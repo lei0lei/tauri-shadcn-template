@@ -1,49 +1,39 @@
 import {
-  IconBarrierBlock,
-  IconBrowserCheck,
-  IconBug,
-  IconChecklist,
-  IconError404,
-  IconHelp,
   IconLayoutDashboard,
-  IconLock,
-  IconLockAccess,
-  IconMessages,
-  IconNotification,
-  IconPackages,
-  IconPalette,
-  IconServerOff,
-  IconSettings,
-  IconTool,
-  IconUserCog,
-  IconUserOff,
-  IconUsers,
+  IconParkingCircle,
+  IconCamera,
+  IconCircleDottedLetterC,
+  IconCircleLetterH,
+  IconPrompt,
+  IconBrandGoogleAnalytics,
+  IconSettings2,
+  IconLetterO,
 } from '@tabler/icons-react'
-import { AudioWaveform, Command, GalleryVerticalEnd } from 'lucide-react'
+import { Command } from 'lucide-react'
 import { type SidebarData } from '../types'
 
 export const sidebarData: SidebarData = {
   user: {
-    name: 'satnaing',
-    email: 'satnaingdev@gmail.com',
+    name: 'Meng Fanlei',
+    email: 'lei.lei.fan.meng@gmail.com',
     avatar: '/avatars/shadcn.jpg',
   },
   teams: [
     {
-      name: 'Shadcn Admin',
+      name: 'Sengo',
       logo: Command,
       plan: 'Vite + ShadcnUI',
     },
-    {
-      name: 'Acme Inc',
-      logo: GalleryVerticalEnd,
-      plan: 'Enterprise',
-    },
-    {
-      name: 'Acme Corp.',
-      logo: AudioWaveform,
-      plan: 'Startup',
-    },
+    // {
+    //   name: 'Acme Inc',
+    //   logo: GalleryVerticalEnd,
+    //   plan: 'Enterprise',
+    // },
+    // {
+    //   name: 'Acme Corp.',
+    //   logo: AudioWaveform,
+    //   plan: 'Startup',
+    // },
   ],
   navGroups: [
     {
@@ -55,128 +45,127 @@ export const sidebarData: SidebarData = {
           icon: IconLayoutDashboard,
         },
         {
-          title: 'Tasks',
+          title: 'Analytics',
           url: '/tasks',
-          icon: IconChecklist,
+          icon: IconBrandGoogleAnalytics,
         },
-        {
-          title: 'Apps',
-          url: '/apps',
-          icon: IconPackages,
-        },
-        {
-          title: 'Chats',
-          url: '/chats',
-          badge: '3',
-          icon: IconMessages,
-        },
-        {
-          title: 'Users',
-          url: '/users',
-          icon: IconUsers,
-        },
-      ],
-    },
-    {
-      title: 'Pages',
-      items: [
-        {
-          title: 'Auth',
-          icon: IconLockAccess,
-          items: [
-            {
-              title: 'Sign In',
-              url: '/sign-in',
-            },
-            {
-              title: 'Sign In (2 Col)',
-              url: '/sign-in-2',
-            },
-            {
-              title: 'Sign Up',
-              url: '/sign-up',
-            },
-            {
-              title: 'Forgot Password',
-              url: '/forgot-password',
-            },
-            {
-              title: 'OTP',
-              url: '/otp',
-            },
-          ],
-        },
-        {
-          title: 'Errors',
-          icon: IconBug,
-          items: [
-            {
-              title: 'Unauthorized',
-              url: '/401',
-              icon: IconLock,
-            },
-            {
-              title: 'Forbidden',
-              url: '/403',
-              icon: IconUserOff,
-            },
-            {
-              title: 'Not Found',
-              url: '/404',
-              icon: IconError404,
-            },
-            {
-              title: 'Internal Server Error',
-              url: '/500',
-              icon: IconServerOff,
-            },
-            {
-              title: 'Maintenance Error',
-              url: '/503',
-              icon: IconBarrierBlock,
-            },
-          ],
-        },
-      ],
-    },
-    {
-      title: 'Other',
-      items: [
         {
           title: 'Settings',
-          icon: IconSettings,
+          url: '/apps',
+          icon: IconSettings2,
+        },
+        {
+          title: 'Project',
+          url: '/chats',
+          icon: IconPrompt,
+        },
+      ],
+    },
+    // {
+    //   title: 'Projects',
+    //   items: [
+    //     {
+    //       title: 'Auth',
+    //       icon: IconLockAccess,
+    //       items: [
+    //         {
+    //           title: 'Sign In',
+    //           url: '/sign-in',
+    //         },
+    //         {
+    //           title: 'Sign In (2 Col)',
+    //           url: '/sign-in-2',
+    //         },
+    //         {
+    //           title: 'Sign Up',
+    //           url: '/sign-up',
+    //         },
+    //         {
+    //           title: 'Forgot Password',
+    //           url: '/forgot-password',
+    //         },
+    //         {
+    //           title: 'OTP',
+    //           url: '/otp',
+    //         },
+    //       ],
+    //     },
+    //     {
+    //       title: 'Errors',
+    //       icon: IconBug,
+    //       items: [
+    //         {
+    //           title: 'Unauthorized',
+    //           url: '/401',
+    //           icon: IconLock,
+    //         },
+    //         {
+    //           title: 'Forbidden',
+    //           url: '/403',
+    //           icon: IconUserOff,
+    //         },
+    //         {
+    //           title: 'Not Found',
+    //           url: '/404',
+    //           icon: IconError404,
+    //         },
+    //         {
+    //           title: 'Internal Server Error',
+    //           url: '/500',
+    //           icon: IconServerOff,
+    //         },
+    //         {
+    //           title: 'Maintenance Error',
+    //           url: '/503',
+    //           icon: IconBarrierBlock,
+    //         },
+    //       ],
+    //     },
+    //   ],
+    // },
+    {
+      title: 'Hardware',
+      items: [
+        {
+          title: 'Cameras',
+          icon: IconCamera,
           items: [
             {
-              title: 'Profile',
+              title: 'Virtual',
               url: '/settings',
-              icon: IconUserCog,
+              icon: IconCircleDottedLetterC,
             },
             {
-              title: 'Account',
+              title: 'Hikvision',
               url: '/settings/account',
-              icon: IconTool,
+              icon: IconCircleLetterH,
             },
-            {
-              title: 'Appearance',
-              url: '/settings/appearance',
-              icon: IconPalette,
-            },
-            {
-              title: 'Notifications',
-              url: '/settings/notifications',
-              icon: IconNotification,
-            },
-            {
-              title: 'Display',
-              url: '/settings/display',
-              icon: IconBrowserCheck,
-            },
+            // {
+            //   title: 'Appearance',
+            //   url: '/settings/appearance',
+            //   icon: IconPalette,
+            // },
+            // {
+            //   title: 'Notifications',
+            //   url: '/settings/notifications',
+            //   icon: IconNotification,
+            // },
+            // {
+            //   title: 'Display',
+            //   url: '/settings/display',
+            //   icon: IconBrowserCheck,
+            // },
           ],
         },
         {
-          title: 'Help Center',
+          title: 'PLC',
           url: '/help-center',
-          icon: IconHelp,
+          icon: IconParkingCircle,
+        },
+        {
+          title: 'Others',
+          url: '/settings/account',
+          icon: IconLetterO,
         },
       ],
     },
