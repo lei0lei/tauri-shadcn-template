@@ -43,6 +43,15 @@ const AuthenticatedTasksIndexLazyImport = createFileRoute(
 const AuthenticatedSettingsIndexLazyImport = createFileRoute(
   '/_authenticated/settings/',
 )()
+const AuthenticatedProjectIndexLazyImport = createFileRoute(
+  '/_authenticated/project/',
+)()
+const AuthenticatedNoderIndexLazyImport = createFileRoute(
+  '/_authenticated/noder/',
+)()
+const AuthenticatedMonacoIndexLazyImport = createFileRoute(
+  '/_authenticated/monaco/',
+)()
 const AuthenticatedHelpCenterIndexLazyImport = createFileRoute(
   '/_authenticated/help-center/',
 )()
@@ -196,6 +205,33 @@ const AuthenticatedSettingsIndexLazyRoute =
     getParentRoute: () => AuthenticatedSettingsRouteLazyRoute,
   } as any).lazy(() =>
     import('./routes/_authenticated/settings/index.lazy').then((d) => d.Route),
+  )
+
+const AuthenticatedProjectIndexLazyRoute =
+  AuthenticatedProjectIndexLazyImport.update({
+    id: '/project/',
+    path: '/project/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any).lazy(() =>
+    import('./routes/_authenticated/project/index.lazy').then((d) => d.Route),
+  )
+
+const AuthenticatedNoderIndexLazyRoute =
+  AuthenticatedNoderIndexLazyImport.update({
+    id: '/noder/',
+    path: '/noder/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any).lazy(() =>
+    import('./routes/_authenticated/noder/index.lazy').then((d) => d.Route),
+  )
+
+const AuthenticatedMonacoIndexLazyRoute =
+  AuthenticatedMonacoIndexLazyImport.update({
+    id: '/monaco/',
+    path: '/monaco/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any).lazy(() =>
+    import('./routes/_authenticated/monaco/index.lazy').then((d) => d.Route),
   )
 
 const AuthenticatedHelpCenterIndexLazyRoute =
@@ -423,6 +459,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHelpCenterIndexLazyImport
       parentRoute: typeof AuthenticatedRouteImport
     }
+    '/_authenticated/monaco/': {
+      id: '/_authenticated/monaco/'
+      path: '/monaco'
+      fullPath: '/monaco'
+      preLoaderRoute: typeof AuthenticatedMonacoIndexLazyImport
+      parentRoute: typeof AuthenticatedRouteImport
+    }
+    '/_authenticated/noder/': {
+      id: '/_authenticated/noder/'
+      path: '/noder'
+      fullPath: '/noder'
+      preLoaderRoute: typeof AuthenticatedNoderIndexLazyImport
+      parentRoute: typeof AuthenticatedRouteImport
+    }
+    '/_authenticated/project/': {
+      id: '/_authenticated/project/'
+      path: '/project'
+      fullPath: '/project'
+      preLoaderRoute: typeof AuthenticatedProjectIndexLazyImport
+      parentRoute: typeof AuthenticatedRouteImport
+    }
     '/_authenticated/settings/': {
       id: '/_authenticated/settings/'
       path: '/'
@@ -481,6 +538,9 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAppsIndexLazyRoute: typeof AuthenticatedAppsIndexLazyRoute
   AuthenticatedChatsIndexLazyRoute: typeof AuthenticatedChatsIndexLazyRoute
   AuthenticatedHelpCenterIndexLazyRoute: typeof AuthenticatedHelpCenterIndexLazyRoute
+  AuthenticatedMonacoIndexLazyRoute: typeof AuthenticatedMonacoIndexLazyRoute
+  AuthenticatedNoderIndexLazyRoute: typeof AuthenticatedNoderIndexLazyRoute
+  AuthenticatedProjectIndexLazyRoute: typeof AuthenticatedProjectIndexLazyRoute
   AuthenticatedTasksIndexLazyRoute: typeof AuthenticatedTasksIndexLazyRoute
   AuthenticatedUsersIndexLazyRoute: typeof AuthenticatedUsersIndexLazyRoute
 }
@@ -492,6 +552,9 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAppsIndexLazyRoute: AuthenticatedAppsIndexLazyRoute,
   AuthenticatedChatsIndexLazyRoute: AuthenticatedChatsIndexLazyRoute,
   AuthenticatedHelpCenterIndexLazyRoute: AuthenticatedHelpCenterIndexLazyRoute,
+  AuthenticatedMonacoIndexLazyRoute: AuthenticatedMonacoIndexLazyRoute,
+  AuthenticatedNoderIndexLazyRoute: AuthenticatedNoderIndexLazyRoute,
+  AuthenticatedProjectIndexLazyRoute: AuthenticatedProjectIndexLazyRoute,
   AuthenticatedTasksIndexLazyRoute: AuthenticatedTasksIndexLazyRoute,
   AuthenticatedUsersIndexLazyRoute: AuthenticatedUsersIndexLazyRoute,
 }
@@ -520,6 +583,9 @@ export interface FileRoutesByFullPath {
   '/apps': typeof AuthenticatedAppsIndexLazyRoute
   '/chats': typeof AuthenticatedChatsIndexLazyRoute
   '/help-center': typeof AuthenticatedHelpCenterIndexLazyRoute
+  '/monaco': typeof AuthenticatedMonacoIndexLazyRoute
+  '/noder': typeof AuthenticatedNoderIndexLazyRoute
+  '/project': typeof AuthenticatedProjectIndexLazyRoute
   '/settings/': typeof AuthenticatedSettingsIndexLazyRoute
   '/tasks': typeof AuthenticatedTasksIndexLazyRoute
   '/users': typeof AuthenticatedUsersIndexLazyRoute
@@ -544,6 +610,9 @@ export interface FileRoutesByTo {
   '/apps': typeof AuthenticatedAppsIndexLazyRoute
   '/chats': typeof AuthenticatedChatsIndexLazyRoute
   '/help-center': typeof AuthenticatedHelpCenterIndexLazyRoute
+  '/monaco': typeof AuthenticatedMonacoIndexLazyRoute
+  '/noder': typeof AuthenticatedNoderIndexLazyRoute
+  '/project': typeof AuthenticatedProjectIndexLazyRoute
   '/settings': typeof AuthenticatedSettingsIndexLazyRoute
   '/tasks': typeof AuthenticatedTasksIndexLazyRoute
   '/users': typeof AuthenticatedUsersIndexLazyRoute
@@ -572,6 +641,9 @@ export interface FileRoutesById {
   '/_authenticated/apps/': typeof AuthenticatedAppsIndexLazyRoute
   '/_authenticated/chats/': typeof AuthenticatedChatsIndexLazyRoute
   '/_authenticated/help-center/': typeof AuthenticatedHelpCenterIndexLazyRoute
+  '/_authenticated/monaco/': typeof AuthenticatedMonacoIndexLazyRoute
+  '/_authenticated/noder/': typeof AuthenticatedNoderIndexLazyRoute
+  '/_authenticated/project/': typeof AuthenticatedProjectIndexLazyRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexLazyRoute
   '/_authenticated/tasks/': typeof AuthenticatedTasksIndexLazyRoute
   '/_authenticated/users/': typeof AuthenticatedUsersIndexLazyRoute
@@ -600,6 +672,9 @@ export interface FileRouteTypes {
     | '/apps'
     | '/chats'
     | '/help-center'
+    | '/monaco'
+    | '/noder'
+    | '/project'
     | '/settings/'
     | '/tasks'
     | '/users'
@@ -623,6 +698,9 @@ export interface FileRouteTypes {
     | '/apps'
     | '/chats'
     | '/help-center'
+    | '/monaco'
+    | '/noder'
+    | '/project'
     | '/settings'
     | '/tasks'
     | '/users'
@@ -649,6 +727,9 @@ export interface FileRouteTypes {
     | '/_authenticated/apps/'
     | '/_authenticated/chats/'
     | '/_authenticated/help-center/'
+    | '/_authenticated/monaco/'
+    | '/_authenticated/noder/'
+    | '/_authenticated/project/'
     | '/_authenticated/settings/'
     | '/_authenticated/tasks/'
     | '/_authenticated/users/'
@@ -717,6 +798,9 @@ export const routeTree = rootRoute
         "/_authenticated/apps/",
         "/_authenticated/chats/",
         "/_authenticated/help-center/",
+        "/_authenticated/monaco/",
+        "/_authenticated/noder/",
+        "/_authenticated/project/",
         "/_authenticated/tasks/",
         "/_authenticated/users/"
       ]
@@ -795,6 +879,18 @@ export const routeTree = rootRoute
     },
     "/_authenticated/help-center/": {
       "filePath": "_authenticated/help-center/index.lazy.tsx",
+      "parent": "/_authenticated"
+    },
+    "/_authenticated/monaco/": {
+      "filePath": "_authenticated/monaco/index.lazy.tsx",
+      "parent": "/_authenticated"
+    },
+    "/_authenticated/noder/": {
+      "filePath": "_authenticated/noder/index.lazy.tsx",
+      "parent": "/_authenticated"
+    },
+    "/_authenticated/project/": {
+      "filePath": "_authenticated/project/index.lazy.tsx",
       "parent": "/_authenticated"
     },
     "/_authenticated/settings/": {

@@ -1,4 +1,4 @@
-import { Button } from '@/components/ui/button'
+// import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -6,43 +6,43 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent} from '@/components/ui/tabs'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
-import { TopNav } from '@/components/layout/top-nav'
-import { ProfileDropdown } from '@/components/profile-dropdown'
-import { Search } from '@/components/search'
+// import { TopNav } from '@/components/layout/top-nav'
+// import { ProfileDropdown } from '@/components/profile-dropdown'
+// import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { Overview } from './components/overview'
 import { RecentSales } from './components/recent-sales'
 
 export default function Dashboard() {
   return (
-    <>
+    <div className='flex flex-col min-h-screen p-4'>
       {/* ===== Top Heading ===== */}
       <Header>
-        <TopNav links={topNav} />
+        {/* <TopNav links={topNav} /> */}
         <div className='ml-auto flex items-center space-x-4'>
-          <Search />
+          {/* <Search /> */}
           <ThemeSwitch />
-          <ProfileDropdown />
+          {/* <ProfileDropdown /> */}
         </div>
       </Header>
 
       {/* ===== Main ===== */}
-      <Main className="overflow-x-hidden">
-        <div className='mb-2 flex items-center justify-between space-y-2'>
+      <Main className="overflow-x-hidden overflow-y-hidden">
+        {/* <div className='mb-2 flex items-center justify-between space-y-2'>
           <h1 className='text-2xl font-bold tracking-tight'>Dashboard</h1>
           <div className='flex items-center space-x-2'>
             <Button>Download</Button>
           </div>
-        </div>
+        </div> */}
         <Tabs
           orientation='vertical'
           defaultValue='overview'
-          className='space-y-4'
+          className='h-full'
         >
-          <div className='w-full overflow-x-auto pb-2'>
+          {/* <div className='w-full overflow-x-auto pb-2'>
             <TabsList>
               <TabsTrigger value='overview'>Overview</TabsTrigger>
               <TabsTrigger value='analytics' disabled>
@@ -55,13 +55,13 @@ export default function Dashboard() {
                 Notifications
               </TabsTrigger>
             </TabsList>
-          </div>
-          <TabsContent value='overview' className='space-y-4'>
+          </div> */}
+          <TabsContent value='overview' className='space-y-4 h-full'>
             <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
               <Card>
                 <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                   <CardTitle className='text-sm font-medium'>
-                    Total Revenue
+                    当前型号
                   </CardTitle>
                   <svg
                     xmlns='http://www.w3.org/2000/svg'
@@ -77,7 +77,7 @@ export default function Dashboard() {
                   </svg>
                 </CardHeader>
                 <CardContent>
-                  <div className='text-2xl font-bold'>$45,231.89</div>
+                  <div className='text-2xl font-bold'>EK40</div>
                   <p className='text-xs text-muted-foreground'>
                     +20.1% from last month
                   </p>
@@ -86,7 +86,7 @@ export default function Dashboard() {
               <Card>
                 <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                   <CardTitle className='text-sm font-medium'>
-                    Subscriptions
+                    统计
                   </CardTitle>
                   <svg
                     xmlns='http://www.w3.org/2000/svg'
@@ -112,7 +112,7 @@ export default function Dashboard() {
               </Card>
               <Card>
                 <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>Sales</CardTitle>
+                  <CardTitle className='text-sm font-medium'>当前工件</CardTitle>
                   <svg
                     xmlns='http://www.w3.org/2000/svg'
                     viewBox='0 0 24 24'
@@ -137,7 +137,7 @@ export default function Dashboard() {
               <Card>
                 <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                   <CardTitle className='text-sm font-medium'>
-                    Active Now
+                    系统状态
                   </CardTitle>
                   <svg
                     xmlns='http://www.w3.org/2000/svg'
@@ -160,8 +160,8 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
             </div>
-            <div className='grid grid-cols-1 gap-4 lg:grid-cols-7'>
-              <Card className='col-span-1 lg:col-span-4'>
+            <div className='grid grid-cols-1 gap-4 lg:grid-cols-9 h-128'>
+              <Card className='col-span-1 lg:col-span-6'>
                 <CardHeader>
                   <CardTitle>Overview</CardTitle>
                 </CardHeader>
@@ -171,7 +171,7 @@ export default function Dashboard() {
               </Card>
               <Card className='col-span-1 lg:col-span-3'>
                 <CardHeader>
-                  <CardTitle>Recent Sales</CardTitle>
+                  <CardTitle>Current State & Logs</CardTitle>
                   <CardDescription>
                     You made 265 sales this month.
                   </CardDescription>
@@ -184,33 +184,33 @@ export default function Dashboard() {
           </TabsContent>
         </Tabs>
       </Main>
-    </>
+    </div>
   )
 }
 
-const topNav = [
-  {
-    title: 'Overview',
-    href: 'dashboard/overview',
-    isActive: true,
-    disabled: false,
-  },
-  {
-    title: 'Customers',
-    href: 'dashboard/customers',
-    isActive: false,
-    disabled: true,
-  },
-  {
-    title: 'Products',
-    href: 'dashboard/products',
-    isActive: false,
-    disabled: true,
-  },
-  {
-    title: 'Settings',
-    href: 'dashboard/settings',
-    isActive: false,
-    disabled: true,
-  },
-]
+// const topNav = [
+//   {
+//     title: 'Overview',
+//     href: 'dashboard/overview',
+//     isActive: true,
+//     disabled: false,
+//   },
+//   {
+//     title: 'Customers',
+//     href: 'dashboard/customers',
+//     isActive: false,
+//     disabled: true,
+//   },
+//   {
+//     title: 'Products',
+//     href: 'dashboard/products',
+//     isActive: false,
+//     disabled: true,
+//   },
+//   {
+//     title: 'Settings',
+//     href: 'dashboard/settings',
+//     isActive: false,
+//     disabled: true,
+//   },
+// ]

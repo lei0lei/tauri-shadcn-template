@@ -70,6 +70,9 @@ export default {
           ring: 'hsl(var(--sidebar-ring))',
         },
       },
+      height: {
+        '128': '35rem',
+      }
     },
   },
   plugins: [tailwindCssAnimate],

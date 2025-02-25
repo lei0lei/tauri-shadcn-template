@@ -6,8 +6,14 @@ import {
   IconCircleLetterH,
   IconPrompt,
   IconBrandGoogleAnalytics,
-  IconSettings2,
   IconLetterO,
+  IconBrandVscode,
+  IconGenderThird,
+  IconHexagon3d,
+  IconLogs,
+  IconFileIsr,
+  IconWaveSawTool,
+  IconSettings,
 } from '@tabler/icons-react'
 import { Command } from 'lucide-react'
 import { type SidebarData } from '../types'
@@ -24,16 +30,6 @@ export const sidebarData: SidebarData = {
       logo: Command,
       plan: 'Vite + ShadcnUI',
     },
-    // {
-    //   name: 'Acme Inc',
-    //   logo: GalleryVerticalEnd,
-    //   plan: 'Enterprise',
-    // },
-    // {
-    //   name: 'Acme Corp.',
-    //   logo: AudioWaveform,
-    //   plan: 'Startup',
-    // },
   ],
   navGroups: [
     {
@@ -46,18 +42,53 @@ export const sidebarData: SidebarData = {
         },
         {
           title: 'Analytics',
-          url: '/tasks',
           icon: IconBrandGoogleAnalytics,
+          items: [
+            {
+              title: 'analytics',
+              url: '/tasks',
+              icon: IconWaveSawTool,
+            },
+            {
+              title: 'records',
+              url: '/tasks',
+              icon: IconFileIsr,
+            },
+            {
+              title: 'logs',
+              url: '/tasks',
+              icon: IconLogs,
+            },
+
+
+          ]
         },
         {
           title: 'Settings',
-          url: '/apps',
-          icon: IconSettings2,
+          url: '/settings',
+          icon: IconSettings,
         },
         {
           title: 'Project',
-          url: '/chats',
           icon: IconPrompt,
+          items: [
+            {
+              title: 'node-editor',
+              url: '/noder',
+              icon: IconGenderThird,
+            },
+            {
+              title: 'project-editor',
+              url: '/project',
+              icon: IconHexagon3d,
+            },
+            {
+              title: 'algo-editor',
+              url: '/monaco',
+              icon: IconBrandVscode,
+            },
+
+          ]
         },
       ],
     },

@@ -1,0 +1,29 @@
+[type]
+all_type = ['EH09','EH12','EY28','EK30','EK40']
+
+
+[type.EH09]
+run_sequence = ['A','B','C','D','E']
+
+[type.EH09.A]
+run_sequence = [1,2,3,4,5,6,7,8]
+[type.EH09.A.1]
+thru_home = false
+screw_hole = 'M8'
+diameter_min = 0
+diameter_max = 0
+depth_min = 0
+depth_max = 0
+algo_name = 'general.t1'
+
+
+
+
+
+[type.EH12]
+
+[type.EY28]
+
+[type.EK30]
+
+[type.EK40]

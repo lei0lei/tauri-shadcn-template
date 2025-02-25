@@ -1,0 +1,10 @@
+[log]
+log_dir = ''
+image_dir = ''
+
+
+[service]
+database = 'surreal'
+algo_backend = 'fastapi'
+
+[pretest]
