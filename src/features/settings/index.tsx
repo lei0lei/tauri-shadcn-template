@@ -51,27 +51,32 @@ export default function Settings() {
 
 const sidebarNavItems = [
   {
-    title: 'Profile',
+    title: '软件设置',
     icon: <IconUser size={18} />,
     href: '/settings',
   },
   {
-    title: 'Account',
+    title: '检测设置',
+    icon: <IconUser size={18} />,
+    href: '/settings',
+  },
+  {
+    title: '相机设置',
     icon: <IconTool size={18} />,
     href: '/settings/account',
   },
   {
-    title: 'Appearance',
+    title: 'plc设置',
     icon: <IconPalette size={18} />,
     href: '/settings/appearance',
   },
   {
-    title: 'Notifications',
+    title: '机器人设置',
     icon: <IconNotification size={18} />,
     href: '/settings/notifications',
   },
   {
-    title: 'Display',
+    title: '传感器设置',
     icon: <IconBrowserCheck size={18} />,
     href: '/settings/display',
   },

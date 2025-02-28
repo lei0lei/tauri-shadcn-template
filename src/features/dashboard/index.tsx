@@ -15,8 +15,54 @@ import { Main } from '@/components/layout/main'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { Overview } from './components/overview'
 import { RecentSales } from './components/recent-sales'
+// import { invoke } from '@tauri-apps/api/core';
+// import React, { useState } from 'react';
+import { listen } from '@tauri-apps/api/event';
+import { useEffect, useState } from "react";
+
 
 export default function Dashboard() {
+  // 后端rust调用测试
+  // const [response, setResponse] = useState<string>('');
+
+  // const callRustCommand = async () => {
+  //   try {
+  //     // 调用 Rust 后端的自定义命令
+  //     const result = await invoke('test_call_from_frontend');
+  //     setResponse(result as string); // 更新响应内容
+  //   } catch (error) {
+  //     console.error("Error calling Rust command:", error);
+  //   }
+  // };
+  const [logs, setLogs] = useState("[ui] Listening for sidecar & network logs...");
+  const initSidecarListeners = async () => {
+    // Listen for stdout lines from the sidecar
+
+    const unlistenStdout = await listen('sidecar-stdout', (event) => {
+      console.log('Sidecar stdout:', event.payload);
+      if (`${event.payload}`.length > 0 && event.payload !== "\r\n")
+        setLogs(prev => prev += `\n${event.payload}`)
+    });
+
+    // Listen for stderr lines from the sidecar
+    const unlistenStderr = await listen('sidecar-stderr', (event) => {
+      console.error('Sidecar stderr:', event.payload);
+      if (`${event.payload}`.length > 0 && event.payload !== "\r\n")
+        setLogs(prev => prev += `\n${event.payload}`)
+    });
+
+    // Cleanup listeners when not needed
+    return () => {
+      unlistenStdout();
+      unlistenStderr();
+    };
+  }
+
+  useEffect(() => {
+    initSidecarListeners()
+  }, [])
+
+
   return (
     <div className='flex flex-col min-h-screen p-4'>
       {/* ===== Top Heading ===== */}
@@ -37,6 +83,10 @@ export default function Dashboard() {
             <Button>Download</Button>
           </div>
         </div> */}
+        {/* <div>
+              <button onClick={callRustCommand}>Call Rust Command</button>
+              {response && <p>{response}</p>}
+            </div> */}
         <Tabs
           orientation='vertical'
           defaultValue='overview'
@@ -165,16 +215,13 @@ export default function Dashboard() {
                 <CardHeader>
                   <CardTitle>Overview</CardTitle>
                 </CardHeader>
-                <CardContent className='pl-2'>
+                <CardContent className='pl-2 flex justify-center items-center h-full'>
                   <Overview />
                 </CardContent>
               </Card>
               <Card className='col-span-1 lg:col-span-3'>
                 <CardHeader>
                   <CardTitle>Current State & Logs</CardTitle>
-                  <CardDescription>
-                    You made 265 sales this month.
-                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <RecentSales />

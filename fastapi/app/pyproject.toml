@@ -1,0 +1,59 @@
+[tool.poetry]
+name = "app"
+version = "0.1.0"
+description = ""
+authors = ["meng fanlei <lei.lei.fan.meng@gmail.com>"]
+readme = "README.md"
+package-mode = false
+
+
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = {extras = ["standard"], version = "^0.115.4", source = "tsinghua"}
+networkx = {version = "^3.4.2", source = "tsinghua"}
+torch = {version = "^2.5.1+cu121", source = "pytorch"}
+numpy = {version = "^1.26.4", source = "tsinghua"}
+opencv-python = {version = ">=4.6.0", source = "tsinghua"}
+matplotlib = {version = ">=3.3.0", source = "tsinghua"}
+pyyaml = {version = ">=5.3.1", source = "tsinghua"}
+requests = {version = ">=2.23.0", source = "tsinghua"}
+scipy = {version = ">=1.4.1", source = "tsinghua"}
+torchvision = {version = ">=0.9.0", source = "pytorch"}
+tqdm = {version = ">=4.64.0", source = "tsinghua"}
+psutil = {version = "^6.1.0", source = "tsinghua"}
+py-cpuinfo = {version = "^9.0.0", source = "tsinghua"}
+pandas = {version = ">=1.1.4", source = "tsinghua"}
+seaborn = {version = ">=0.11.0", source = "tsinghua"}
+ultralytics-thop = {version = ">=2.0.0", source = "tsinghua"}
+ultralytics = {version = "^8.3.28", source = "tsinghua"}
+python-multipart = "^0.0.19"
+memory-profiler = "^0.61.0"
+loguru = "^0.7.3"
+rich = "^13.9.4"
+alive-progress = "^3.2.0"
+inquirer = "^3.4.0"
+dependency-injector = "^4.44.0"
+cachetools = "^5.5.0"
+types-cachetools = "^5.5.0.20240820"
+supervision = "*"
+websockets = "^14.1"
+tinydb = "^4.8.2"
+python-dotenv = "^1.0.1"
+
+[[tool.poetry.source]]
+name = "tsinghua"
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+priority = "supplemental"
+
+
+[[tool.poetry.source]]
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cu121"
+priority = "explicit"

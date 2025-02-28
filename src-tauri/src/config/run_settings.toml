@@ -7,4 +7,9 @@ image_dir = ''
 database = 'surreal'
 algo_backend = 'fastapi'
 
-[pretest]
+
+
+[run]
+enable_stop = false
+enable_diameter = false
+enable_depth = false
