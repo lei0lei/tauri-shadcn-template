@@ -1,0 +1,5 @@
+# fastapi算法设置
+[fastapi]
+ip = '127.0.0.1'
+port = 8000
+env = "D:\\github\\tauri-shadcn-template\\fastapi\\app\\.venv\\Scripts\\python.exe"

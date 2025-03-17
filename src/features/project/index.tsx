@@ -1,23 +1,21 @@
-// import React from 'react';
-// import ReactDOM from 'react-dom';
 
-// import Editor from '@monaco-editor/react';
-// import {FileSidebar} from '@/components/file-sidebar';
-// import { Outlet } from '@tanstack/react-router'
-// import {
-//   IconBrowserCheck,
-//   IconNotification,
-//   IconPalette,
-//   IconTool,
-//   IconUser,
-// } from '@tabler/icons-react'
 import { Separator } from '@/components/ui/separator'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
-// import { ProfileDropdown } from '@/components/profile-dropdown'
-// import { Search } from '@/components/search'
-// import { ThemeSwitch } from '@/components/theme-switch'
-// import SidebarNav from './components/sidebar-nav'
+import '@xyflow/react/dist/style.css';
+import { ReactFlow,  Controls, ControlButton, Background,BackgroundVariant} from '@xyflow/react'
+
+import {IconPencil,
+  IconDownload,
+  IconPlus
+} from '@tabler/icons-react'
+
+const initialNodes = [
+  { id: '1', position: { x: 0, y: 0 }, data: { label: '1' } },
+  { id: '2', position: { x: 0, y: 100 }, data: { label: '2' } },
+];
+const initialEdges = [{ id: 'e1-2', source: '1', target: '2' }];
+
 
 export default function Project() {
   return (
@@ -33,61 +31,33 @@ export default function Project() {
 
       <Main fixed>
         <div className='space-y-0.5'>
-          <h1 className='text-2xl font-bold tracking-tight md:text-3xl'>
+          <h5 className='font-bold tracking-tight'>
             Project editor
-          </h1>
-          <p className='text-muted-foreground'>
+          </h5>
+          {/* <p className='text-muted-foreground'>
             Node based project editor.
-          </p>
+          </p> */}
         </div>
         <Separator className='my-4 lg:my-6' />
         <div className='flex flex-1 flex-col space-y-2 md:space-y-2 overflow-hidden lg:flex-row lg:space-x-12 lg:space-y-0'>
-          {/* <aside className='top-0 lg:sticky lg:w-1/5'> */}
-            {/* <SidebarNav items={sidebarNavItems} /> */}
-            {/* <Editor height="90vh"  defaultLanguage="javascript" defaultValue="// some comment" /> */}
-          {/* </aside> */}
-          {/* <div className='flex w-full p-1 pr-4 overflow-y-hidden'>
-            <Outlet />
-          </div> */}
+          <div style={{ width: '100vw', height: '100vh'}}>
+            <ReactFlow nodes={initialNodes} edges={initialEdges}>
+              <Background color="#ccc" variant={BackgroundVariant.Lines} />
+              <Controls position={'top-left'} showZoom={false}>
+              <ControlButton onClick={() => alert('Edit. ✨')}>
+                <IconPencil />
+              </ControlButton>
+              <ControlButton onClick={() => alert('Something magical just happened. ✨')}>
+                <IconDownload />
+              </ControlButton>
+              <ControlButton onClick={() => alert('Something magical just happened. ✨')}>
+                <IconPlus />
+              </ControlButton>
+            </Controls>
+              </ReactFlow>
+          </div>
         </div>
       </Main>
     </>
   )
 }
-
-// const sidebarNavItems = [
-//   {
-//     title: 'Profile',
-//     icon: <IconUser size={18} />,
-//     href: '/settings',
-//   },
-//   {
-//     title: 'Account',
-//     icon: <IconTool size={18} />,
-//     href: '/settings/account',
-//   },
-//   {
-//     title: 'Appearance',
-//     icon: <IconPalette size={18} />,
-//     href: '/settings/appearance',
-//   },
-//   {
-//     title: 'Notifications',
-//     icon: <IconNotification size={18} />,
-//     href: '/settings/notifications',
-//   },
-//   {
-//     title: 'Display',
-//     icon: <IconBrowserCheck size={18} />,
-//     href: '/settings/display',
-//   },
-// ]
-
-
-
-
-// export default function Monaco() {
-//   return (<div>
-//     <Editor height="90vh" defaultLanguage="javascript" defaultValue="// some comment" />
-//     </div>);
-// }

@@ -143,3 +143,6 @@ pub fn start_sidecar(app_handle: tauri::AppHandle) -> Result<String, String> {
     spawn_and_monitor_sidecar(app_handle)?;
     Ok("Sidecar spawned and monitoring started.".to_string())
 }
+
+
+// 算法调用

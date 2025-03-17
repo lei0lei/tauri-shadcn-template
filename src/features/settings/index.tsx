@@ -1,10 +1,12 @@
 import { Outlet } from '@tanstack/react-router'
 import {
-  IconBrowserCheck,
-  IconNotification,
-  IconPalette,
-  IconTool,
-  IconUser,
+  IconAutomation,
+  IconSettingsPin,
+  IconCamera,
+  IconParkingCircle,
+  IconCircle,
+  IconAsset
+
 } from '@tabler/icons-react'
 import { Separator } from '@/components/ui/separator'
 import { Header } from '@/components/layout/header'
@@ -52,32 +54,32 @@ export default function Settings() {
 const sidebarNavItems = [
   {
     title: '软件设置',
-    icon: <IconUser size={18} />,
-    href: '/settings',
+    icon: <IconAutomation size={18} />,
+    href: '/settings/software',
   },
   {
     title: '检测设置',
-    icon: <IconUser size={18} />,
-    href: '/settings',
+    icon: <IconSettingsPin size={18} />,
+    href: '/settings/detection',
   },
   {
     title: '相机设置',
-    icon: <IconTool size={18} />,
-    href: '/settings/account',
+    icon: <IconCamera size={18} />,
+    href: '/settings/camera',
   },
   {
     title: 'plc设置',
-    icon: <IconPalette size={18} />,
-    href: '/settings/appearance',
+    icon: <IconParkingCircle size={18} />,
+    href: '/settings/plc',
   },
   {
     title: '机器人设置',
-    icon: <IconNotification size={18} />,
-    href: '/settings/notifications',
+    icon: <IconAsset size={18} />,
+    href: '/settings/robot',
   },
   {
     title: '传感器设置',
-    icon: <IconBrowserCheck size={18} />,
-    href: '/settings/display',
+    icon: <IconCircle size={18} />,
+    href: '/settings/sensor',
   },
 ]

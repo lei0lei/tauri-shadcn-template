@@ -2,10 +2,10 @@
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { useQuery } from '@tanstack/react-query'
 import { Tabs, TabsContent} from '@/components/ui/tabs'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
@@ -14,12 +14,15 @@ import { Main } from '@/components/layout/main'
 // import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { Overview } from './components/overview'
-import { RecentSales } from './components/recent-sales'
+import  LogWindow  from './components/stateandlogs'
+import ResultShow from './components/resultshow'
 // import { invoke } from '@tauri-apps/api/core';
 // import React, { useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { useEffect, useState } from "react";
-
+import StartStopButton from './components/startstop'
+import { Separator } from '@radix-ui/react-separator'
+import { useDashboardStore } from "@/stores/dashboardStore";
 
 export default function Dashboard() {
   // 后端rust调用测试
@@ -34,21 +37,23 @@ export default function Dashboard() {
   //     console.error("Error calling Rust command:", error);
   //   }
   // };
-  const [logs, setLogs] = useState("[ui] Listening for sidecar & network logs...");
+  // @ts-ignore
+  const { logs, setLogs, artifactType,statics,artifact} = useDashboardStore();
+
   const initSidecarListeners = async () => {
     // Listen for stdout lines from the sidecar
 
     const unlistenStdout = await listen('sidecar-stdout', (event) => {
       console.log('Sidecar stdout:', event.payload);
       if (`${event.payload}`.length > 0 && event.payload !== "\r\n")
-        setLogs(prev => prev += `\n${event.payload}`)
+        useDashboardStore.getState().setLogs(event.payload as string);
     });
 
     // Listen for stderr lines from the sidecar
     const unlistenStderr = await listen('sidecar-stderr', (event) => {
       console.error('Sidecar stderr:', event.payload);
       if (`${event.payload}`.length > 0 && event.payload !== "\r\n")
-        setLogs(prev => prev += `\n${event.payload}`)
+        useDashboardStore.getState().setLogs(event.payload as string);
     });
 
     // Cleanup listeners when not needed
@@ -65,47 +70,22 @@ export default function Dashboard() {
 
   return (
     <div className='flex flex-col min-h-screen p-4'>
-      {/* ===== Top Heading ===== */}
       <Header>
-        {/* <TopNav links={topNav} /> */}
+        <div className="flex-1 flex justify-center">
+          <StartStopButton className="w-full" />
+        </div>
         <div className='ml-auto flex items-center space-x-4'>
-          {/* <Search /> */}
           <ThemeSwitch />
-          {/* <ProfileDropdown /> */}
         </div>
       </Header>
 
-      {/* ===== Main ===== */}
+
       <Main className="overflow-x-hidden overflow-y-hidden">
-        {/* <div className='mb-2 flex items-center justify-between space-y-2'>
-          <h1 className='text-2xl font-bold tracking-tight'>Dashboard</h1>
-          <div className='flex items-center space-x-2'>
-            <Button>Download</Button>
-          </div>
-        </div> */}
-        {/* <div>
-              <button onClick={callRustCommand}>Call Rust Command</button>
-              {response && <p>{response}</p>}
-            </div> */}
         <Tabs
           orientation='vertical'
           defaultValue='overview'
           className='h-full'
         >
-          {/* <div className='w-full overflow-x-auto pb-2'>
-            <TabsList>
-              <TabsTrigger value='overview'>Overview</TabsTrigger>
-              <TabsTrigger value='analytics' disabled>
-                Analytics
-              </TabsTrigger>
-              <TabsTrigger value='reports' disabled>
-                Reports
-              </TabsTrigger>
-              <TabsTrigger value='notifications' disabled>
-                Notifications
-              </TabsTrigger>
-            </TabsList>
-          </div> */}
           <TabsContent value='overview' className='space-y-4 h-full'>
             <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
               <Card>
@@ -127,7 +107,7 @@ export default function Dashboard() {
                   </svg>
                 </CardHeader>
                 <CardContent>
-                  <div className='text-2xl font-bold'>EK40</div>
+                  <div className='text-2xl font-bold'>{artifactType}</div>
                   <p className='text-xs text-muted-foreground'>
                     +20.1% from last month
                   </p>
@@ -154,7 +134,7 @@ export default function Dashboard() {
                   </svg>
                 </CardHeader>
                 <CardContent>
-                  <div className='text-2xl font-bold'>+2350</div>
+                  <div className='text-2xl font-bold'>{statics}</div>
                   <p className='text-xs text-muted-foreground'>
                     +180.1% from last month
                   </p>
@@ -178,7 +158,7 @@ export default function Dashboard() {
                   </svg>
                 </CardHeader>
                 <CardContent>
-                  <div className='text-2xl font-bold'>+12,234</div>
+                  <div className='text-2xl font-bold'>{artifact}</div>
                   <p className='text-xs text-muted-foreground'>
                     +19% from last month
                   </p>
@@ -211,21 +191,21 @@ export default function Dashboard() {
               </Card>
             </div>
             <div className='grid grid-cols-1 gap-4 lg:grid-cols-9 h-128'>
-              <Card className='col-span-1 lg:col-span-6'>
-                <CardHeader>
-                  <CardTitle>Overview</CardTitle>
-                </CardHeader>
-                <CardContent className='pl-2 flex justify-center items-center h-full'>
+              <Card className='col-span-1 lg:col-span-6 pt-2'>
+                <CardContent className='px-2 flex justify-center items-center h-full'>
                   <Overview />
                 </CardContent>
               </Card>
-              <Card className='col-span-1 lg:col-span-3'>
-                <CardHeader>
-                  <CardTitle>Current State & Logs</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <RecentSales />
-                </CardContent>
+              <Card className='col-span-1 lg:col-span-3 flex flex-col h-full'>
+                <CardContent className="flex flex-col h-full pt-4 px-2 pb-2">
+                <div className="flex-grow p-2 bg-gray-100 rounded-lg shadow-lg mb-2" style={{ maxHeight: '220px' }}>
+                  <ResultShow />
+                </div>
+                <Separator />
+                <div className="mt-2 flex-grow">
+                  <LogWindow />
+                  </div>
+              </CardContent>
               </Card>
             </div>
           </TabsContent>
@@ -234,30 +214,3 @@ export default function Dashboard() {
     </div>
   )
 }
-
-// const topNav = [
-//   {
-//     title: 'Overview',
-//     href: 'dashboard/overview',
-//     isActive: true,
-//     disabled: false,
-//   },
-//   {
-//     title: 'Customers',
-//     href: 'dashboard/customers',
-//     isActive: false,
-//     disabled: true,
-//   },
-//   {
-//     title: 'Products',
-//     href: 'dashboard/products',
-//     isActive: false,
-//     disabled: true,
-//   },
-//   {
-//     title: 'Settings',
-//     href: 'dashboard/settings',
-//     isActive: false,
-//     disabled: true,
-//   },
-// ]

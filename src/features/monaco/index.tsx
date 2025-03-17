@@ -36,9 +36,9 @@ export default function Monaco() {
           <h1 className='text-2xl font-bold tracking-tight md:text-3xl'>
             Code editor
           </h1>
-          <p className='text-muted-foreground'>
+          {/* <p className='text-muted-foreground'>
             Edit code.
-          </p>
+          </p> */}
         {/* </div> */}
         <Separator className='my-4 lg:my-6' />
         <div className='flex flex-1 flex-col space-y-2 md:space-y-2 overflow-hidden lg:flex-row lg:space-x-12 lg:space-y-0'>
@@ -54,40 +54,3 @@ export default function Monaco() {
     </>
   )
 }
-
-// const sidebarNavItems = [
-//   {
-//     title: 'Profile',
-//     icon: <IconUser size={18} />,
-//     href: '/settings',
-//   },
-//   {
-//     title: 'Account',
-//     icon: <IconTool size={18} />,
-//     href: '/settings/account',
-//   },
-//   {
-//     title: 'Appearance',
-//     icon: <IconPalette size={18} />,
-//     href: '/settings/appearance',
-//   },
-//   {
-//     title: 'Notifications',
-//     icon: <IconNotification size={18} />,
-//     href: '/settings/notifications',
-//   },
-//   {
-//     title: 'Display',
-//     icon: <IconBrowserCheck size={18} />,
-//     href: '/settings/display',
-//   },
-// ]
-
-
-
-
-// export default function Monaco() {
-//   return (<div>
-//     <Editor height="90vh" defaultLanguage="javascript" defaultValue="// some comment" />
-//     </div>);
-// }

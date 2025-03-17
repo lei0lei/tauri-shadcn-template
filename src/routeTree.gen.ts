@@ -34,6 +34,15 @@ const authForgotPasswordLazyImport = createFileRoute(
 const AuthenticatedSettingsRouteLazyImport = createFileRoute(
   '/_authenticated/settings',
 )()
+const AuthenticatedRecordsRouteLazyImport = createFileRoute(
+  '/_authenticated/records',
+)()
+const AuthenticatedLogsRouteLazyImport = createFileRoute(
+  '/_authenticated/logs',
+)()
+const AuthenticatedAnalyticsRouteLazyImport = createFileRoute(
+  '/_authenticated/analytics',
+)()
 const AuthenticatedUsersIndexLazyImport = createFileRoute(
   '/_authenticated/users/',
 )()
@@ -46,8 +55,8 @@ const AuthenticatedSettingsIndexLazyImport = createFileRoute(
 const AuthenticatedProjectIndexLazyImport = createFileRoute(
   '/_authenticated/project/',
 )()
-const AuthenticatedNoderIndexLazyImport = createFileRoute(
-  '/_authenticated/noder/',
+const AuthenticatedNodeIndexLazyImport = createFileRoute(
+  '/_authenticated/node/',
 )()
 const AuthenticatedMonacoIndexLazyImport = createFileRoute(
   '/_authenticated/monaco/',
@@ -61,17 +70,23 @@ const AuthenticatedChatsIndexLazyImport = createFileRoute(
 const AuthenticatedAppsIndexLazyImport = createFileRoute(
   '/_authenticated/apps/',
 )()
-const AuthenticatedSettingsNotificationsLazyImport = createFileRoute(
-  '/_authenticated/settings/notifications',
+const AuthenticatedSettingsSoftwareLazyImport = createFileRoute(
+  '/_authenticated/settings/software',
 )()
-const AuthenticatedSettingsDisplayLazyImport = createFileRoute(
-  '/_authenticated/settings/display',
+const AuthenticatedSettingsSensorLazyImport = createFileRoute(
+  '/_authenticated/settings/sensor',
 )()
-const AuthenticatedSettingsAppearanceLazyImport = createFileRoute(
-  '/_authenticated/settings/appearance',
+const AuthenticatedSettingsRobotLazyImport = createFileRoute(
+  '/_authenticated/settings/robot',
 )()
-const AuthenticatedSettingsAccountLazyImport = createFileRoute(
-  '/_authenticated/settings/account',
+const AuthenticatedSettingsPlcLazyImport = createFileRoute(
+  '/_authenticated/settings/plc',
+)()
+const AuthenticatedSettingsDetectionLazyImport = createFileRoute(
+  '/_authenticated/settings/detection',
+)()
+const AuthenticatedSettingsCameraLazyImport = createFileRoute(
+  '/_authenticated/settings/camera',
 )()
 
 // Create/Update Routes
@@ -162,6 +177,34 @@ const AuthenticatedSettingsRouteLazyRoute =
     import('./routes/_authenticated/settings/route.lazy').then((d) => d.Route),
   )
 
+const AuthenticatedRecordsRouteLazyRoute =
+  AuthenticatedRecordsRouteLazyImport.update({
+    id: '/records',
+    path: '/records',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any).lazy(() =>
+    import('./routes/_authenticated/records/route.lazy').then((d) => d.Route),
+  )
+
+const AuthenticatedLogsRouteLazyRoute = AuthenticatedLogsRouteLazyImport.update(
+  {
+    id: '/logs',
+    path: '/logs',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any,
+).lazy(() =>
+  import('./routes/_authenticated/logs/route.lazy').then((d) => d.Route),
+)
+
+const AuthenticatedAnalyticsRouteLazyRoute =
+  AuthenticatedAnalyticsRouteLazyImport.update({
+    id: '/analytics',
+    path: '/analytics',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any).lazy(() =>
+    import('./routes/_authenticated/analytics/route.lazy').then((d) => d.Route),
+  )
+
 const authSignInRoute = authSignInImport.update({
   id: '/(auth)/sign-in',
   path: '/sign-in',
@@ -216,14 +259,15 @@ const AuthenticatedProjectIndexLazyRoute =
     import('./routes/_authenticated/project/index.lazy').then((d) => d.Route),
   )
 
-const AuthenticatedNoderIndexLazyRoute =
-  AuthenticatedNoderIndexLazyImport.update({
-    id: '/noder/',
-    path: '/noder/',
+const AuthenticatedNodeIndexLazyRoute = AuthenticatedNodeIndexLazyImport.update(
+  {
+    id: '/node/',
+    path: '/node/',
     getParentRoute: () => AuthenticatedRouteRoute,
-  } as any).lazy(() =>
-    import('./routes/_authenticated/noder/index.lazy').then((d) => d.Route),
-  )
+  } as any,
+).lazy(() =>
+  import('./routes/_authenticated/node/index.lazy').then((d) => d.Route),
+)
 
 const AuthenticatedMonacoIndexLazyRoute =
   AuthenticatedMonacoIndexLazyImport.update({
@@ -264,48 +308,62 @@ const AuthenticatedAppsIndexLazyRoute = AuthenticatedAppsIndexLazyImport.update(
   import('./routes/_authenticated/apps/index.lazy').then((d) => d.Route),
 )
 
-const AuthenticatedSettingsNotificationsLazyRoute =
-  AuthenticatedSettingsNotificationsLazyImport.update({
-    id: '/notifications',
-    path: '/notifications',
+const AuthenticatedSettingsSoftwareLazyRoute =
+  AuthenticatedSettingsSoftwareLazyImport.update({
+    id: '/software',
+    path: '/software',
     getParentRoute: () => AuthenticatedSettingsRouteLazyRoute,
   } as any).lazy(() =>
-    import('./routes/_authenticated/settings/notifications.lazy').then(
+    import('./routes/_authenticated/settings/software.lazy').then(
       (d) => d.Route,
     ),
   )
 
-const AuthenticatedSettingsDisplayLazyRoute =
-  AuthenticatedSettingsDisplayLazyImport.update({
-    id: '/display',
-    path: '/display',
+const AuthenticatedSettingsSensorLazyRoute =
+  AuthenticatedSettingsSensorLazyImport.update({
+    id: '/sensor',
+    path: '/sensor',
     getParentRoute: () => AuthenticatedSettingsRouteLazyRoute,
   } as any).lazy(() =>
-    import('./routes/_authenticated/settings/display.lazy').then(
+    import('./routes/_authenticated/settings/sensor.lazy').then((d) => d.Route),
+  )
+
+const AuthenticatedSettingsRobotLazyRoute =
+  AuthenticatedSettingsRobotLazyImport.update({
+    id: '/robot',
+    path: '/robot',
+    getParentRoute: () => AuthenticatedSettingsRouteLazyRoute,
+  } as any).lazy(() =>
+    import('./routes/_authenticated/settings/robot.lazy').then((d) => d.Route),
+  )
+
+const AuthenticatedSettingsPlcLazyRoute =
+  AuthenticatedSettingsPlcLazyImport.update({
+    id: '/plc',
+    path: '/plc',
+    getParentRoute: () => AuthenticatedSettingsRouteLazyRoute,
+  } as any).lazy(() =>
+    import('./routes/_authenticated/settings/plc.lazy').then((d) => d.Route),
+  )
+
+const AuthenticatedSettingsDetectionLazyRoute =
+  AuthenticatedSettingsDetectionLazyImport.update({
+    id: '/detection',
+    path: '/detection',
+    getParentRoute: () => AuthenticatedSettingsRouteLazyRoute,
+  } as any).lazy(() =>
+    import('./routes/_authenticated/settings/detection.lazy').then(
       (d) => d.Route,
     ),
   )
 
-const AuthenticatedSettingsAppearanceLazyRoute =
-  AuthenticatedSettingsAppearanceLazyImport.update({
-    id: '/appearance',
-    path: '/appearance',
+const AuthenticatedSettingsCameraLazyRoute =
+  AuthenticatedSettingsCameraLazyImport.update({
+    id: '/camera',
+    path: '/camera',
     getParentRoute: () => AuthenticatedSettingsRouteLazyRoute,
   } as any).lazy(() =>
-    import('./routes/_authenticated/settings/appearance.lazy').then(
-      (d) => d.Route,
-    ),
-  )
-
-const AuthenticatedSettingsAccountLazyRoute =
-  AuthenticatedSettingsAccountLazyImport.update({
-    id: '/account',
-    path: '/account',
-    getParentRoute: () => AuthenticatedSettingsRouteLazyRoute,
-  } as any).lazy(() =>
-    import('./routes/_authenticated/settings/account.lazy').then(
-      (d) => d.Route,
-    ),
+    import('./routes/_authenticated/settings/camera.lazy').then((d) => d.Route),
   )
 
 // Populate the FileRoutesByPath interface
@@ -339,6 +397,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/sign-in'
       preLoaderRoute: typeof authSignInImport
       parentRoute: typeof rootRoute
+    }
+    '/_authenticated/analytics': {
+      id: '/_authenticated/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AuthenticatedAnalyticsRouteLazyImport
+      parentRoute: typeof AuthenticatedRouteImport
+    }
+    '/_authenticated/logs': {
+      id: '/_authenticated/logs'
+      path: '/logs'
+      fullPath: '/logs'
+      preLoaderRoute: typeof AuthenticatedLogsRouteLazyImport
+      parentRoute: typeof AuthenticatedRouteImport
+    }
+    '/_authenticated/records': {
+      id: '/_authenticated/records'
+      path: '/records'
+      fullPath: '/records'
+      preLoaderRoute: typeof AuthenticatedRecordsRouteLazyImport
+      parentRoute: typeof AuthenticatedRouteImport
     }
     '/_authenticated/settings': {
       id: '/_authenticated/settings'
@@ -410,32 +489,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndexImport
       parentRoute: typeof AuthenticatedRouteImport
     }
-    '/_authenticated/settings/account': {
-      id: '/_authenticated/settings/account'
-      path: '/account'
-      fullPath: '/settings/account'
-      preLoaderRoute: typeof AuthenticatedSettingsAccountLazyImport
+    '/_authenticated/settings/camera': {
+      id: '/_authenticated/settings/camera'
+      path: '/camera'
+      fullPath: '/settings/camera'
+      preLoaderRoute: typeof AuthenticatedSettingsCameraLazyImport
       parentRoute: typeof AuthenticatedSettingsRouteLazyImport
     }
-    '/_authenticated/settings/appearance': {
-      id: '/_authenticated/settings/appearance'
-      path: '/appearance'
-      fullPath: '/settings/appearance'
-      preLoaderRoute: typeof AuthenticatedSettingsAppearanceLazyImport
+    '/_authenticated/settings/detection': {
+      id: '/_authenticated/settings/detection'
+      path: '/detection'
+      fullPath: '/settings/detection'
+      preLoaderRoute: typeof AuthenticatedSettingsDetectionLazyImport
       parentRoute: typeof AuthenticatedSettingsRouteLazyImport
     }
-    '/_authenticated/settings/display': {
-      id: '/_authenticated/settings/display'
-      path: '/display'
-      fullPath: '/settings/display'
-      preLoaderRoute: typeof AuthenticatedSettingsDisplayLazyImport
+    '/_authenticated/settings/plc': {
+      id: '/_authenticated/settings/plc'
+      path: '/plc'
+      fullPath: '/settings/plc'
+      preLoaderRoute: typeof AuthenticatedSettingsPlcLazyImport
       parentRoute: typeof AuthenticatedSettingsRouteLazyImport
     }
-    '/_authenticated/settings/notifications': {
-      id: '/_authenticated/settings/notifications'
-      path: '/notifications'
-      fullPath: '/settings/notifications'
-      preLoaderRoute: typeof AuthenticatedSettingsNotificationsLazyImport
+    '/_authenticated/settings/robot': {
+      id: '/_authenticated/settings/robot'
+      path: '/robot'
+      fullPath: '/settings/robot'
+      preLoaderRoute: typeof AuthenticatedSettingsRobotLazyImport
+      parentRoute: typeof AuthenticatedSettingsRouteLazyImport
+    }
+    '/_authenticated/settings/sensor': {
+      id: '/_authenticated/settings/sensor'
+      path: '/sensor'
+      fullPath: '/settings/sensor'
+      preLoaderRoute: typeof AuthenticatedSettingsSensorLazyImport
+      parentRoute: typeof AuthenticatedSettingsRouteLazyImport
+    }
+    '/_authenticated/settings/software': {
+      id: '/_authenticated/settings/software'
+      path: '/software'
+      fullPath: '/settings/software'
+      preLoaderRoute: typeof AuthenticatedSettingsSoftwareLazyImport
       parentRoute: typeof AuthenticatedSettingsRouteLazyImport
     }
     '/_authenticated/apps/': {
@@ -466,11 +559,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMonacoIndexLazyImport
       parentRoute: typeof AuthenticatedRouteImport
     }
-    '/_authenticated/noder/': {
-      id: '/_authenticated/noder/'
-      path: '/noder'
-      fullPath: '/noder'
-      preLoaderRoute: typeof AuthenticatedNoderIndexLazyImport
+    '/_authenticated/node/': {
+      id: '/_authenticated/node/'
+      path: '/node'
+      fullPath: '/node'
+      preLoaderRoute: typeof AuthenticatedNodeIndexLazyImport
       parentRoute: typeof AuthenticatedRouteImport
     }
     '/_authenticated/project/': {
@@ -507,23 +600,25 @@ declare module '@tanstack/react-router' {
 // Create and export the route tree
 
 interface AuthenticatedSettingsRouteLazyRouteChildren {
-  AuthenticatedSettingsAccountLazyRoute: typeof AuthenticatedSettingsAccountLazyRoute
-  AuthenticatedSettingsAppearanceLazyRoute: typeof AuthenticatedSettingsAppearanceLazyRoute
-  AuthenticatedSettingsDisplayLazyRoute: typeof AuthenticatedSettingsDisplayLazyRoute
-  AuthenticatedSettingsNotificationsLazyRoute: typeof AuthenticatedSettingsNotificationsLazyRoute
+  AuthenticatedSettingsCameraLazyRoute: typeof AuthenticatedSettingsCameraLazyRoute
+  AuthenticatedSettingsDetectionLazyRoute: typeof AuthenticatedSettingsDetectionLazyRoute
+  AuthenticatedSettingsPlcLazyRoute: typeof AuthenticatedSettingsPlcLazyRoute
+  AuthenticatedSettingsRobotLazyRoute: typeof AuthenticatedSettingsRobotLazyRoute
+  AuthenticatedSettingsSensorLazyRoute: typeof AuthenticatedSettingsSensorLazyRoute
+  AuthenticatedSettingsSoftwareLazyRoute: typeof AuthenticatedSettingsSoftwareLazyRoute
   AuthenticatedSettingsIndexLazyRoute: typeof AuthenticatedSettingsIndexLazyRoute
 }
 
 const AuthenticatedSettingsRouteLazyRouteChildren: AuthenticatedSettingsRouteLazyRouteChildren =
   {
-    AuthenticatedSettingsAccountLazyRoute:
-      AuthenticatedSettingsAccountLazyRoute,
-    AuthenticatedSettingsAppearanceLazyRoute:
-      AuthenticatedSettingsAppearanceLazyRoute,
-    AuthenticatedSettingsDisplayLazyRoute:
-      AuthenticatedSettingsDisplayLazyRoute,
-    AuthenticatedSettingsNotificationsLazyRoute:
-      AuthenticatedSettingsNotificationsLazyRoute,
+    AuthenticatedSettingsCameraLazyRoute: AuthenticatedSettingsCameraLazyRoute,
+    AuthenticatedSettingsDetectionLazyRoute:
+      AuthenticatedSettingsDetectionLazyRoute,
+    AuthenticatedSettingsPlcLazyRoute: AuthenticatedSettingsPlcLazyRoute,
+    AuthenticatedSettingsRobotLazyRoute: AuthenticatedSettingsRobotLazyRoute,
+    AuthenticatedSettingsSensorLazyRoute: AuthenticatedSettingsSensorLazyRoute,
+    AuthenticatedSettingsSoftwareLazyRoute:
+      AuthenticatedSettingsSoftwareLazyRoute,
     AuthenticatedSettingsIndexLazyRoute: AuthenticatedSettingsIndexLazyRoute,
   }
 
@@ -533,19 +628,25 @@ const AuthenticatedSettingsRouteLazyRouteWithChildren =
   )
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAnalyticsRouteLazyRoute: typeof AuthenticatedAnalyticsRouteLazyRoute
+  AuthenticatedLogsRouteLazyRoute: typeof AuthenticatedLogsRouteLazyRoute
+  AuthenticatedRecordsRouteLazyRoute: typeof AuthenticatedRecordsRouteLazyRoute
   AuthenticatedSettingsRouteLazyRoute: typeof AuthenticatedSettingsRouteLazyRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAppsIndexLazyRoute: typeof AuthenticatedAppsIndexLazyRoute
   AuthenticatedChatsIndexLazyRoute: typeof AuthenticatedChatsIndexLazyRoute
   AuthenticatedHelpCenterIndexLazyRoute: typeof AuthenticatedHelpCenterIndexLazyRoute
   AuthenticatedMonacoIndexLazyRoute: typeof AuthenticatedMonacoIndexLazyRoute
-  AuthenticatedNoderIndexLazyRoute: typeof AuthenticatedNoderIndexLazyRoute
+  AuthenticatedNodeIndexLazyRoute: typeof AuthenticatedNodeIndexLazyRoute
   AuthenticatedProjectIndexLazyRoute: typeof AuthenticatedProjectIndexLazyRoute
   AuthenticatedTasksIndexLazyRoute: typeof AuthenticatedTasksIndexLazyRoute
   AuthenticatedUsersIndexLazyRoute: typeof AuthenticatedUsersIndexLazyRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAnalyticsRouteLazyRoute: AuthenticatedAnalyticsRouteLazyRoute,
+  AuthenticatedLogsRouteLazyRoute: AuthenticatedLogsRouteLazyRoute,
+  AuthenticatedRecordsRouteLazyRoute: AuthenticatedRecordsRouteLazyRoute,
   AuthenticatedSettingsRouteLazyRoute:
     AuthenticatedSettingsRouteLazyRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
@@ -553,7 +654,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedChatsIndexLazyRoute: AuthenticatedChatsIndexLazyRoute,
   AuthenticatedHelpCenterIndexLazyRoute: AuthenticatedHelpCenterIndexLazyRoute,
   AuthenticatedMonacoIndexLazyRoute: AuthenticatedMonacoIndexLazyRoute,
-  AuthenticatedNoderIndexLazyRoute: AuthenticatedNoderIndexLazyRoute,
+  AuthenticatedNodeIndexLazyRoute: AuthenticatedNodeIndexLazyRoute,
   AuthenticatedProjectIndexLazyRoute: AuthenticatedProjectIndexLazyRoute,
   AuthenticatedTasksIndexLazyRoute: AuthenticatedTasksIndexLazyRoute,
   AuthenticatedUsersIndexLazyRoute: AuthenticatedUsersIndexLazyRoute,
@@ -567,6 +668,9 @@ export interface FileRoutesByFullPath {
   '/500': typeof errors500LazyRoute
   '/otp': typeof authOtpRoute
   '/sign-in': typeof authSignInRoute
+  '/analytics': typeof AuthenticatedAnalyticsRouteLazyRoute
+  '/logs': typeof AuthenticatedLogsRouteLazyRoute
+  '/records': typeof AuthenticatedRecordsRouteLazyRoute
   '/settings': typeof AuthenticatedSettingsRouteLazyRouteWithChildren
   '/forgot-password': typeof authForgotPasswordLazyRoute
   '/sign-in-2': typeof authSignIn2LazyRoute
@@ -576,15 +680,17 @@ export interface FileRoutesByFullPath {
   '/404': typeof errors404LazyRoute
   '/503': typeof errors503LazyRoute
   '/': typeof AuthenticatedIndexRoute
-  '/settings/account': typeof AuthenticatedSettingsAccountLazyRoute
-  '/settings/appearance': typeof AuthenticatedSettingsAppearanceLazyRoute
-  '/settings/display': typeof AuthenticatedSettingsDisplayLazyRoute
-  '/settings/notifications': typeof AuthenticatedSettingsNotificationsLazyRoute
+  '/settings/camera': typeof AuthenticatedSettingsCameraLazyRoute
+  '/settings/detection': typeof AuthenticatedSettingsDetectionLazyRoute
+  '/settings/plc': typeof AuthenticatedSettingsPlcLazyRoute
+  '/settings/robot': typeof AuthenticatedSettingsRobotLazyRoute
+  '/settings/sensor': typeof AuthenticatedSettingsSensorLazyRoute
+  '/settings/software': typeof AuthenticatedSettingsSoftwareLazyRoute
   '/apps': typeof AuthenticatedAppsIndexLazyRoute
   '/chats': typeof AuthenticatedChatsIndexLazyRoute
   '/help-center': typeof AuthenticatedHelpCenterIndexLazyRoute
   '/monaco': typeof AuthenticatedMonacoIndexLazyRoute
-  '/noder': typeof AuthenticatedNoderIndexLazyRoute
+  '/node': typeof AuthenticatedNodeIndexLazyRoute
   '/project': typeof AuthenticatedProjectIndexLazyRoute
   '/settings/': typeof AuthenticatedSettingsIndexLazyRoute
   '/tasks': typeof AuthenticatedTasksIndexLazyRoute
@@ -595,6 +701,9 @@ export interface FileRoutesByTo {
   '/500': typeof errors500LazyRoute
   '/otp': typeof authOtpRoute
   '/sign-in': typeof authSignInRoute
+  '/analytics': typeof AuthenticatedAnalyticsRouteLazyRoute
+  '/logs': typeof AuthenticatedLogsRouteLazyRoute
+  '/records': typeof AuthenticatedRecordsRouteLazyRoute
   '/forgot-password': typeof authForgotPasswordLazyRoute
   '/sign-in-2': typeof authSignIn2LazyRoute
   '/sign-up': typeof authSignUpLazyRoute
@@ -603,15 +712,17 @@ export interface FileRoutesByTo {
   '/404': typeof errors404LazyRoute
   '/503': typeof errors503LazyRoute
   '/': typeof AuthenticatedIndexRoute
-  '/settings/account': typeof AuthenticatedSettingsAccountLazyRoute
-  '/settings/appearance': typeof AuthenticatedSettingsAppearanceLazyRoute
-  '/settings/display': typeof AuthenticatedSettingsDisplayLazyRoute
-  '/settings/notifications': typeof AuthenticatedSettingsNotificationsLazyRoute
+  '/settings/camera': typeof AuthenticatedSettingsCameraLazyRoute
+  '/settings/detection': typeof AuthenticatedSettingsDetectionLazyRoute
+  '/settings/plc': typeof AuthenticatedSettingsPlcLazyRoute
+  '/settings/robot': typeof AuthenticatedSettingsRobotLazyRoute
+  '/settings/sensor': typeof AuthenticatedSettingsSensorLazyRoute
+  '/settings/software': typeof AuthenticatedSettingsSoftwareLazyRoute
   '/apps': typeof AuthenticatedAppsIndexLazyRoute
   '/chats': typeof AuthenticatedChatsIndexLazyRoute
   '/help-center': typeof AuthenticatedHelpCenterIndexLazyRoute
   '/monaco': typeof AuthenticatedMonacoIndexLazyRoute
-  '/noder': typeof AuthenticatedNoderIndexLazyRoute
+  '/node': typeof AuthenticatedNodeIndexLazyRoute
   '/project': typeof AuthenticatedProjectIndexLazyRoute
   '/settings': typeof AuthenticatedSettingsIndexLazyRoute
   '/tasks': typeof AuthenticatedTasksIndexLazyRoute
@@ -624,6 +735,9 @@ export interface FileRoutesById {
   '/(auth)/500': typeof auth500Route
   '/(auth)/otp': typeof authOtpRoute
   '/(auth)/sign-in': typeof authSignInRoute
+  '/_authenticated/analytics': typeof AuthenticatedAnalyticsRouteLazyRoute
+  '/_authenticated/logs': typeof AuthenticatedLogsRouteLazyRoute
+  '/_authenticated/records': typeof AuthenticatedRecordsRouteLazyRoute
   '/_authenticated/settings': typeof AuthenticatedSettingsRouteLazyRouteWithChildren
   '/(auth)/forgot-password': typeof authForgotPasswordLazyRoute
   '/(auth)/sign-in-2': typeof authSignIn2LazyRoute
@@ -634,15 +748,17 @@ export interface FileRoutesById {
   '/(errors)/500': typeof errors500LazyRoute
   '/(errors)/503': typeof errors503LazyRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
-  '/_authenticated/settings/account': typeof AuthenticatedSettingsAccountLazyRoute
-  '/_authenticated/settings/appearance': typeof AuthenticatedSettingsAppearanceLazyRoute
-  '/_authenticated/settings/display': typeof AuthenticatedSettingsDisplayLazyRoute
-  '/_authenticated/settings/notifications': typeof AuthenticatedSettingsNotificationsLazyRoute
+  '/_authenticated/settings/camera': typeof AuthenticatedSettingsCameraLazyRoute
+  '/_authenticated/settings/detection': typeof AuthenticatedSettingsDetectionLazyRoute
+  '/_authenticated/settings/plc': typeof AuthenticatedSettingsPlcLazyRoute
+  '/_authenticated/settings/robot': typeof AuthenticatedSettingsRobotLazyRoute
+  '/_authenticated/settings/sensor': typeof AuthenticatedSettingsSensorLazyRoute
+  '/_authenticated/settings/software': typeof AuthenticatedSettingsSoftwareLazyRoute
   '/_authenticated/apps/': typeof AuthenticatedAppsIndexLazyRoute
   '/_authenticated/chats/': typeof AuthenticatedChatsIndexLazyRoute
   '/_authenticated/help-center/': typeof AuthenticatedHelpCenterIndexLazyRoute
   '/_authenticated/monaco/': typeof AuthenticatedMonacoIndexLazyRoute
-  '/_authenticated/noder/': typeof AuthenticatedNoderIndexLazyRoute
+  '/_authenticated/node/': typeof AuthenticatedNodeIndexLazyRoute
   '/_authenticated/project/': typeof AuthenticatedProjectIndexLazyRoute
   '/_authenticated/settings/': typeof AuthenticatedSettingsIndexLazyRoute
   '/_authenticated/tasks/': typeof AuthenticatedTasksIndexLazyRoute
@@ -656,6 +772,9 @@ export interface FileRouteTypes {
     | '/500'
     | '/otp'
     | '/sign-in'
+    | '/analytics'
+    | '/logs'
+    | '/records'
     | '/settings'
     | '/forgot-password'
     | '/sign-in-2'
@@ -665,15 +784,17 @@ export interface FileRouteTypes {
     | '/404'
     | '/503'
     | '/'
-    | '/settings/account'
-    | '/settings/appearance'
-    | '/settings/display'
-    | '/settings/notifications'
+    | '/settings/camera'
+    | '/settings/detection'
+    | '/settings/plc'
+    | '/settings/robot'
+    | '/settings/sensor'
+    | '/settings/software'
     | '/apps'
     | '/chats'
     | '/help-center'
     | '/monaco'
-    | '/noder'
+    | '/node'
     | '/project'
     | '/settings/'
     | '/tasks'
@@ -683,6 +804,9 @@ export interface FileRouteTypes {
     | '/500'
     | '/otp'
     | '/sign-in'
+    | '/analytics'
+    | '/logs'
+    | '/records'
     | '/forgot-password'
     | '/sign-in-2'
     | '/sign-up'
@@ -691,15 +815,17 @@ export interface FileRouteTypes {
     | '/404'
     | '/503'
     | '/'
-    | '/settings/account'
-    | '/settings/appearance'
-    | '/settings/display'
-    | '/settings/notifications'
+    | '/settings/camera'
+    | '/settings/detection'
+    | '/settings/plc'
+    | '/settings/robot'
+    | '/settings/sensor'
+    | '/settings/software'
     | '/apps'
     | '/chats'
     | '/help-center'
     | '/monaco'
-    | '/noder'
+    | '/node'
     | '/project'
     | '/settings'
     | '/tasks'
@@ -710,6 +836,9 @@ export interface FileRouteTypes {
     | '/(auth)/500'
     | '/(auth)/otp'
     | '/(auth)/sign-in'
+    | '/_authenticated/analytics'
+    | '/_authenticated/logs'
+    | '/_authenticated/records'
     | '/_authenticated/settings'
     | '/(auth)/forgot-password'
     | '/(auth)/sign-in-2'
@@ -720,15 +849,17 @@ export interface FileRouteTypes {
     | '/(errors)/500'
     | '/(errors)/503'
     | '/_authenticated/'
-    | '/_authenticated/settings/account'
-    | '/_authenticated/settings/appearance'
-    | '/_authenticated/settings/display'
-    | '/_authenticated/settings/notifications'
+    | '/_authenticated/settings/camera'
+    | '/_authenticated/settings/detection'
+    | '/_authenticated/settings/plc'
+    | '/_authenticated/settings/robot'
+    | '/_authenticated/settings/sensor'
+    | '/_authenticated/settings/software'
     | '/_authenticated/apps/'
     | '/_authenticated/chats/'
     | '/_authenticated/help-center/'
     | '/_authenticated/monaco/'
-    | '/_authenticated/noder/'
+    | '/_authenticated/node/'
     | '/_authenticated/project/'
     | '/_authenticated/settings/'
     | '/_authenticated/tasks/'
@@ -793,13 +924,16 @@ export const routeTree = rootRoute
     "/_authenticated": {
       "filePath": "_authenticated/route.tsx",
       "children": [
+        "/_authenticated/analytics",
+        "/_authenticated/logs",
+        "/_authenticated/records",
         "/_authenticated/settings",
         "/_authenticated/",
         "/_authenticated/apps/",
         "/_authenticated/chats/",
         "/_authenticated/help-center/",
         "/_authenticated/monaco/",
-        "/_authenticated/noder/",
+        "/_authenticated/node/",
         "/_authenticated/project/",
         "/_authenticated/tasks/",
         "/_authenticated/users/"
@@ -814,14 +948,28 @@ export const routeTree = rootRoute
     "/(auth)/sign-in": {
       "filePath": "(auth)/sign-in.tsx"
     },
+    "/_authenticated/analytics": {
+      "filePath": "_authenticated/analytics/route.lazy.tsx",
+      "parent": "/_authenticated"
+    },
+    "/_authenticated/logs": {
+      "filePath": "_authenticated/logs/route.lazy.tsx",
+      "parent": "/_authenticated"
+    },
+    "/_authenticated/records": {
+      "filePath": "_authenticated/records/route.lazy.tsx",
+      "parent": "/_authenticated"
+    },
     "/_authenticated/settings": {
       "filePath": "_authenticated/settings/route.lazy.tsx",
       "parent": "/_authenticated",
       "children": [
-        "/_authenticated/settings/account",
-        "/_authenticated/settings/appearance",
-        "/_authenticated/settings/display",
-        "/_authenticated/settings/notifications",
+        "/_authenticated/settings/camera",
+        "/_authenticated/settings/detection",
+        "/_authenticated/settings/plc",
+        "/_authenticated/settings/robot",
+        "/_authenticated/settings/sensor",
+        "/_authenticated/settings/software",
         "/_authenticated/settings/"
       ]
     },
@@ -853,20 +1001,28 @@ export const routeTree = rootRoute
       "filePath": "_authenticated/index.tsx",
       "parent": "/_authenticated"
     },
-    "/_authenticated/settings/account": {
-      "filePath": "_authenticated/settings/account.lazy.tsx",
+    "/_authenticated/settings/camera": {
+      "filePath": "_authenticated/settings/camera.lazy.tsx",
       "parent": "/_authenticated/settings"
     },
-    "/_authenticated/settings/appearance": {
-      "filePath": "_authenticated/settings/appearance.lazy.tsx",
+    "/_authenticated/settings/detection": {
+      "filePath": "_authenticated/settings/detection.lazy.tsx",
       "parent": "/_authenticated/settings"
     },
-    "/_authenticated/settings/display": {
-      "filePath": "_authenticated/settings/display.lazy.tsx",
+    "/_authenticated/settings/plc": {
+      "filePath": "_authenticated/settings/plc.lazy.tsx",
       "parent": "/_authenticated/settings"
     },
-    "/_authenticated/settings/notifications": {
-      "filePath": "_authenticated/settings/notifications.lazy.tsx",
+    "/_authenticated/settings/robot": {
+      "filePath": "_authenticated/settings/robot.lazy.tsx",
+      "parent": "/_authenticated/settings"
+    },
+    "/_authenticated/settings/sensor": {
+      "filePath": "_authenticated/settings/sensor.lazy.tsx",
+      "parent": "/_authenticated/settings"
+    },
+    "/_authenticated/settings/software": {
+      "filePath": "_authenticated/settings/software.lazy.tsx",
       "parent": "/_authenticated/settings"
     },
     "/_authenticated/apps/": {
@@ -885,8 +1041,8 @@ export const routeTree = rootRoute
       "filePath": "_authenticated/monaco/index.lazy.tsx",
       "parent": "/_authenticated"
     },
-    "/_authenticated/noder/": {
-      "filePath": "_authenticated/noder/index.lazy.tsx",
+    "/_authenticated/node/": {
+      "filePath": "_authenticated/node/index.lazy.tsx",
       "parent": "/_authenticated"
     },
     "/_authenticated/project/": {

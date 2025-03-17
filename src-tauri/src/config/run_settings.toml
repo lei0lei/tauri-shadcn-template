@@ -1,3 +1,4 @@
+# 运行时设置
 [log]
 log_dir = ''
 image_dir = ''
@@ -6,6 +7,14 @@ image_dir = ''
 [service]
 database = 'surreal'
 algo_backend = 'fastapi'
+
+[database]
+database = 'surreal'
+ip = '127.0.0.1'
+port = 8000
+
+[save_dir]
+
 
 
 

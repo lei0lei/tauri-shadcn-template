@@ -26,3 +26,9 @@ tauri-plugin-os = "2.2.0"
 tauri-plugin-shell = "2"
 tokio = { version = "1.43.0", features = ["full", "macros", "mio", "rt-multi-thread"] }
 surrealdb = "2.2.1"
+ethercrab = { version = "0.5.3", default-features = false, features = ["std"] }
+hikvision = { version="0.1", features = ["mvs", "net", "ui"] }
+tokio-modbus = "*"
+lazy_static = "1.5.0"
+e-utils = { version = "0.3", features = ["algorithm", "macros"] }
+opencv =  "0.94.2"
