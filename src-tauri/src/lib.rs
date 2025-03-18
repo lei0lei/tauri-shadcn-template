@@ -2,16 +2,14 @@ use std::sync::{Arc, RwLock};
 use std::thread;
 use std::fs::File;
 use std::io::Read;
-use tokio::sync::mpsc;
 use std::sync::mpsc::{Sender, Receiver};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
 use tauri::{AppHandle, Manager,Emitter};
 
 use std::time::Duration;
-use tokio::process::Child; // 导入 tokio::process::Child
-use tokio::sync::oneshot;
-use tokio::sync::Mutex;
+use tokio::process::Child; 
+use tokio::sync::{oneshot, Mutex, mpsc};
 use tauri::{State, WindowEvent};
 use tokio::task;
 mod sidecar;
@@ -66,7 +64,6 @@ lazy_static::lazy_static! {
   pub static ref START_STATE: Arc<std::sync::Mutex<SoftwareState>> = Arc::new(std::sync::Mutex::new(SoftwareState::STOP));
 }
 
-
 pub static mut PLC_STATE: HardwareState = HardwareState::plc(false);
 pub static mut CAMERA_STATE: HardwareState = HardwareState::camera(false);
 pub static mut SENSOR_STATE: HardwareState = HardwareState::sensor(false);
@@ -89,7 +86,6 @@ lazy_static! {
       Arc::new(std::sync::Mutex::new(None));
 }
 
-
 // 机器人消息队列(读写)
 
 // 当前任务存放
@@ -101,15 +97,13 @@ pub struct HoleState {
 
 }
 
-
-
 // 数据消息队列(相机、传感器)
 pub enum SensorsDataRequest {
   ImageProcess(cameras::hik_camera::FrameInfoSafe,Vec<u8>),
   Cf3000(Vec<u8>),
 }
 
-// 初始化传感器消息队列
+// 初始化传感器消息队列,回调需要在同步环境中运行
 pub fn start_sensor_task(mut rx: std::sync::mpsc::Receiver<SensorsDataRequest>) -> Result<(), String> {
   let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?; // 创建一个 Tokio 运行时
 
@@ -117,6 +111,25 @@ pub fn start_sensor_task(mut rx: std::sync::mpsc::Receiver<SensorsDataRequest>) 
     match request {
       SensorsDataRequest::ImageProcess(frame_info,image_data)=>{
         let log = "[camera] [log] [info]";
+        // 发送图片到前端
+        rt.spawn(async move {
+            let (resp_tx, resp_rx) = oneshot::channel();
+            let tx = GLOBAL_TX.lock().await.clone().unwrap_or_else(|| {
+                panic!("GLOBAL_TX is not initialized. Ensure that start_plc_connect() has been called.");
+            });
+            tx.send(GeneralRequest::SendImageToFrontend(frame_info,image_data, resp_tx))
+                .await
+                .map_err(|_| "发送请求失败".to_string());
+            match resp_rx.await {
+                      Ok(_) => {
+                      }
+                      Err(e) => {
+                          println!("图片发送请求失败 {}！",e);
+                      }
+                  }
+      });
+
+        // 发送log到前端
         // rt.spawn(async move {
         //     let (resp_tx, resp_rx) = oneshot::channel();
         //     let tx = GLOBAL_TX.lock().await.clone().unwrap_or_else(|| {
@@ -145,7 +158,6 @@ pub fn start_sensor_task(mut rx: std::sync::mpsc::Receiver<SensorsDataRequest>) 
   Ok(())
 }
 
-
 pub fn start_sensor_mpsc() -> Result<bool, String>{
     let (tx, rx) = std::sync::mpsc::sync_channel::<SensorsDataRequest>(32);
     // 存储 `tx` 在全局变量
@@ -161,7 +173,6 @@ pub fn start_sensor_mpsc() -> Result<bool, String>{
   Ok(true)
 }
 
-
 // 通用消息队列(结果判定、数据返回前端、保存相关数据等)
 pub enum GeneralRequest {
   StartMonitorProcess(oneshot::Sender<Result<(), String>>),
@@ -172,9 +183,9 @@ pub enum GeneralRequest {
   GetImageResult(Vec<u8>, String, oneshot::Sender<Result<String, String>>), // 获取图像结果,
   GetSensorResult(f64, oneshot::Sender<Result<String, String>>),  // 获取传感器结果
   SendLogToFrontend(String, oneshot::Sender<Result<(), String>>),  // 发送日志到前端
-  SendImageToFrontend(Vec<u8>, oneshot::Sender<Result<(), String>>),  // 发送图像到前端
+  SendImageToFrontend(cameras::hik_camera::FrameInfoSafe,Vec<u8>, oneshot::Sender<Result<(), String>>),  // 发送图像到前端
   GetCurrentState(oneshot::Sender<Result<String, String>>),  // 获取当前状态
-  SendJsonToFrontend(String, oneshot::Sender<Result<(), String>>),
+  SendJsonToFrontend(String, oneshot::Sender<Result<(), String>>), //发送结果到前端
 }
 
 // 启动监控过程的异步任务
@@ -239,9 +250,9 @@ pub async fn start_global_task(mut rx: mpsc::Receiver<GeneralRequest>,app_handle
         let _ = resp_tx.send(Ok(()));
       }
       // 发送图像到前端
-      GeneralRequest::SendImageToFrontend(image_data, resp_tx) => {
+      GeneralRequest::SendImageToFrontend(frame_info,image_data, resp_tx) => {
         // 假设这里是发送图像到前端的逻辑
-        send_image_to_frontend(image_data).await;
+        send_image_to_frontend(app_handle.clone(),frame_info,image_data).await;
         let _ = resp_tx.send(Ok(()));
       }
       // 获取当前状态
@@ -291,10 +302,47 @@ async fn send_log_to_frontend(app_handle:tauri::AppHandle, log_message: String) 
   println!("发送日志到前端: {}", log_message);
 }
 
-async fn send_image_to_frontend(image_data: Vec<u8>) {
+async fn send_image_to_frontend(app_handle:tauri::AppHandle,frame_info:cameras::hik_camera::FrameInfoSafe,image_data: Vec<u8>) {
   // 模拟发送图像到前端
   println!("发送图像到前端，图像大小: {} bytes", image_data.len());
+
+  // bayerGB到RGB转换
+
+  let width = frame_info.nWidth as i32;
+  let height = frame_info.nHeight as i32;
+  // let mut mat = unsafe {
+  //   Mat::new_rows_cols(height, width, CV_8U).map_err(|_| "Mat 创建失败")?
+  // };
+        
+  // // 获取 Mat 数据指针
+  // let mat_ptr = mat.data_mut();
+  // if mat_ptr.is_null() {
+  //     return Err("Mat 数据指针为空");
+  // }
+
+  // // 复制 buffer 数据到 Mat
+  // unsafe {
+  //     std::ptr::copy_nonoverlapping(image_data.as_ptr(), mat_ptr, image_data.len());
+  // }
+
+  // // 创建一个空 Mat 用于存放 RGB 图像数据
+  // let mut rgb_mat = Mat::new_rows_cols_with_default(
+  //   height,
+  //   width,
+  //   CV_8UC3,
+  //   Scalar::all(0.0),
+  // ).map_err(|_| "RGB Mat 创建失败")?;
+        
+  // // 将 Bayer 格式转换为 RGB
+  // imgproc::cvt_color(&mat, &mut rgb_mat, imgproc::COLOR_BayerGB2BGR, 0,AlgorithmHint::ALGO_HINT_DEFAULT)
+  // .map_err(|_| "Bayer 到 RGB 转换失败")?;
+
+  // 发送rgb_mat到前端
+  // app_handle.emit("image-send-image-1", rgb_mat).unwrap(); // 发送原始二进制数据到前端
+
+
 }
+
 
 async fn send_json_to_frontend(result: String) {
   // 模拟发送图像到前端
@@ -602,8 +650,6 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
   start_plc_connection();
   start_global_mpsc_(app_handle.clone());
   start_sensor_mpsc().expect("Failed to start sensor mpsc");
-
-
 
   // 启动相机
   init_mvs_sdk();

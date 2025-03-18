@@ -1,3 +1,6 @@
+#![allow(non_snake_case)]
+#![allow(non_camel_case_types)]
+
 use std::net::SocketAddr;
 use tokio::{sync::mpsc, time::Duration};
 use tokio_modbus::client::tcp;

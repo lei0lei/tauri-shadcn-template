@@ -38,7 +38,7 @@ pub fn spawn_and_monitor_sidecar(app_handle: tauri::AppHandle) -> Result<(), Str
         .stderr(Stdio::piped()) // 捕获错误输出
         .spawn()
         .map_err(|e| e.to_string())?;
-
+ 
     let sidecar_command = Arc::new(Mutex::new(sidecar_command));
     // Store the child process in the app state
     if let Some(state) = app_handle.try_state::<Arc<Mutex<Option<Arc<Mutex<tokio::process::Child>>>>>>() {

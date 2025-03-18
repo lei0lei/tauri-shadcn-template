@@ -1,9 +1,5 @@
 import {
   IconLayoutDashboard,
-  IconParkingCircle,
-  IconCamera,
-  IconCircleDottedLetterC,
-  IconCircleLetterH,
   IconPrompt,
   IconBrandGoogleAnalytics,
   IconBrandVscode,
@@ -13,7 +9,6 @@ import {
   IconFileIsr,
   IconWaveSawTool,
   IconSettings,
-  IconCircle,
 } from '@tabler/icons-react'
 import { Command } from 'lucide-react'
 import { type SidebarData } from '../types'

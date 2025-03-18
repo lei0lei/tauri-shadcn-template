@@ -1,14 +1,13 @@
 // import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts'
-import { IconPhotoScan } from '@tabler/icons-react'; // 用于显示图标
 import { useState } from "react";
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 
 
 export function Overview() {
-  const [image1, setImage1] = useState<string | null>(null);
-  const [image2, setImage2] = useState<string | null>(null);
-  const [value1, setValue1] = useState<number>(0);
-  const [value2, setValue2] = useState<number>(0);
+  const [image1] = useState<string | null>(null);
+  const [image2] = useState<string | null>(null);
+  const [value1] = useState<number>(0);
+  const [value2] = useState<number>(0);
 
 
 

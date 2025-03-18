@@ -3,7 +3,7 @@ import { useDashboardStore } from "@/stores/dashboardStore"; // 导入 zustand s
 
 export default function ResultShow() {
   const resultComponentValue = useDashboardStore((state) => state.resultComponentValue);
-  const updateResultComponent = useDashboardStore((state) => state.updateResultComponent);
+  // const updateResultComponent = useDashboardStore((state) => state.updateResultComponent);
 
 
 

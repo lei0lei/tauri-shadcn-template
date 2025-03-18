@@ -5,7 +5,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { useQuery } from '@tanstack/react-query'
 import { Tabs, TabsContent} from '@/components/ui/tabs'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
@@ -19,7 +18,7 @@ import ResultShow from './components/resultshow'
 // import { invoke } from '@tauri-apps/api/core';
 // import React, { useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import StartStopButton from './components/startstop'
 import { Separator } from '@radix-ui/react-separator'
 import { useDashboardStore } from "@/stores/dashboardStore";
@@ -91,7 +90,7 @@ export default function Dashboard() {
               <Card>
                 <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                   <CardTitle className='text-sm font-medium'>
-                    当前型号
+                    {logs}
                   </CardTitle>
                   <svg
                     xmlns='http://www.w3.org/2000/svg'

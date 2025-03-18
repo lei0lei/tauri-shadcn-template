@@ -53,7 +53,7 @@ export function AccountForm() {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-8'>
         
-        <Button type='submit'>Update account</Button>
+        <Button type='submit'>更新设置</Button>
       </form>
     </Form>
   )
