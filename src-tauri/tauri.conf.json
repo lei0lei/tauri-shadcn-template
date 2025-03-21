@@ -29,6 +29,11 @@
       "icons/2061956.png",
       "icons/2061956.ico"
     ],
-    "resources":["assets/config/*"]
+    "resources":["assets/config/*",
+                "assets/external/bin/cf_windows_3156557.dll",
+                "assets/external/bin/CF3000FAT24040431.bt",
+                "assets/external/bin/hps_cfxxxx_sdk.dll",
+                "assets/external/bin/hps_cfxxxx_sdk.lib"]
+
  }
 }

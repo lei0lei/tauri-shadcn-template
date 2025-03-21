@@ -44,6 +44,14 @@ use opencv::{
 };
 use std::fs;
 
+mod sensors;
+
+
+
+
+
+
+
 // 主流程启动状态
 #[derive(Debug, PartialEq)]
 pub enum SoftwareState{
@@ -653,6 +661,46 @@ fn get_plc_ip_port() -> Option<String> {
   None  // 如果找不到，返回 None
 }
 
+pub fn set_plc_test() -> Result<(), Box<dyn std::error::Error>> {
+  // 获取全局配置
+  let mut config = match config::config::CONFIG.write() {
+      Ok(config) => config,
+      Err(_) => {
+          println!("获取配置失败");
+          return Err("获取配置失败".into());
+      }
+  };
+  if let Some(ref mut config) = *config {
+    // 设置 plc.test 为 true
+    let new_value = toml::Value::Boolean(true); // 设置为布尔值 true
+    config.hardware.set_value("sensors.ip", new_value)?;
+    Ok(())
+} else {
+    Err("配置为空".into())
+}
+}
+
+
+pub fn remove_plc_test()-> Result<(), Box<dyn std::error::Error>> {
+  let mut config = match config::config::CONFIG.write() {
+    Ok(config) => config,
+    Err(_) => {
+        println!("获取配置失败");
+        return Err("获取配置失败".into());
+    }
+};
+if let Some(ref mut config) = *config {
+  // 设置 plc.test 为 true
+  let new_value = toml::Value::Boolean(true); // 设置为布尔值 true
+  config.hardware.remove_value("plc.test")?;
+  Ok(())
+} else {
+  Err("配置为空".into())
+}
+}
+
+
+
 
 pub fn get_hikvision_dll() -> Option<String> {
   // 获取全局配置
@@ -662,7 +710,7 @@ pub fn get_hikvision_dll() -> Option<String> {
         println!("获取配置失败");
         return None;
     }
-};
+  };
   // 检查配置是否已经加载
   if let Some(config) = &*config {
       // 访问硬件配置中的 plc 子配置项
@@ -773,6 +821,7 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
   // 启动相机
   // let dll_path = get_hikvision_dll();
   init_mvs_sdk();
+  // sensors::cf3000::main_();
 
   // 启动机器人异步通道
   tauri::async_runtime::spawn(async {

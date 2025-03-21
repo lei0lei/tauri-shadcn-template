@@ -17,7 +17,6 @@ pub struct ConfigData {
 }
 
 
-
 // 定义总体配置结构体
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Config {
@@ -114,7 +113,102 @@ impl RunConfig {
     }
     
     pub fn get_value(&self, key: &str) -> Option<&toml::Value> {
-        self.data.get(key)
+        // 分割 key 来处理嵌套的表
+        let keys: Vec<&str> = key.split('.').collect();
+
+        // 递归访问嵌套的表
+        self.get_nested_value(&keys)
+    }
+
+    fn get_nested_value(&self, keys: &[&str]) -> Option<&toml::Value> {
+        if keys.is_empty() {
+            return None; // 如果没有更多的键了，返回 None
+        }
+
+        let key = keys[0];
+        let remaining_keys = &keys[1..];
+
+        // 首先检查当前层级的键是否存在
+        if let Some(value) = self.data.get(key) {
+            // 如果还有剩余的键，且当前值是表格类型，则继续深入
+            if !remaining_keys.is_empty() {
+                if let toml::Value::Table(table) = value {
+                    return HardwareConfig::get_table_value(table, remaining_keys);
+                }
+            } else {
+                // 如果没有更多的键，则返回当前值
+                return Some(value);
+            }
+        }
+        None // 找不到键时返回 None
+    }
+
+    // 处理表格类型的值
+    fn get_table_value<'a>(
+        table: &'a toml::map::Map<String, toml::Value>,
+        keys: &[&str],
+    ) -> Option<&'a toml::Value> {
+        if let Some(value) = table.get(keys[0]) {
+            // 如果还有剩余的键，递归处理
+            if keys.len() > 1 {
+                if let toml::Value::Table(ref inner_table) = value {
+                    return HardwareConfig::get_table_value(inner_table, &keys[1..]);
+                }
+            } else {
+                // 如果没有更多的键，则返回当前值
+                return Some(value);
+            }
+        }
+        None // 如果找不到该键，则返回 None
+    }
+
+    /// 设置或更新配置项（支持嵌套）
+    pub fn set_value(&mut self, key: &str, new_value: toml::Value) -> Result<(), Box<dyn std::error::Error>> {
+        let keys: Vec<&str> = key.split('.').collect(); // 修正这里
+        self.update(|toml_value| {
+            if let Value::Table(table) = toml_value {
+                Self::modify_nested_value(table, &keys, Some(new_value.clone()));
+            }
+        })
+    }
+
+    /// 删除某个配置项（支持嵌套）
+    pub fn remove_value(&mut self, key: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let keys: Vec<&str> = key.split('.').collect(); // 修正这里
+        self.update(|toml_value| {
+            if let Value::Table(table) = toml_value {
+                Self::modify_nested_value(table, &keys, None);
+            }
+        })
+    }
+
+    fn modify_nested_value(table: &mut toml::map::Map<String, Value>, keys: &[&str], new_value: Option<Value>) {
+        if let Some((first_key, rest_keys)) = keys.split_first() {
+            if rest_keys.is_empty() {
+                // **修改或删除最终的值**
+                if let Some(value) = new_value {
+                    table.insert(first_key.to_string(), value);
+                } else {
+                    table.remove(*first_key);
+                }
+            } else {
+                // **递归进入嵌套 Table**
+                match table.entry(first_key.to_string()) {
+                    toml::map::Entry::Occupied(mut entry) => {
+                        if let Value::Table(inner_table) = entry.get_mut() {
+                            Self::modify_nested_value(inner_table, rest_keys, new_value);
+                        }
+                    }
+                    toml::map::Entry::Vacant(entry) => {  // ✅ 这里确保使用的是 toml::map::Entry
+                        if new_value.is_some() {
+                            let mut new_table = toml::map::Map::new();
+                            Self::modify_nested_value(&mut new_table, rest_keys, new_value);
+                            entry.insert(Value::Table(new_table));
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -154,7 +248,102 @@ impl RecipesConfig {
     }
 
     pub fn get_value(&self, key: &str) -> Option<&toml::Value> {
-        self.data.get(key)
+        // 分割 key 来处理嵌套的表
+        let keys: Vec<&str> = key.split('.').collect();
+
+        // 递归访问嵌套的表
+        self.get_nested_value(&keys)
+    }
+
+    fn get_nested_value(&self, keys: &[&str]) -> Option<&toml::Value> {
+        if keys.is_empty() {
+            return None; // 如果没有更多的键了，返回 None
+        }
+
+        let key = keys[0];
+        let remaining_keys = &keys[1..];
+
+        // 首先检查当前层级的键是否存在
+        if let Some(value) = self.data.get(key) {
+            // 如果还有剩余的键，且当前值是表格类型，则继续深入
+            if !remaining_keys.is_empty() {
+                if let toml::Value::Table(table) = value {
+                    return HardwareConfig::get_table_value(table, remaining_keys);
+                }
+            } else {
+                // 如果没有更多的键，则返回当前值
+                return Some(value);
+            }
+        }
+        None // 找不到键时返回 None
+    }
+
+    // 处理表格类型的值
+    fn get_table_value<'a>(
+        table: &'a toml::map::Map<String, toml::Value>,
+        keys: &[&str],
+    ) -> Option<&'a toml::Value> {
+        if let Some(value) = table.get(keys[0]) {
+            // 如果还有剩余的键，递归处理
+            if keys.len() > 1 {
+                if let toml::Value::Table(ref inner_table) = value {
+                    return HardwareConfig::get_table_value(inner_table, &keys[1..]);
+                }
+            } else {
+                // 如果没有更多的键，则返回当前值
+                return Some(value);
+            }
+        }
+        None // 如果找不到该键，则返回 None
+    }
+
+    /// 设置或更新配置项（支持嵌套）
+    pub fn set_value(&mut self, key: &str, new_value: toml::Value) -> Result<(), Box<dyn std::error::Error>> {
+        let keys: Vec<&str> = key.split('.').collect(); // 修正这里
+        self.update(|toml_value| {
+            if let Value::Table(table) = toml_value {
+                Self::modify_nested_value(table, &keys, Some(new_value.clone()));
+            }
+        })
+    }
+
+    /// 删除某个配置项（支持嵌套）
+    pub fn remove_value(&mut self, key: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let keys: Vec<&str> = key.split('.').collect(); // 修正这里
+        self.update(|toml_value| {
+            if let Value::Table(table) = toml_value {
+                Self::modify_nested_value(table, &keys, None);
+            }
+        })
+    }
+
+    fn modify_nested_value(table: &mut toml::map::Map<String, Value>, keys: &[&str], new_value: Option<Value>) {
+        if let Some((first_key, rest_keys)) = keys.split_first() {
+            if rest_keys.is_empty() {
+                // **修改或删除最终的值**
+                if let Some(value) = new_value {
+                    table.insert(first_key.to_string(), value);
+                } else {
+                    table.remove(*first_key);
+                }
+            } else {
+                // **递归进入嵌套 Table**
+                match table.entry(first_key.to_string()) {
+                    toml::map::Entry::Occupied(mut entry) => {
+                        if let Value::Table(inner_table) = entry.get_mut() {
+                            Self::modify_nested_value(inner_table, rest_keys, new_value);
+                        }
+                    }
+                    toml::map::Entry::Vacant(entry) => {  // ✅ 这里确保使用的是 toml::map::Entry
+                        if new_value.is_some() {
+                            let mut new_table = toml::map::Map::new();
+                            Self::modify_nested_value(&mut new_table, rest_keys, new_value);
+                            entry.insert(Value::Table(new_table));
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -242,6 +431,56 @@ impl HardwareConfig {
         }
         None // 如果找不到该键，则返回 None
     }
+
+    /// 设置或更新配置项（支持嵌套）
+    pub fn set_value(&mut self, key: &str, new_value: toml::Value) -> Result<(), Box<dyn std::error::Error>> {
+        let keys: Vec<&str> = key.split('.').collect(); // 修正这里
+        self.update(|toml_value| {
+            if let Value::Table(table) = toml_value {
+                Self::modify_nested_value(table, &keys, Some(new_value.clone()));
+            }
+        })
+    }
+
+    /// 删除某个配置项（支持嵌套）
+    pub fn remove_value(&mut self, key: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let keys: Vec<&str> = key.split('.').collect(); // 修正这里
+        self.update(|toml_value| {
+            if let Value::Table(table) = toml_value {
+                Self::modify_nested_value(table, &keys, None);
+            }
+        })
+    }
+
+    fn modify_nested_value(table: &mut toml::map::Map<String, Value>, keys: &[&str], new_value: Option<Value>) {
+        if let Some((first_key, rest_keys)) = keys.split_first() {
+            if rest_keys.is_empty() {
+                // **修改或删除最终的值**
+                if let Some(value) = new_value {
+                    table.insert(first_key.to_string(), value);
+                } else {
+                    table.remove(*first_key);
+                }
+            } else {
+                // **递归进入嵌套 Table**
+                match table.entry(first_key.to_string()) {
+                    toml::map::Entry::Occupied(mut entry) => {
+                        if let Value::Table(inner_table) = entry.get_mut() {
+                            Self::modify_nested_value(inner_table, rest_keys, new_value);
+                        }
+                    }
+                    toml::map::Entry::Vacant(entry) => {  // ✅ 这里确保使用的是 toml::map::Entry
+                        if new_value.is_some() {
+                            let mut new_table = toml::map::Map::new();
+                            Self::modify_nested_value(&mut new_table, rest_keys, new_value);
+                            entry.insert(Value::Table(new_table));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
 }
 
 /// **AlgoConfig 子配置**
@@ -280,6 +519,101 @@ impl AlgoConfig {
     }
 
     pub fn get_value(&self, key: &str) -> Option<&toml::Value> {
-        self.data.get(key)
+        // 分割 key 来处理嵌套的表
+        let keys: Vec<&str> = key.split('.').collect();
+
+        // 递归访问嵌套的表
+        self.get_nested_value(&keys)
+    }
+
+    fn get_nested_value(&self, keys: &[&str]) -> Option<&toml::Value> {
+        if keys.is_empty() {
+            return None; // 如果没有更多的键了，返回 None
+        }
+
+        let key = keys[0];
+        let remaining_keys = &keys[1..];
+
+        // 首先检查当前层级的键是否存在
+        if let Some(value) = self.data.get(key) {
+            // 如果还有剩余的键，且当前值是表格类型，则继续深入
+            if !remaining_keys.is_empty() {
+                if let toml::Value::Table(table) = value {
+                    return HardwareConfig::get_table_value(table, remaining_keys);
+                }
+            } else {
+                // 如果没有更多的键，则返回当前值
+                return Some(value);
+            }
+        }
+        None // 找不到键时返回 None
+    }
+
+    // 处理表格类型的值
+    fn get_table_value<'a>(
+        table: &'a toml::map::Map<String, toml::Value>,
+        keys: &[&str],
+    ) -> Option<&'a toml::Value> {
+        if let Some(value) = table.get(keys[0]) {
+            // 如果还有剩余的键，递归处理
+            if keys.len() > 1 {
+                if let toml::Value::Table(ref inner_table) = value {
+                    return HardwareConfig::get_table_value(inner_table, &keys[1..]);
+                }
+            } else {
+                // 如果没有更多的键，则返回当前值
+                return Some(value);
+            }
+        }
+        None // 如果找不到该键，则返回 None
+    }
+
+    /// 设置或更新配置项（支持嵌套）
+    pub fn set_value(&mut self, key: &str, new_value: toml::Value) -> Result<(), Box<dyn std::error::Error>> {
+        let keys: Vec<&str> = key.split('.').collect(); // 修正这里
+        self.update(|toml_value| {
+            if let Value::Table(table) = toml_value {
+                Self::modify_nested_value(table, &keys, Some(new_value.clone()));
+            }
+        })
+    }
+
+    /// 删除某个配置项（支持嵌套）
+    pub fn remove_value(&mut self, key: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let keys: Vec<&str> = key.split('.').collect(); // 修正这里
+        self.update(|toml_value| {
+            if let Value::Table(table) = toml_value {
+                Self::modify_nested_value(table, &keys, None);
+            }
+        })
+    }
+
+    fn modify_nested_value(table: &mut toml::map::Map<String, Value>, keys: &[&str], new_value: Option<Value>) {
+        if let Some((first_key, rest_keys)) = keys.split_first() {
+            if rest_keys.is_empty() {
+                // **修改或删除最终的值**
+                if let Some(value) = new_value {
+                    table.insert(first_key.to_string(), value);
+                } else {
+                    table.remove(*first_key);
+                }
+            } else {
+                // **递归进入嵌套 Table**
+                match table.entry(first_key.to_string()) {
+                    toml::map::Entry::Occupied(mut entry) => {
+                        if let Value::Table(inner_table) = entry.get_mut() {
+                            Self::modify_nested_value(inner_table, rest_keys, new_value);
+                        }
+                    }
+                    toml::map::Entry::Vacant(entry) => {  // ✅ 这里确保使用的是 toml::map::Entry
+                        if new_value.is_some() {
+                            let mut new_table = toml::map::Map::new();
+                            Self::modify_nested_value(&mut new_table, rest_keys, new_value);
+                            entry.insert(Value::Table(new_table));
+                        }
+                    }
+                }
+            }
+        }
     }
 }
