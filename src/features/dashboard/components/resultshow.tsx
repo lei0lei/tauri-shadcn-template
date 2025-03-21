@@ -10,7 +10,7 @@ export default function ResultShow() {
   return (
     <div className="space-y-1">
       {resultComponentValue.map((surface, index) => (
-        <div key={index} className="flex items-center border p-1 rounded-lg max-h-10">
+        <div key={index} className="flex items-center border p-1 rounded-lg max-h-10 select-none">
           {/* 第一列: 面名称和状态，占 1/9 */}
           <div className="w-[10%] flex-shrink-0 text-center mr-4 pr-4 border-r-2">
           <h5

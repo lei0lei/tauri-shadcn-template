@@ -33,9 +33,6 @@ export default function Settings() {
           <h1 className='text-2xl font-bold tracking-tight md:text-3xl'>
             Settings
           </h1>
-          <p className='text-muted-foreground'>
-            Manage your account settings and set e-mail preferences.
-          </p>
         </div>
         <Separator className='my-4 lg:my-6' />
         <div className='flex flex-1 flex-col space-y-2 md:space-y-2 overflow-hidden lg:flex-row lg:space-x-12 lg:space-y-0'>

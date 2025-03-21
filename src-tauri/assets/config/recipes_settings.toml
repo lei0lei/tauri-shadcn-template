@@ -2,7 +2,7 @@
 
 [type]
 all_type = ['EH09','EH12','EY28','EK30','EK40']
-
+current_type = 'EH09'
 
 [type.EH09]
 run_sequence = ['A','B','C','D','E']
@@ -16,7 +16,7 @@ diameter_min = 0
 diameter_max = 0
 depth_min = 0
 depth_max = 0
-algo_name = 'general.t1'
+
 
 
 

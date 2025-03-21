@@ -6,7 +6,7 @@ use std::sync::mpsc::{Sender, Receiver};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
 use tauri::{AppHandle, Manager,Emitter};
-
+use base64;
 use std::time::Duration;
 use tokio::process::Child; 
 use tokio::sync::{oneshot, Mutex, mpsc};
@@ -15,7 +15,10 @@ use tokio::task;
 mod sidecar;
 mod plc;
 use plc::modbusTCP;
-
+use std::net::SocketAddr;
+use std::{path::{Path, PathBuf}};
+mod config;
+use toml::Value;
 mod cameras;
 use cameras::hik_camera::{
   init_mvs_sdk, 
@@ -32,9 +35,9 @@ use cameras::hik_camera::{
   get_oneframe_timeout,
 };
 use hikvision::mvs_sdk::types::{MvAccessMode,MvEnumDeviceLayerType,MvFrameOutInfoEx};
-
+use tauri::path::BaseDirectory;
 use opencv::{
-  core::{Mat, MatTrait, CV_8UC3, CV_8U,Scalar,AlgorithmHint},
+  core::{Mat, MatTrait, CV_8UC3, CV_8U,Scalar,AlgorithmHint,Vector},
   imgcodecs,
   imgproc,
   prelude::*,
@@ -42,6 +45,7 @@ use opencv::{
 use std::fs;
 
 // 主流程启动状态
+#[derive(Debug, PartialEq)]
 pub enum SoftwareState{
   START,
   STOP,
@@ -75,6 +79,7 @@ use lazy_static::lazy_static;
 lazy_static! {
   static ref PLC_TX: Arc<Mutex<Option<mpsc::Sender<modbusTCP::ModbusRequest>>>> = Arc::new(Mutex::new(None));
 }
+
 
 
 lazy_static! {
@@ -111,6 +116,12 @@ pub fn start_sensor_task(mut rx: std::sync::mpsc::Receiver<SensorsDataRequest>) 
     match request {
       SensorsDataRequest::ImageProcess(frame_info,image_data)=>{
         let log = "[camera] [log] [info]";
+        // 获取当前的状态
+        let mut state = START_STATE.lock().unwrap();
+        if *state != SoftwareState::START {
+          // println!("当前状态不是START，图片不会发送");
+          // return Ok(()); // 返回 Ok 表示成功结束，不继续处理
+        } else{
         // 发送图片到前端
         rt.spawn(async move {
             let (resp_tx, resp_rx) = oneshot::channel();
@@ -127,8 +138,9 @@ pub fn start_sensor_task(mut rx: std::sync::mpsc::Receiver<SensorsDataRequest>) 
                           println!("图片发送请求失败 {}！",e);
                       }
                   }
-      });
 
+        
+      });
         // 发送log到前端
         // rt.spawn(async move {
         //     let (resp_tx, resp_rx) = oneshot::channel();
@@ -150,6 +162,7 @@ pub fn start_sensor_task(mut rx: std::sync::mpsc::Receiver<SensorsDataRequest>) 
         //         }
         //     }
         //   });
+        }
       }
       SensorsDataRequest::Cf3000(data)=>{
       }
@@ -252,8 +265,21 @@ pub async fn start_global_task(mut rx: mpsc::Receiver<GeneralRequest>,app_handle
       // 发送图像到前端
       GeneralRequest::SendImageToFrontend(frame_info,image_data, resp_tx) => {
         // 假设这里是发送图像到前端的逻辑
-        send_image_to_frontend(app_handle.clone(),frame_info,image_data).await;
-        let _ = resp_tx.send(Ok(()));
+        let result = send_image_to_frontend(app_handle.clone(), frame_info, image_data).await;
+
+        match result {
+          Ok(_) => {
+              // 成功处理图像
+              let _ = resp_tx.send(Ok(()));
+          }
+          Err(e) => {
+              // 处理失败的情况，记录错误
+              eprintln!("发送图像失败: {}", e);
+              
+              // 发送错误时，将 `&str` 转换为 `String`
+              let _ = resp_tx.send(Err(e.to_string()));
+          }
+        }
       }
       // 获取当前状态
       GeneralRequest::GetCurrentState(resp_tx) => {
@@ -302,7 +328,10 @@ async fn send_log_to_frontend(app_handle:tauri::AppHandle, log_message: String) 
   println!("发送日志到前端: {}", log_message);
 }
 
-async fn send_image_to_frontend(app_handle:tauri::AppHandle,frame_info:cameras::hik_camera::FrameInfoSafe,image_data: Vec<u8>) {
+async fn send_image_to_frontend(
+  app_handle:tauri::AppHandle,
+  frame_info:cameras::hik_camera::FrameInfoSafe,
+  image_data: Vec<u8>)-> Result<(), &'static str> {
   // 模拟发送图像到前端
   println!("发送图像到前端，图像大小: {} bytes", image_data.len());
 
@@ -310,37 +339,50 @@ async fn send_image_to_frontend(app_handle:tauri::AppHandle,frame_info:cameras::
 
   let width = frame_info.nWidth as i32;
   let height = frame_info.nHeight as i32;
-  // let mut mat = unsafe {
-  //   Mat::new_rows_cols(height, width, CV_8U).map_err(|_| "Mat 创建失败")?
-  // };
+  let mut mat = unsafe {
+    Mat::new_rows_cols(height, width, CV_8U)
+    .map_err(|_| "Mat 创建失败")?
+  };
         
-  // // 获取 Mat 数据指针
-  // let mat_ptr = mat.data_mut();
-  // if mat_ptr.is_null() {
-  //     return Err("Mat 数据指针为空");
-  // }
+  // 获取 Mat 数据指针
+  let mat_ptr = mat.data_mut();
+  if mat_ptr.is_null() {
+    return Err("Mat 数据指针为空");
+  }
 
-  // // 复制 buffer 数据到 Mat
-  // unsafe {
-  //     std::ptr::copy_nonoverlapping(image_data.as_ptr(), mat_ptr, image_data.len());
-  // }
+  // 复制 buffer 数据到 Mat
+  unsafe {
+      std::ptr::copy_nonoverlapping(image_data.as_ptr(), mat_ptr, image_data.len());
+  }
 
-  // // 创建一个空 Mat 用于存放 RGB 图像数据
-  // let mut rgb_mat = Mat::new_rows_cols_with_default(
-  //   height,
-  //   width,
-  //   CV_8UC3,
-  //   Scalar::all(0.0),
-  // ).map_err(|_| "RGB Mat 创建失败")?;
+  // 创建一个空 Mat 用于存放 RGB 图像数据
+  let mut rgb_mat = Mat::new_rows_cols_with_default(
+    height,
+    width,
+    CV_8UC3,
+    Scalar::all(0.0),
+  ).map_err(|_| "RGB Mat 创建失败")?;
         
-  // // 将 Bayer 格式转换为 RGB
-  // imgproc::cvt_color(&mat, &mut rgb_mat, imgproc::COLOR_BayerGB2BGR, 0,AlgorithmHint::ALGO_HINT_DEFAULT)
-  // .map_err(|_| "Bayer 到 RGB 转换失败")?;
+  // 将 Bayer 格式转换为 RGB
+  imgproc::cvt_color(&mat, &mut rgb_mat, imgproc::COLOR_BayerGB2RGB, 0,AlgorithmHint::ALGO_HINT_DEFAULT)
+    .map_err(|_| "Bayer 到 RGB 转换失败")?;
 
+  // 将 RGB 图像编码为 JPEG 格式
+  let mut jpeg_data: Vec<u8> = Vec::new();
+  let mut opencv_vector = Vector::new();
+  opencv_vector.extend(jpeg_data.iter().cloned());
+  imgcodecs::imencode(".jpg", &rgb_mat, &mut opencv_vector, &opencv::core::Vector::new())
+      .map_err(|_| "JPEG 编码失败")?;
+
+  // 将 JPEG 数据编码为 base64 格式
+  let base64_image = base64::encode(&opencv_vector);
   // 发送rgb_mat到前端
-  // app_handle.emit("image-send-image-1", rgb_mat).unwrap(); // 发送原始二进制数据到前端
+  app_handle.emit("image-send-image-1", base64_image).unwrap(); // 发送原始二进制数据到前端
+  // 编码为jpg
 
 
+  // 发送到前端
+  Ok(())
 }
 
 
@@ -452,7 +494,6 @@ fn test_image_transfer_to_frontend() -> String {
 }
 
 // ========================================================================================
-
 
 // =========================================== plc相关======================================
 async fn start_plc_connect(plc_addr: std::net::SocketAddr) -> Result<bool, String> {
@@ -589,16 +630,81 @@ async fn stop_plc_connection() {
   }
 }
 
+fn get_plc_ip_port() -> Option<String> {
+  // 获取全局配置
+  let config = config::config::CONFIG.read().unwrap();  // 获取只读锁
+
+  // 检查配置是否已经加载
+  if let Some(config) = &*config {
+      // 访问硬件配置中的 plc 子配置项
+      if let Some(plc_ip_port) = config.hardware.get_value("plc.ip_port") {
+          if let Some(plc_addr_str) = plc_ip_port.as_str(){
+              // 返回ip_port
+              return Some(plc_addr_str.to_string());
+            } else {
+              println!("PLC ip_port 不是字符串类型");
+            }
+      } else {
+          println!("PLC ip_port not found.");
+      }
+  } else {
+      println!("配置加载失败");
+  }
+  None  // 如果找不到，返回 None
+}
+
+
+pub fn get_hikvision_dll() -> Option<String> {
+  // 获取全局配置
+  let config = match config::config::CONFIG.read() {
+    Ok(config) => config,
+    Err(_) => {
+        println!("获取配置失败");
+        return None;
+    }
+};
+  // 检查配置是否已经加载
+  if let Some(config) = &*config {
+      // 访问硬件配置中的 plc 子配置项
+      if let Some(camera_dll) = config.hardware.get_value("cameras.lib_path") {
+          if let Some(camera_dll_) = camera_dll.as_str(){
+              // 返回ip_port
+              return Some(camera_dll_.to_string());
+            } else {
+              println!("相机dll 不是字符串类型");
+            }
+      } else {
+          println!("相机dll not found.");
+      }
+  } else {
+      println!("配置加载失败");
+  }
+  None  // 如果找不到，返回 None
+}
+
+
 fn start_plc_connection(){
   tauri::async_runtime::spawn(async {
     // 这里可以执行一些后台任务
     println!("创建modbus tcp连接...");
-    // plc启动
-    let plc_addr: std::net::SocketAddr = "192.168.1.88:502".parse().unwrap();
-    start_plc_connect(plc_addr).await;
-    println!("modbus tcp连接创建完毕");
+
+    if let Some(plc_addr) = get_plc_ip_port() {
+      // 将读取到的 ip_port 转换为 SocketAddr 类型
+      
+      if let Ok(socket_addr) = plc_addr.parse::<SocketAddr>() {
+          // 启动 PLC 连接
+          start_plc_connect(socket_addr).await;
+          println!("modbus tcp连接创建完毕");
+      } else {
+          println!("PLC ip_port 格式错误: {}", plc_addr);
+      }
+  } else {
+      println!("PLC ip_port not found.");
+  }
   });
 }
+
+
 // ==========================================================================================
 pub fn sendlog2frontend(log:String)-> Result<(), String>{
   // 发送日志到前端的异步任务
@@ -638,7 +744,20 @@ fn start_global_mpsc_(app_handle: tauri::AppHandle){
 
 // ============================================== tauri相关 ==================================
 fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+
   app.manage(Arc::new(Mutex::new(None::<Arc<Mutex<Child>>>)));
+  // 加载全局配置
+  let run_path = app.path().resolve("assets/config/run_settings.toml", BaseDirectory::Resource)?.to_path_buf();
+  let recipes_path = app.path().resolve("assets/config/recipes_settings.toml", BaseDirectory::Resource)?.to_path_buf();
+  let hardware_path = app.path().resolve("assets/config/hardware_settings.toml", BaseDirectory::Resource)?.to_path_buf();
+  let algo_path = app.path().resolve("assets/config/algo_settings.toml", BaseDirectory::Resource)?.to_path_buf();
+
+  let config_tmp = config::config::Config::load(run_path, recipes_path, hardware_path, algo_path)?;
+
+  {
+  let mut config = config::config::CONFIG.write().unwrap();  // 获取写入锁
+  *config = Some(config_tmp.clone());  // 更新配置
+  }
   // Clone the app handle for use elsewhere
   let app_handle = app.handle().clone();
 
@@ -652,6 +771,7 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
   start_sensor_mpsc().expect("Failed to start sensor mpsc");
 
   // 启动相机
+  // let dll_path = get_hikvision_dll();
   init_mvs_sdk();
 
   // 启动机器人异步通道
@@ -725,53 +845,7 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
     }
   });
 
-  // match get_oneframe_timeout().await {
-  //   Ok((buffer, frame_info)) => {
-  //       let width = frame_info.nWidth as i32;
-  //       let height = frame_info.nHeight as i32;
-  //       println!("1");
-  //       // 创建一个空 Mat
-  //       let mut mat = unsafe {
-  //         Mat::new_rows_cols(height, width, CV_8U).map_err(|_| "Mat 创建失败")?
-  //       };
-        
-  //       // 获取 Mat 数据指针
-  //       let mat_ptr = mat.data_mut();
-  //       if mat_ptr.is_null() {
-  //           return Err("Mat 数据指针为空");
-  //       }
-
-  //       // 复制 buffer 数据到 Mat
-  //       unsafe {
-  //           std::ptr::copy_nonoverlapping(buffer.as_ptr(), mat_ptr, buffer.len());
-  //       }
-
-  //       // 创建一个空 Mat 用于存放 RGB 图像数据
-  //       let mut rgb_mat = Mat::new_rows_cols_with_default(
-  //         height,
-  //         width,
-  //         CV_8UC3,
-  //         Scalar::all(0.0),
-  //       ).map_err(|_| "RGB Mat 创建失败")?;
-        
-  //       println!("2");
-  //       // 将 Bayer 格式转换为 RGB
-  //       imgproc::cvt_color(&mat, &mut rgb_mat, imgproc::COLOR_BayerGB2BGR, 0,AlgorithmHint::ALGO_HINT_DEFAULT)
-  //       .map_err(|_| "Bayer 到 RGB 转换失败")?;
-  //       println!("3");
-  //       // OpenCV `imwrite` 保存图片
-  //       let filename = "output.jpg";
-  //       imgcodecs::imwrite(filename, &rgb_mat, &opencv::core::Vector::new()).map_err(|_| "保存图片失败")?;
-
-  //       println!("图片保存成功: {}", filename);
-  //       Ok(())
-  //   }
-  //   Err(e) => {
-  //       eprintln!("获取帧失败: {}", e);
-  //       Err("获取图像失败")
-  //   }
-  // }
-
+ 
   // 启动后端任务
 
   Ok(())

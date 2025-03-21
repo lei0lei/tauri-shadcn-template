@@ -28,6 +28,7 @@
     "icon": [
       "icons/2061956.png",
       "icons/2061956.ico"
-    ]
-  }
+    ],
+    "resources":["assets/config/*"]
+ }
 }

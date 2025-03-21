@@ -1,9 +1,11 @@
-import { useState } from "react";
 import { invoke } from '@tauri-apps/api/core';
 import { Button } from "@/components/ui/button";
+import { useDashboardStore } from "@/stores/dashboardStore";
+
 
 function StartStopButton({ className }: { className?: string }) {
-  const [isRunning, setIsRunning] = useState(false);
+  const isRunning = useDashboardStore((state) => state.isRunning);
+  const setIsRunning = useDashboardStore((state) => state.setIsRunning);
 
   // 处理按钮点击
     // const callRustCommand = async () => {
@@ -28,7 +30,7 @@ function StartStopButton({ className }: { className?: string }) {
         // 启动流程，传递 "start" 参数给后端
         const result = await invoke("start_software", { start_state: "start" });
         if (result === "started") {
-          console.log("started")
+          console.log("started");
           setIsRunning(true);
         }
       }

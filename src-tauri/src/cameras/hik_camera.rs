@@ -23,6 +23,8 @@ use std::{
     net::{IpAddr, Ipv4Addr},
 };
 
+use super::super::get_hikvision_dll;
+
 use super::super::SensorsDataRequest;
 use super::super::GLOBAL_SENSOR_TX;
 use super::super::GLOBAL_TX;
@@ -36,8 +38,23 @@ lazy_static! {
   }
 
 pub fn init_mvs_sdk() -> Result<(),Box<dyn Error>> {
-    let lib = Lib::new(PathBuf::from("C:\\Program Files (x86)\\Common Files\\MVS\\Runtime\\Win64_x64\\MvCameraControl.dll"));
-    HC_MVS_CORE_SDK.write().res()?.set_lib(lib);
+
+
+    let dll_path = get_hikvision_dll();
+    match dll_path {
+        Some(dll_path) => {
+            let lib = Lib::new(PathBuf::from(dll_path));
+            HC_MVS_CORE_SDK.write().res()?.set_lib(lib);
+            println!("line 48...");
+        },
+        None => {
+            println!("无法获取相机DLL路径");
+            return Err("无法获取相机DLL路径".into());
+        }
+    }
+    // let lib = Lib::new(PathBuf::from("C:\\Program Files (x86)\\Common Files\\MVS\\Runtime\\Win64_x64\\MvCameraControl.dll"));
+    
+    // HC_MVS_CORE_SDK.write().res()?.set_lib(lib);
     println!("Init hikvision SDK OK...");
     
     Ok(())

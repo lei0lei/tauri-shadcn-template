@@ -221,3 +221,13 @@ async def list_registered_algos():
 #     while True:
 #         data = await websocket.receive_text()
 #         await websocket.send_text(f"Message text was: {data}")
+
+
+
+
+# 推理算法 返回结果
+
+
+
+
+# 推理算法 返回结果加绘图

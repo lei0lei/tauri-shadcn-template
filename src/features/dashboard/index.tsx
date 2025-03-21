@@ -5,6 +5,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Tabs, TabsContent} from '@/components/ui/tabs'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
@@ -22,6 +24,16 @@ import { useEffect } from "react";
 import StartStopButton from './components/startstop'
 import { Separator } from '@radix-ui/react-separator'
 import { useDashboardStore } from "@/stores/dashboardStore";
+import { IconCheck, IconX, IconCamera, IconParkingCircleFilled, IconAsset, IconServer, IconCircle, IconDeviceFloppy } from "@tabler/icons-react";
+
+const iconMap : Record<string, React.ComponentType>= {
+  "相机": IconCamera,
+  "PLC": IconParkingCircleFilled,
+  "传感器": IconCircle,
+  "机器人": IconAsset,
+  "算法": IconServer,
+  "硬盘": IconDeviceFloppy,
+};
 
 export default function Dashboard() {
   // 后端rust调用测试
@@ -66,7 +78,6 @@ export default function Dashboard() {
     initSidecarListeners()
   }, [])
 
-
   return (
     <div className='flex flex-col min-h-screen p-4'>
       <Header>
@@ -87,10 +98,10 @@ export default function Dashboard() {
         >
           <TabsContent value='overview' className='space-y-4 h-full'>
             <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
-              <Card>
+              <Card className="select-none">
                 <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                   <CardTitle className='text-sm font-medium'>
-                    {logs}
+                    型号
                   </CardTitle>
                   <svg
                     xmlns='http://www.w3.org/2000/svg'
@@ -112,7 +123,7 @@ export default function Dashboard() {
                   </p>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="select-none">
                 <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                   <CardTitle className='text-sm font-medium'>
                     统计
@@ -139,7 +150,7 @@ export default function Dashboard() {
                   </p>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="select-none">
                 <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                   <CardTitle className='text-sm font-medium'>当前工件</CardTitle>
                   <svg
@@ -163,7 +174,7 @@ export default function Dashboard() {
                   </p>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="select-none">
                 <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                   <CardTitle className='text-sm font-medium'>
                     系统状态
@@ -181,21 +192,23 @@ export default function Dashboard() {
                     <path d='M22 12h-4l-3 9L9 3l-3 9H2' />
                   </svg>
                 </CardHeader>
-                <CardContent>
-                  <div className='text-2xl font-bold'>+573</div>
-                  <p className='text-xs text-muted-foreground'>
-                    +201 since last hour
-                  </p>
-                </CardContent>
+                <CardContent className="grid grid-cols-3 gap-2">
+                <StatusItem label="相机" status={true} />
+                <StatusItem label="PLC" status={true} />
+                <StatusItem label="传感器" status={false} />
+                <StatusItem label="机器人" status={true} />
+                <StatusItem label="算法" status={true} />
+                <StatusItem label="硬盘" status={true} />
+      </CardContent>
               </Card>
             </div>
             <div className='grid grid-cols-1 gap-4 lg:grid-cols-9 h-128'>
-              <Card className='col-span-1 lg:col-span-6 pt-2'>
+              <Card className='col-span-1 lg:col-span-7 pt-2'>
                 <CardContent className='px-2 flex justify-center items-center h-full'>
                   <Overview />
                 </CardContent>
               </Card>
-              <Card className='col-span-1 lg:col-span-3 flex flex-col h-full'>
+              <Card className='col-span-1 lg:col-span-2 flex flex-col h-full'>
                 <CardContent className="flex flex-col h-full pt-4 px-2 pb-2">
                 <div className="flex-grow p-2 bg-gray-100 rounded-lg shadow-lg mb-2" style={{ maxHeight: '220px' }}>
                   <ResultShow />
@@ -212,4 +225,26 @@ export default function Dashboard() {
       </Main>
     </div>
   )
+}
+
+function StatusItem({ label, status }: { label: string; status: boolean }) {
+  const Icon = iconMap[label];
+
+  return (
+    <div className="flex items-center space-x-2">
+      {/* Badge 悬停显示 label */}
+
+          <Badge className={status ? "bg-green-700 text-white" : "bg-red-700 text-white"}>
+            {status ? <IconCheck className="w-4 h-4 text-white" /> : <IconX className="w-4 h-4 text-white" />}
+          </Badge>
+
+      {/* Icon 悬停显示 label */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {Icon && <Icon/>}
+        </TooltipTrigger>
+        <TooltipContent>{label}</TooltipContent>
+      </Tooltip>
+    </div>
+  );
 }
