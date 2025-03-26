@@ -282,7 +282,7 @@ pub async fn read_register_robot(reg_address: u16) -> Result<u16, String> {
     let (resp_tx, resp_rx) = oneshot::channel();  // 创建响应通道
     // 获取全局的 tx
     let tx = ROBOT_TX.lock().await.clone().unwrap_or_else(|| {
-      panic!("PLC_TX is not initialized. Ensure that start_plc_connect() has been called.");
+      panic!("ROBOT_TX is not initialized. Ensure that start_plc_connect() has been called.");
     });
     tx.send(ModbusRequest::ReadRegister(reg_address, resp_tx)).await.map_err(|_| "发送请求失败".to_string())?;
   
@@ -292,6 +292,27 @@ pub async fn read_register_robot(reg_address: u16) -> Result<u16, String> {
         Err(err) => Err("响应通道关闭".to_string()),  // 响应通道关闭
     }
   }
+
+// 读取多个寄存器的函数
+pub async fn read_multiple_registers_robot(start_address: u16, count: u16) -> Result<Vec<u16>, String> {
+    let (resp_tx, resp_rx) = oneshot::channel();  // 创建响应通道
+
+    // 获取全局的 tx
+    let tx = ROBOT_TX.lock().await.clone().unwrap_or_else(|| {
+        panic!("PLC_TX is not initialized. Ensure that start_plc_connect() has been called.");
+    });
+
+    // 发送读取多个寄存器的请求
+    tx.send(ModbusRequest::ReadMultipleRegisters(start_address, count, resp_tx)).await
+        .map_err(|_| "发送请求失败".to_string())?;
+
+    // 等待响应并处理结果
+    match resp_rx.await {
+        Ok(Ok(values)) => Ok(values),  // 返回读取的寄存器值
+        Ok(Err(err)) => Err(err),      // Modbus 读取失败
+        Err(_) => Err("响应通道关闭".to_string()),  // 响应通道关闭
+    }
+}
 
 
 pub async fn write_register_plc(reg_address: u16, value: u16)-> Result<(), String>{
@@ -421,15 +442,15 @@ fn get_robot_ip_port() -> Option<String> {
 pub fn start_plc_connection(){
     tauri::async_runtime::spawn(async {
       // 这里可以执行一些后台任务
-      println!("创建modbus tcp连接...");
+      println!("plc: 创建modbus tcp连接...");
   
       if let Some(plc_addr) = get_plc_ip_port() {
         // 将读取到的 ip_port 转换为 SocketAddr 类型
         
         if let Ok(socket_addr) = plc_addr.parse::<SocketAddr>() {
             // 启动 PLC 连接
-            start_plc_connect(socket_addr).await;
-            println!("modbus tcp连接创建完毕");
+            let _ = start_plc_connect(socket_addr).await;
+            println!("plc:modbus tcp连接创建完毕");
         } else {
             println!("PLC ip_port 格式错误: {}", plc_addr);
         }
@@ -443,7 +464,7 @@ pub fn start_plc_connection(){
 pub fn start_robot_connection(){
     tauri::async_runtime::spawn(async {
       // 这里可以执行一些后台任务
-      println!("创建modbus tcp连接...");
+      println!("robot: 创建modbus tcp连接...");
   
       if let Some(robot_addr) = get_robot_ip_port() {
         // 将读取到的 ip_port 转换为 SocketAddr 类型
@@ -451,7 +472,7 @@ pub fn start_robot_connection(){
         if let Ok(socket_addr) = robot_addr.parse::<SocketAddr>() {
             // 启动 PLC 连接
             start_robot_connect(socket_addr).await;
-            println!("modbus tcp连接创建完毕");
+            println!("robot: modbus tcp连接创建完毕");
         } else {
             println!("PLC ip_port 格式错误: {}", robot_addr);
         }

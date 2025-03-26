@@ -72,6 +72,7 @@ export default {
       },
       height: {
         '128': '35rem',
+        '120':'32rem',
       }
     },
   },

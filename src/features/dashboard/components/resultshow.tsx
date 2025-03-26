@@ -8,7 +8,7 @@ export default function ResultShow() {
 
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-1 flex-grow">
       {resultComponentValue.map((surface, index) => (
         <div key={index} className="flex items-center border p-1 rounded-lg max-h-10 select-none">
           {/* 第一列: 面名称和状态，占 1/9 */}

@@ -23,7 +23,7 @@ pub fn spawn_and_monitor_sidecar(app_handle: tauri::AppHandle) -> Result<(), Str
     // Spawn sidecar
     let python_interpreter = if cfg!(target_os = "windows") {
         // 虚拟环境目录
-        "D:\\github\\tauri-shadcn-template\\fastapi\\app\\.venv\\Scripts\\python.exe" // Windows
+        "D:\\code\\tauri-shadcn-template\\fastapi\\app\\.venv\\Scripts\\python.exe" // Windows
     } else {
         ".venv/bin/python" // Linux/macOS
     };

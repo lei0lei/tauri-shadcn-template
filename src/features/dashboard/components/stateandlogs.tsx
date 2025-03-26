@@ -48,7 +48,7 @@ export default function LogWindow() {
     }
   }, [logs]); // 依赖 logs，当日志更新时触发滚动
   return (
-    <ScrollArea className="h-72 p-4 bg-gray-300 rounded-lg shadow-lg overflow-auto">
+    <ScrollArea className="h-120 p-4 bg-gray-300 rounded-lg shadow-lg overflow-auto">
       <div className="space-y-1">
         {logs.map((log, idx) => (
           <div key={idx} className="text-sm text-gray-700">

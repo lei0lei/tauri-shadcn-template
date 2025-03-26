@@ -48,7 +48,7 @@ origins = [
 ]
 
 model_path = {
-    'luowen_detect':"D:\\github\\tauri-shadcn-template\\fastapi\\app\\algo\\best.pt",
+    'luowen_detect':"D:\\code\\tauri-shadcn-template\\fastapi\\app\\algo\\best.pt",
 }
 
 # JSON 数据格式
@@ -67,8 +67,8 @@ async def lifespan(app: FastAPI):
     yolo_model(dummy_img)
     print("🔥 预热完成，YOLOv8 已准备就绪")
     yield  # 运行 FastAPI
-    del yolo_model
-    print("🛑 YOLOv8 模型已释放")
+    # del yolo_model
+    # print("🛑 YOLOv8 模型已释放")
     
 app = FastAPI(lifespan=lifespan)
 

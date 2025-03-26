@@ -90,7 +90,7 @@ export default function Dashboard() {
       </Header>
 
 
-      <Main className="overflow-x-hidden overflow-y-hidden">
+      <Main className="overflow-x-hidden overflow-y-hidden flex-grow">
         <Tabs
           orientation='vertical'
           defaultValue='overview'
@@ -202,8 +202,8 @@ export default function Dashboard() {
       </CardContent>
               </Card>
             </div>
-            <div className='grid grid-cols-1 gap-4 lg:grid-cols-9 h-128'>
-              <Card className='col-span-1 lg:col-span-7 pt-2'>
+            <div className='grid grid-cols-1 gap-4 lg:grid-cols-9 flex-grow'>
+              <Card className='col-span-1 lg:col-span-7 pt-2 h-full'>
                 <CardContent className='px-2 flex justify-center items-center h-full'>
                   <Overview />
                 </CardContent>
