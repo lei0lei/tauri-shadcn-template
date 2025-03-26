@@ -23,11 +23,9 @@ use std::{
     net::{IpAddr, Ipv4Addr},
 };
 
-use super::super::get_hikvision_dll;
-
 use super::super::SensorsDataRequest;
 use super::super::GLOBAL_SENSOR_TX;
-use super::super::GLOBAL_TX;
+// use super::super::GLOBAL_TX;
 use tokio::task;
 
 
@@ -37,6 +35,35 @@ lazy_static! {
       Arc::new(RwLock::new(HcMvsCoreSdk::default()));
   }
 
+pub fn get_hikvision_dll() -> Option<String> {
+    // 获取全局配置
+    let config = match crate::config::config::CONFIG.read() {
+      Ok(config) => config,
+      Err(_) => {
+          println!("获取配置失败");
+          return None;
+      }
+    };
+    // 检查配置是否已经加载
+    if let Some(config) = &*config {
+        // 访问硬件配置中的 plc 子配置项
+        if let Some(camera_dll) = config.hardware.get_value("cameras.lib_path") {
+            if let Some(camera_dll_) = camera_dll.as_str(){
+                // 返回ip_port
+                return Some(camera_dll_.to_string());
+              } else {
+                println!("相机dll 不是字符串类型");
+              }
+        } else {
+            println!("相机dll not found.");
+        }
+    } else {
+        println!("配置加载失败");
+    }
+    None  // 如果找不到，返回 None
+  }
+
+  
 pub fn init_mvs_sdk() -> Result<(),Box<dyn Error>> {
 
 
@@ -45,7 +72,6 @@ pub fn init_mvs_sdk() -> Result<(),Box<dyn Error>> {
         Some(dll_path) => {
             let lib = Lib::new(PathBuf::from(dll_path));
             HC_MVS_CORE_SDK.write().res()?.set_lib(lib);
-            println!("line 48...");
         },
         None => {
             println!("无法获取相机DLL路径");

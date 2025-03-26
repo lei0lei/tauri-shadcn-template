@@ -38,3 +38,5 @@ opencv =  { version="0.94.2", features = ["clang-runtime"] }
 tokio-tungstenite = "*"
 libc = "0.2"
 once_cell = "1.20.3"
+reqwest = { version = "0.12", features = ["json", "multipart"] }
+windows = "0.61.1"

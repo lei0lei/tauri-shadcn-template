@@ -9,10 +9,10 @@ ip = ''
 ip = '192.168.1.100'
 lib_path = 'C:\\Program Files (x86)\\Common Files\\MVS\\Runtime\\Win64_x64\\MvCameraControl.dll'
 
-
+ 
 [robot]
-ip = ''
+ip_port = '172.16.1.30:502'
 
 
 [plc]
-ip_port = '192.168.1.88:502'
+ip_port = '192.168.1.88:3100'

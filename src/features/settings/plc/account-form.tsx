@@ -84,7 +84,7 @@ export function AccountForm() {
 
     setLoading(true)
     try {
-      const value = await invoke<number>("read_register_frontend", { reg_address: parseInt(address) })
+      const value = await invoke<number>("read_register_frontend_plc", { reg_address: parseInt(address) })
       setRegisterValue(`寄存器值: ${value}`)
     } catch (err) {
       setRegisterValue(`读取失败: ${err}`)
@@ -104,7 +104,7 @@ export function AccountForm() {
 
     setLoading(true)
     try {
-      await invoke("write_register_frontend", {
+      await invoke("write_register_frontend_plc", {
         reg_address: parseInt(address),
         value: parseInt(value),
       })

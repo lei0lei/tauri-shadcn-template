@@ -16,7 +16,7 @@ from fastapi.responses import JSONResponse
 from multiprocessing import Process
 import uvicorn
 from fastapi.routing import APIRouter
-from fastapi import FastAPI, UploadFile, HTTPException, Form
+from fastapi import FastAPI, UploadFile, HTTPException, Form,Depends
 from pathlib import Path
 import zipfile
 import shutil
@@ -26,19 +26,54 @@ import json
 import ctypes
 from typing import Optional
 import importlib
-
+import numpy as np
 from fastapi import  WebSocket
-
+from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
+import supervision as sv
+import base64
+from io import BytesIO
+from pydantic import BaseModel
 # from cameras.local_image.image_gen import router as image_get_websocket_router
 # from cameras.hik.image_gen import router as image_hik_get_websocket_router
 # 配置 CORS
+import cv2
+
+from ultralytics import YOLO
+import torch
+
 origins = [
     "http://localhost:5173",  # 前端地址
     "http://127.0.0.1:5173",  # 或者你的前端地址（如果是 React 本地开发的话）
 ]
 
-app = FastAPI()
+model_path = {
+    'luowen_detect':"D:\\github\\tauri-shadcn-template\\fastapi\\app\\algo\\best.pt",
+}
+
+# JSON 数据格式
+class ImageMetadata(BaseModel):
+    some_field: str  # 示例字段
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """应用启动时加载 YOLOv8，关闭时释放"""
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model_str = model_path["luowen_detect"]
+    global yolo_model
+    yolo_model = YOLO(model_str).to(device)
+    print("✅ YOLOv8 模型加载完成")
+    dummy_img = np.zeros((640, 640, 3), dtype=np.uint8)  # 创建黑色图片
+    yolo_model(dummy_img)
+    print("🔥 预热完成，YOLOv8 已准备就绪")
+    yield  # 运行 FastAPI
+    del yolo_model
+    print("🛑 YOLOv8 模型已释放")
+    
+app = FastAPI(lifespan=lifespan)
+
+
+
 
 app.add_middleware(
         CORSMiddleware,
@@ -65,7 +100,107 @@ async def root():
     '''
     return {"Algo list": "Hello World",
             "Command": "run"}
-    
+
+
+
+def parse_yolo_results(results):
+    """手动解析 YOLOv8 目标检测结果为 JSON 格式"""
+    detections = []
+    for box, conf, cls in zip(results[0].boxes.xyxy.cpu().numpy(),
+                              results[0].boxes.conf.cpu().numpy(),
+                              results[0].boxes.cls.cpu().numpy()):
+        detection = {
+            "x1": float(box[0]),  # 左上角 X 坐标
+            "y1": float(box[1]),  # 左上角 Y 坐标
+            "x2": float(box[2]),  # 右下角 X 坐标
+            "y2": float(box[3]),  # 右下角 Y 坐标
+            "confidence": float(conf),  # 置信度
+            "class_id": int(cls),  # 类别 ID
+        }
+        detections.append(detection)
+
+    return json.dumps(detections, indent=4)  # 转换为 JSON 字符串
+
+
+@app.post("/detect_diameter")
+async def detect_diameter(
+    file: UploadFile = File(...),
+):
+    pass
+
+@app.post("/detect_diameter_with_draw")
+async def detect_diameter_with_draw(
+    file: UploadFile = File(...),
+):
+    pass
+
+
+
+@app.post("/detect_luowen_with_draw/")
+async def detect_luowen_with_draw(
+    file: UploadFile = File(...),
+):
+    """处理图片，返回检测结果和绘制后的 Base64 图片"""
+
+    # 读取图片数据
+    contents = await file.read()
+    image = np.frombuffer(contents, np.uint8)
+    image = cv2.imdecode(image, cv2.IMREAD_COLOR)
+
+    # 使用 YOLOv8 进行推理
+    try:
+        results = yolo_model(image,conf=0.8)[0]
+
+
+        detections = sv.Detections.from_ultralytics(results)
+        
+        # 解析检测结果
+        detection_json = parse_yolo_results(results)
+
+        # 使用 Supervision 绘制检测框
+        # image_with_boxes = draw_detections(image, results)
+        box_annotator = sv.BoxAnnotator()
+        annotated_frame = box_annotator.annotate(
+            scene=image.copy(),
+            detections=detections)
+
+        # **直接用 OpenCV 编码为 PNG**
+        _, buffer = cv2.imencode('.png', annotated_frame)
+        img_base64 = base64.b64encode(buffer).decode("utf-8")
+    except:
+        _, buffer = cv2.imencode('.png', image)
+        img_base64 = base64.b64encode(buffer).decode("utf-8")
+        detection_json = {}
+        
+    detection_json = {'a':'a'}
+    return {"results": detection_json, "image_base64": img_base64}
+
+
+
+@app.post("/detect_luowen/")
+async def detect_luowen(
+    file: UploadFile = File(...),
+):
+    """处理图片，返回检测结果和绘制后的 Base64 图片"""
+
+    # 读取图片数据
+    contents = await file.read()
+    image = np.frombuffer(contents, np.uint8)
+    image = cv2.imdecode(image, cv2.IMREAD_COLOR)
+
+    # 使用 YOLOv8 进行推理
+    try:
+        results = yolo_model(image)[0]
+        
+        # 解析检测结果
+        detection_json = parse_yolo_results(results)
+    except:
+        detection_json = {}
+
+    return {"results": detection_json}
+
+
+
 @app.get("/data-transfer-protocol")
 async def data_transfer_protocol():
     '''
