@@ -28,8 +28,8 @@ interface DashboardState {
     logs: string;
     image_1: string|null;
     image_2: string|null;
-    info_1: string;
-    info_2: string;
+    info_1: string|null;
+    info_2: string|null;
     logComponentValue: LogShow[]; // 子组件状态示例
     resultComponentValue: SurfaceData[];
     systemstate: SystemState;
@@ -44,8 +44,12 @@ interface DashboardState {
     addLogComponentValueEntry: (log: LogShow) => void;
     addImage_1: (image: string) => void;
     addImage_2: (image: string) => void;
+    setInfo_1:(info: string)=>void;
+    setInfo_2:(info: string)=>void;
     clearImage_1: () => void;
     clearImage_2: () => void;
+    clearInfo_1: () => void;
+    clearInfo_2: () => void;
     updateResultComponent: (
       surface: string, // 要更新的 surface 名称
       newStatus?: "OK" | "NG" | "NULL", // 更新的状态
@@ -55,14 +59,14 @@ interface DashboardState {
 
 export const useDashboardStore = create<DashboardState>((set) => ({
   isRunning:false,  
-  artifactType:"-",
-  statics:"-",
-  artifact:"-",
+  artifactType:"---",
+  statics:"---",
+  artifact:"---",
   logs:"",
   image_1: null,
   image_2: null,
-  info_1: "-",
-  info_2: "-",
+  info_1: "---",
+  info_2: "---",
   systemstate: {camera_connected:null,plc_connected:null,robot_connected:null,sensor_connected:null,algo:null,hardware:null},
 
   logComponentValue: [{ sender: "System", level: "info", info: "程序启动." }],
@@ -94,6 +98,20 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   }),
   clearImage_1: () => set(() => ({ image_1: null })),
   clearImage_2: () => set(() => ({ image_2: null })),
+
+  setInfo_1:   (info:string) => set((state) => {
+    if (state.info_1 !== info) {
+      return { info_1: info };
+    }
+    return state;}), // 如果图片没有变化，保持不变),
+  setInfo_2:   (info:string) => set((state) => {
+    if (state.info_2 !== info) {
+      return { info_2: info };
+    }
+    return state;}),
+  clearInfo_1: () => set(() => ({ image_1: null })),
+  clearInfo_2: () => set(() => ({ image_2: null })),
+
   updateResultComponent: (surface, newStatus, newHoles) =>
     set((state) => ({
       resultComponentValue: state.resultComponentValue.map((item) =>

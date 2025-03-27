@@ -202,8 +202,8 @@ export default function Dashboard() {
       </CardContent>
               </Card>
             </div>
-            <div className='grid grid-cols-1 gap-4 lg:grid-cols-9 flex-grow'>
-              <Card className='col-span-1 lg:col-span-7 pt-2 h-full'>
+            <div className='grid grid-cols-1 gap-4 lg:grid-cols-10 flex-grow'>
+              <Card className='col-span-1 lg:col-span-8 pt-2 h-full'>
                 <CardContent className='px-2 flex justify-center items-center h-full'>
                   <Overview />
                 </CardContent>

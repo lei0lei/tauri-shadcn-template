@@ -8,7 +8,9 @@ use std::time::Duration;
 use std::thread;
 use std::sync::{Arc, Mutex};
 use once_cell::sync::Lazy;
-
+use chrono::Local;
+use super::super::SensorsDataRequest;
+use super::super::GLOBAL_SENSOR_TX;
 #[link(name = "cf_windows_3156557", kind = "dylib")] 
 #[link(name = "hps_cfxxxx_sdk", kind = "dylib")] 
 
@@ -64,7 +66,7 @@ fn rs_CF_ScanDeviceList() {
     }
 }
 
-fn rs_CF_GE_OpenDevice(ip: &str, device_handler: &mut cf3000_bindings::DeviceHandle_t,){
+pub async fn rs_CF_GE_OpenDevice(ip: &str, device_handler: &mut cf3000_bindings::DeviceHandle_t,){
     println!("open device");
 
     unsafe {
@@ -109,7 +111,7 @@ fn rs_CF_CloseDevice(device_handler: cf3000_bindings::DeviceHandle_t){
 }
 
 
-fn rs_CF_StartSample(device_handler: cf3000_bindings::DeviceHandle_t, cmd: bool){
+pub async fn rs_CF_StartSample(device_handler: cf3000_bindings::DeviceHandle_t, cmd: bool){
     // let handle: DeviceHandle_t = 0;
     println!("device start sampling {device_handler}");
     unsafe{
@@ -181,11 +183,18 @@ fn rs_getSingleChannelResult(data: *mut std::ffi::c_void, length: i32) {
             g_measure_result[index as usize] = single_channel_result[i as usize].result[0]; // 将数据存到对应的索引
             // println!("{:?}", g_measure_result);
         }
+        let current_time = Local::now();
+        println!("当前时间: {}", current_time);
+        println!("{:?}", g_measure_result);
+        if let Some(tx) = GLOBAL_SENSOR_TX.lock().unwrap().as_ref() {
+            let _ = tx.send(SensorsDataRequest::Cf3000(g_measure_result[0] as f64));
+        }
     }
 }
 
-fn rs_CF_RegisterEventCallback(rust_event_callback: unsafe extern "C" fn(cf3000_bindings::DeviceHandle_t, cf3000_bindings::EventCallbackArgs_t, *mut ::std::os::raw::c_void),){
+pub async fn rs_CF_RegisterEventCallback(){
     println!("register event callback");
+    let rust_event_callback: unsafe extern "C" fn(cf3000_bindings::DeviceHandle_t, cf3000_bindings::EventCallbackArgs_t, *mut ::std::os::raw::c_void) = rs_event_callback;
     unsafe {
         cf3000_bindings::CF_RegisterEventCallback(Some(rust_event_callback), std::ptr::null_mut());
     }
@@ -235,76 +244,76 @@ fn rs_CF_GetIntParam(handle: cf3000_bindings::DeviceHandle_t,
 
 }
 
-pub fn main_() {
+// pub fn main_() {
 
     // std::env::set_var("LANG", "en_ZH.UTF-8");
     // 1-设备扫描
 
     // 7-回调函数注册
-    rs_CF_RegisterEventCallback(rs_event_callback);
+    
 
     // 2-网口设备打开
-    let ip = "192.168.0.99";
-    let mut device_handler: cf3000_bindings::DeviceHandle_t = -1;
-    rs_CF_GE_OpenDevice(ip,&mut device_handler);
-    println!("opened device: {device_handler}");
+    // let ip = "192.168.0.101";
+    // let mut device_handler: cf3000_bindings::DeviceHandle_t = -1;
+    // rs_CF_GE_OpenDevice(ip,&mut device_handler);
+    // println!("opened device: {device_handler}");
 
     // 4-启动/停止数据采集
-    let cmd:bool = true;
-    rs_CF_StartSample(device_handler,cmd);
+    // let cmd:bool = true;
+    // rs_CF_StartSample(device_handler,cmd);
 
-    for i in 0..30 {
-        unsafe {
-            println!("{:?}", g_measure_result);
-            thread::sleep(Duration::from_secs_f64(0.1));
-            let data_received = IS_RECEIVE_DATA.lock().unwrap();
-            if *data_received {
-                    println!("{:?}", g_measure_result);
-            } else {
-                println!("未开启数据采集")
-            }
-        }
-    }
+    // for i in 0..30 {
+    //     unsafe {
+    //         println!("{:?}", g_measure_result);
+    //         thread::sleep(Duration::from_secs_f64(0.1));
+    //         let data_received = IS_RECEIVE_DATA.lock().unwrap();
+    //         if *data_received {
+    //                 println!("{:?}", g_measure_result);
+    //         } else {
+    //             println!("未开启数据采集")
+    //         }
+    //     }
+    // }
 
-    // 8-获取最新一帧单头测量值
-    let mut signalLength: i32 = 0;
+    // // 8-获取最新一帧单头测量值
+    // let mut signalLength: i32 = 0;
 
-    let mut single_result: [cf3000_bindings::SC_ResultDataTypeDef_t; 4] = Default::default();
-    for i in 0..10 {
-        rs_CF_GetLatestResult(device_handler,&mut single_result,&mut signalLength);
-        println!("{:?}",single_result[0].result[0]);
-    }
+    // let mut single_result: [cf3000_bindings::SC_ResultDataTypeDef_t; 4] = Default::default();
+    // for i in 0..10 {
+    //     rs_CF_GetLatestResult(device_handler,&mut single_result,&mut signalLength);
+    //     println!("{:?}",single_result[0].result[0]);
+    // }
 
-    // 获取int型参数
-    let param_name = cf3000_bindings::PARAM_DOUBLE_CHANNEL_MODE;
-    let channel_index: c_int = 0;
-    let channelModeState: c_int = 0;
+    // // 获取int型参数
+    // let param_name = cf3000_bindings::PARAM_DOUBLE_CHANNEL_MODE;
+    // let channel_index: c_int = 0;
+    // let channelModeState: c_int = 0;
 
-    let ret = rs_CF_SetIntParam(device_handler, param_name,channel_index,channelModeState);
-    if ret != cf3000_bindings::StatusTypeDef_Status_Succeed {
-        println!("设置单头模式失败，打印错误码：{:?}", ret);
-    } else {
-        println!("单头模式设置成功！");
-    }
+    // let ret = rs_CF_SetIntParam(device_handler, param_name,channel_index,channelModeState);
+    // if ret != cf3000_bindings::StatusTypeDef_Status_Succeed {
+    //     println!("设置单头模式失败，打印错误码：{:?}", ret);
+    // } else {
+    //     println!("单头模式设置成功！");
+    // }
 
-    // 设置int型参数
-    // rs_CF_GetIntParam();
-    match rs_CF_GetIntParam(device_handler, param_name, channel_index) {
-        Ok(value) => println!("获取到的值: {}", value),
-        Err(error_code) => println!("获取参数失败，错误码：{}", error_code),
-    }
-
-
+    // // 设置int型参数
+    // // rs_CF_GetIntParam();
+    // match rs_CF_GetIntParam(device_handler, param_name, channel_index) {
+    //     Ok(value) => println!("获取到的值: {}", value),
+    //     Err(error_code) => println!("获取参数失败，错误码：{}", error_code),
+    // }
 
 
-    // 3-设备关闭
-    rs_CF_CloseDevice(device_handler);
 
-    // 5-执行dark操作
-    rs_CF_DarkSignal();
 
-    // 6-测量值归0
-    rs_CF_Zero();
+    // // 3-设备关闭
+    // rs_CF_CloseDevice(device_handler);
+
+    // // 5-执行dark操作
+    // rs_CF_DarkSignal();
+
+    // // 6-测量值归0
+    // rs_CF_Zero();
 
 
     // 导出缓存中所有数据
@@ -337,7 +346,7 @@ pub fn main_() {
 
 
 
-    println!("Press Enter to exit...");
-    let mut input = String::new();
-    std::io::stdin().read_line(&mut input).unwrap();
-}
+//     println!("Press Enter to exit...");
+//     let mut input = String::new();
+//     std::io::stdin().read_line(&mut input).unwrap();
+// }

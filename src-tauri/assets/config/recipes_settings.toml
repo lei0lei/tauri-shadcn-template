@@ -2,7 +2,7 @@
 
 [type]
 all_type = ['EH09','EH12','EY28','EK30','EK40','TEST']
-current_type = 'EH09'
+current_type = 'TEST'
 
 [type.EH09]
 run_sequence = ['A','B','C','D','E']
