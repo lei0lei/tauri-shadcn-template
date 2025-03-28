@@ -18,6 +18,9 @@ interface LogShow {
     sensor_connected: boolean | null;
     algo: boolean |null;
     hardware: string|null;
+
+
+
   }
 
 interface DashboardState {
@@ -71,12 +74,12 @@ export const useDashboardStore = create<DashboardState>((set) => ({
 
   logComponentValue: [{ sender: "System", level: "info", info: "程序启动." }],
   resultComponentValue: [
-      { surface: "A", status: "OK", holes: [true, true, true, false, true] },
-      { surface: "B", status: "NG", holes: [false, false, false, false, false] },
-      { surface: "C", status: "OK", holes: [true, true, true, true, true] },
-      { surface: "D", status: "OK", holes: [true, true, true, false, true, true, false, true, true] },
-      { surface: "E", status: "NULL", holes: [null, null, null, null, null, true, false, true, true, true, false, true, true, false] },
-      { surface: "F", status: "OK", holes: [false, true, true, false] }
+      { surface: "A", status: "NULL", holes: [] },
+      { surface: "B", status: "NULL", holes: [] },
+      { surface: "C", status: "NULL", holes: [] },
+      { surface: "D", status: "NULL", holes: [] },
+      { surface: "E", status: "NULL", holes: [] },
+      { surface: "F", status: "NULL", holes: [] }
     ],
   setIsRunning: (state: boolean) => set({ isRunning: state }),
   setLogs: (log) => set((state) => ({ logs: state.logs + `\n${log}` })),

@@ -126,6 +126,23 @@ export function AccountForm() {
     })
   }
 
+  const reset_start_robot = async () => {
+    try {
+      await invoke('reset_start_robot');
+      console.log('机器人启动成功');
+    } catch (error) {
+      console.error('启动机器人失败:', error);
+    }
+  };
+  const reset_robot = async () => {
+    try {
+      await invoke('reset_robot');
+      console.log('机器人复位成功');
+    } catch (error) {
+      console.error('复位机器人失败:', error);
+    }
+  };
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-8'>
@@ -264,6 +281,26 @@ export function AccountForm() {
             </Button>
           </div>
           <FormMessage />
+        </FormItem>
+
+        
+        <FormItem>
+        <FormLabel>机器人指令</FormLabel>
+        <div className="flex gap-2">
+          
+            <Button type="button" onClick={() => reset_start_robot()}>
+              启动机器人
+            </Button>
+            <Button type="button" onClick={() => reset_robot() }>
+              复位机器人
+            </Button>
+            <Button type="button" onClick={() => { /* 停止机器人逻辑 */ }}>
+              停止机器人
+            </Button>
+            <Button type="button" onClick={() => { /* 继续机器人逻辑 */ }}>
+              继续机器人
+            </Button>
+          </div>
         </FormItem>
 
         <Separator />

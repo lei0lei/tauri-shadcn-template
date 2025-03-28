@@ -143,12 +143,12 @@ pub fn start_sensor_task(mut rx: std::sync::mpsc::Receiver<SensorsDataRequest>) 
             let tx = GLOBAL_TX.lock().await.clone().unwrap_or_else(|| {
                 panic!("GLOBAL_TX is not initialized. Ensure that start_plc_connect() has been called.");
             });
-            // tx.send(GeneralRequest::SendImageToFastapi(frame_info,image_data, resp_tx))
-            //     .await
-            //     .map_err(|_| "发送请求失败".to_string());
-            tx.send(GeneralRequest::SendImageToFrontend(frame_info,image_data, resp_tx))
+            tx.send(GeneralRequest::SendImageToFastapi(frame_info,image_data, resp_tx))
                 .await
                 .map_err(|_| "发送请求失败".to_string());
+            // tx.send(GeneralRequest::SendImageToFrontend(frame_info,image_data, resp_tx))
+            //     .await
+            //     .map_err(|_| "发送请求失败".to_string());
             match resp_rx.await {
                       Ok(_) => {
                       }
@@ -267,19 +267,27 @@ pub async fn start_global_task(mut rx: mpsc::Receiver<GeneralRequest>,app_handle
             alarm_reset().await;
             // 等待200ms
             thread::sleep(Duration::from_millis(200));
-            println!("启动报警复位");
+            let log = "[robot] [log] [机器人复位<<<--]";
+            sendlog2frontend(log.to_string());
             // 机器人上电
             on_battery().await;
-            println!("机器人上电");
+            let log = "[robot] [log] [机器人上电<<<--]";
+            sendlog2frontend(log.to_string());
             // 等待200ms
-            thread::sleep(Duration::from_millis(200));
+            thread::sleep(Duration::from_millis(1000));
             // 机器人主程序选择
             select_robot_program().await;
-            println!("主程序选择");
+            let log = "[robot] [log] [机器人主程序选择]";
+            sendlog2frontend(log.to_string());
             // 等待200ms
             thread::sleep(Duration::from_millis(200));
             // 启动机器人程序
             let result = start_robot_program().await;
+            let log = "[robot] [log] [机器人主程序启动<<<--]";
+            sendlog2frontend(log.to_string());
+            thread::sleep(Duration::from_millis(200));
+            write_register_robot(0, 0).await;
+
             let _ = resp_tx.send(result);
         });
       }
@@ -677,8 +685,36 @@ async fn send_image_to_fastapi(
   // 6. 发送结果到前端
   //  获取当前位置信息
 
+  let result = read_multiple_registers_robot(256, 3).await;
+  let mut reciever = String::from("image-send-image-1");
+  match result {
+    Ok(values) => {
+        if values.len() == 3 {
+            // 检查最后一个值，并执行相应的操作
+            match values.last() {
+                Some(&3) => {
+                    // 发送基准面深度信息
 
-  app_handle.emit("image-send-image-1", image_base64)
+                    // 写入深度信息
+                }
+                Some(&4) => {
+                    // 发送底部深度信息
+                    reciever = String::from("image-send-image-2");
+                    // 写入深度信息
+
+                }
+                _ => {
+                    // 抛弃
+                }
+            }
+        } else {
+            // 如果返回值不为 3 个元素，表示出错
+            return Err("读取寄存器失败，返回的数据不足"); // 修改为 &'static str
+        }
+    }
+    Err(_) => return Err("读取寄存器失败"), // 修改为 &'static str
+  }
+  app_handle.emit(&reciever, image_base64)
       .map_err(|_| "发送到前端失败")?;
 
   Ok(())
@@ -750,18 +786,6 @@ async fn monitor_robot() -> Result<(), String> {
   loop {
       // 每500ms读取某个PLC寄存器，模拟读取过程
       tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-      // 循环读取完成信号
-      // 读取位置信息
-      // match get_current_pos_from_robot().await {
-      //   Ok(values) => {
-      //       // 如果成功，打印读取的寄存器值
-      //       println!("读取的寄存器值: {:?}", values);
-      //   }
-      //   Err(err) => {
-      //       // 如果发生错误，打印错误信息
-      //       println!("读取寄存器失败: {}", err);
-      //   }
-      // }
       match get_finished_from_robot().await{
         Ok(value) => {
           let state = {
@@ -770,15 +794,20 @@ async fn monitor_robot() -> Result<(), String> {
         };
 
           if value != 0 && state == SoftwareState::START{
-            let log = "[robot] [log] [工件检测结束]";
+            let log = "[robot] [log] [工件检测结束-->>>]";
             sendlog2frontend(log.to_string());
             // 向plc发送结束信号
+            
+            // 拍照结束
+            write_register_plc(7201, 0).await;
             send_robot_finished_to_plc().await;
             end_robot_process().await;
-            let log = "[plc] [log] [工件退出]";
+
+            let log = "[plc] [log] [工件退出<<<--]";
             sendlog2frontend(log.to_string());
             let mut lock = START_PROCESS_STATE.lock().await; // 获取锁
             *lock = SoftwareState::STOP; // 设置为 START
+
           }else{
             // println!("等待工件到位");
           }
@@ -788,12 +817,144 @@ async fn monitor_robot() -> Result<(), String> {
           sendlog2frontend(log.to_string());
         }
       }
-      // match get_finished_from_robot().await{}
+      match get_command_from_robot().await {
+        Ok(value)=>{
+          if value & 1 != 0 {
+            // "[plc] [log] [机器人运行中<<<--]";
+            
+            send_continue_command_finished_to_plc().await;
+            
+            match get_command_from_plc().await {
+              Ok(value)=>{
+                match value {
+                  3 => {
+                    write_register_plc(7202,0).await;
+                  }
+                  
+                  _ => {
+                      // 如果 value 不是 2、3、或 4，执行默认操作
+                      // println!("Received an unknown command: {}", value);
+                  }
+    
+                }
+              }
+              Err(err) => {
+                let log = "[plc] [error] [无法读取工件指令信息]";
+                sendlog2frontend(log.to_string());
+                }
+            }
+          }
+          if value & 2 != 0 {
+              let log = "[plc] [log] [机器人暂停中<<<--]";
+              sendlog2frontend(log.to_string());
+              send_pause_command_finished_to_plc().await;
+
+              match get_command_from_plc().await {
+                Ok(value)=>{
+                  match value {
+                    2 => {
+                      write_register_plc(7202,0).await;
+                    }
+                    
+                    _ => {
+                        // 如果 value 不是 2、3、或 4，执行默认操作
+                        // println!("Received an unknown command: {}", value);
+                    }
+      
+                  }
+                }
+                Err(err) => {
+                  let log = "[plc] [error] [无法读取工件指令信息]";
+                  sendlog2frontend(log.to_string());
+                  }
+              }
+          }
+          if value & 4 != 0 {
+              // "[robot] [log] [机器人伺服上电完成<<<--]";
+
+          }
+          if value & 8 != 0 {
+            let  log = "[robot] [error] [机器人报警故障-->>>]";
+            sendlog2frontend(log.to_string());
+            // 机器人故障发送给plc停止
+            // send_reset_command_finished_to_plc().await;
+            send_robot_err_to_plc().await;
+          }
+          if value & 16 != 0 {
+              // "[robot] [log] [机器人报警复位完成<<<--]";
+              send_reset_command_finished_to_plc().await;
+
+              match get_command_from_plc().await {
+                Ok(value)=>{
+                  match value {
+                    4 => {
+                      write_register_plc(7202,0).await;
+                    }
+                    
+                    _ => {
+                        // 如果 value 不是 2、3、或 4，执行默认操作
+                        // println!("Received an unknown command: {}", value);
+                    }
+      
+                  }
+                }
+                Err(err) => {
+                  let log = "[plc] [error] [无法读取工件指令信息]";
+                  sendlog2frontend(log.to_string());
+                  }
+              }
+          }
+          if value & 32 == 0 {
+            // "[robot] [log] [机器人急停中<<<--]";
+            send_robot_err_to_plc().await;
+        }
+        }
+        Err(err) => {
+          let log = "[robot] [error] [无法读取工件指令信息]";
+          sendlog2frontend(log.to_string());
+          }
+      }
+      // // 保证暂停和停止信号常开
+      // write_register_robot(4, 3).await;
+      
 
   }
 }
+
+// 手动启动机器人
+#[tauri::command(rename_all = "snake_case")]
+async fn reset_start_robot() -> Result<(), String> {
+  tauri::async_runtime::spawn(async {
+    let (resp_tx, resp_rx) = oneshot::channel(); 
+    let tx = GLOBAL_TX.lock().await.clone().unwrap_or_else(|| {
+      panic!("GLOBAL_TX is not initialized. Ensure that start_global_task() has been called.");
+    });
+    tx.send(GeneralRequest::StartRobotProgram(resp_tx)).await.map_err(|_| "启动机器人程序失败".to_string());
+  });
+
+  Ok(())
+}
+
+// 手动复位机器人
+#[tauri::command(rename_all = "snake_case")]
+async fn reset_robot() -> Result<(), String> {
+  tauri::async_runtime::spawn(async {
+    // 手动启动机器人
+    alarm_reset().await;
+    thread::sleep(Duration::from_millis(200));
+    write_register_robot(0, 0).await
+
+  });
+
+  Ok(())
+}
+
+
+
 // 报警复位
 async fn alarm_reset() -> Result<(), String> {
+  // 保证暂停和停止信号常开
+  write_register_robot(4, 3).await;
   write_register_robot(0, 8).await
 }
 // 机器人上电
@@ -802,24 +963,30 @@ async fn on_battery() -> Result<(), String> {
 }
 // 机器人主程序选择
 async fn select_robot_program() -> Result<(), String> {
-  write_register_robot(0, 32).await
+  write_register_robot(0, 64).await
 }
 
 // 启动机器人程序
 async fn start_robot_program() -> Result<(), String> {
+  // 保证暂停和停止信号常开
+  write_register_robot(4, 3).await;
   write_register_robot(0, 1).await
 }
 
-
-
+// 从机器人获取指令结束信息
+async fn get_command_from_robot()-> Result<u16, String>{
+  read_register_robot(260).await
+}
 
 // 暂停
 async fn pause_robot() -> Result<(), String>{
-  write_register_robot(0, 2).await
+  write_register_robot(0, 2).await;
+  write_register_robot(4, 2).await
 }
 // 停止
 async fn stop_robot() -> Result<(), String>{
-  write_register_robot(0, 4).await
+  write_register_robot(0, 4).await;
+  write_register_robot(4, 1).await
 }
 
 // 到位
@@ -850,11 +1017,11 @@ fn map_value_to_type_plc(value: u16) -> Option<String> {
 
 async fn write_current_type_to_robot(robot_type: &str) -> Result<(), String>{
   let value = match robot_type {
-    "EH09" => 1,
-    "EH12" => 2,
-    "EK30" => 3,
-    "EK40" => 4,
-    "EY28" => 5,
+    "EH09" => 0,
+    "EH12" => 1,
+    "EK30" => 2,
+    "EK40" => 3,
+    "EY28" => 4,
     "TEST" => 10,
     _ => return Err("未知的机器人型号".to_string()),
   };
@@ -1002,20 +1169,20 @@ async fn monitor_plc() -> Result<(), String> {
         let lock = START_PROCESS_STATE.lock().await; // 使用 async 锁
         *lock // 复制出来，避免持有锁
       };
-      if state != SoftwareState::STOP{
-        
-      }else{
+      
         let current_type = get_current_type().clone();
         match get_start_robot_from_plc_started().await{
           Ok(value) => {
             if value != 0 {
-              let log = "[plc] [log] [工件已到位-->>>]";
-              sendlog2frontend(log.to_string());
-              get_start_robot_from_plc_finished().await;
+              // let log = "[plc] [log] [工件已到位-->>>]";
+              // sendlog2frontend(log.to_string());
+
+              // get_start_robot_from_plc_finished().await;
 
               // 修改状态为START
               let mut lock = START_PROCESS_STATE.lock().await; // 获取锁
               *lock = SoftwareState::START; // 设置为 START
+
               match current_type.clone() {
                 Some(robot_type) => {
                     println!("当前型号: {}", robot_type);
@@ -1050,101 +1217,111 @@ async fn monitor_plc() -> Result<(), String> {
                 sendlog2frontend(log.to_string());
                 }
         }
-        // match get_type_from_plc().await{
-        //   Ok(value)=>{
-        //     // println!("{}",value);
-        //     let plc_type = map_value_to_type_plc(value);
-        //     // println!("plc_type: {:?}", plc_type);
-        //     // 如果型号不同，获取写锁，写入类型
 
-        //     // 写入类型到机器人
-        //     match (plc_type, current_type.clone()) {
-        //       (Some(plc_type_str), Some(current_type_str)) => {
-        //           if plc_type_str != current_type_str {
-        //               // 如果不同，调用 set_current_type 更新类型
-        //               println!("类型不同，更新机器人型号...");
+        match get_type_from_plc().await{
+          Ok(value)=>{
+            // println!("{}",value);
+            let plc_type = map_value_to_type_plc(value);
+            // println!("plc_type: {:?}", plc_type);
+            // 如果型号不同，获取写锁，写入类型
 
-        //               set_current_type(plc_type_str); // 调用异步函数更新型号
-        //               // 写入类型到机器人
+            // 写入类型到机器人
+            match (plc_type, current_type.clone()) {
+              (Some(plc_type_str), Some(current_type_str)) => {
+                  if plc_type_str != current_type_str {
+                      // 如果不同，调用 set_current_type 更新类型
+                      println!("类型不同，更新机器人型号...");
 
-        //               let new_type = get_current_type();
-        //               match new_type {
-        //                 Some(robot_type) => {
-        //                     println!("当前型号: {}", robot_type);
+                      set_current_type(plc_type_str); // 调用异步函数更新型号
+                      let log = "[plc] [log] [修改机器人型号-->>>]";
+                      sendlog2frontend(log.to_string());
+                      // 写入类型到机器人
+
+                      let new_type = get_current_type();
+                      match new_type {
+                        Some(robot_type) => {
+                            println!("当前型号: {}", robot_type);
         
-        //                     // 将型号写入机器人
-        //                     match write_current_type_to_robot(&robot_type).await {
-        //                         Ok(_) => {
-        //                             println!("成功写入机器人型号: {}", robot_type);
-        //                             // 继续执行，不需要返回 Err
-        //                         }
-        //                         Err(err) => {
-        //                             println!("写入机器人型号失败: {}", err);
-        //                             return Err(err); // 明确返回错误
-        //                         }
-        //                     }
-        //                 }
-        //                 None => {
-        //                     println!("无法获取当前型号");
-        //                     return Err("无法获取当前型号".to_string()); // 明确返回错误
-        //                 }
-        //               }
-        //           } else {
-        //               // println!("当前类型与PLC获取的类型一致，无需更新");
-        //           }
-        //       }
-        //       _ => {
-        //           println!("无法获取类型进行比较");
-        //       }
-        //   }
-        //     // 传入类型到前端
+                            // 将型号写入机器人
+                            match write_current_type_to_robot(&robot_type).await {
+                                Ok(_) => {
+                                    println!("成功写入机器人型号: {}", robot_type);
+                                    let log = "[robot] [log] [写入机器人型号<<<--]";
+                                    sendlog2frontend(log.to_string());
+                                    // 继续执行，不需要返回 Err
+                                }
+                                Err(err) => {
+                                    println!("写入机器人型号失败: {}", err);
+                                    return Err(err); // 明确返回错误
+                                }
+                            }
+                        }
+                        None => {
+                            println!("无法获取当前型号");
+                            return Err("无法获取当前型号".to_string()); // 明确返回错误
+                        }
+                      }
+                  } else {
+                      // println!("当前类型与PLC获取的类型一致，无需更新");
+                  }
+              }
+              _ => {
+                  println!("无法获取类型进行比较");
+              }
+          }
+            // 传入类型到前端
 
 
-        //   }
-        //   Err(err) => {
-        //     let log = "[plc] [error] [无法读取工件型号信息]";
-        //     sendlog2frontend(log.to_string());
-        //     }
-        // }
+          }
+          Err(err) => {
+            let log = "[plc] [error] [无法读取工件型号信息]";
+            sendlog2frontend(log.to_string());
+            }
+        }
 
         match get_command_from_plc().await {
           Ok(value)=>{
             match value {
               2 => {
                   // 如果 value 是 2，给机器人暂停信号
+                  let log = "[plc] [log] [机器人暂停-->>>]";
+                  sendlog2frontend(log.to_string());
                   pause_robot().await;
+                  
                   // 在这里执行针对 value == 2 的操作
               }
               3 => {
                   // 如果 value 是 3，给机器人继续信号
+                  // let log = "[plc] [log] [机器人继续-->>>]";
+                  sendlog2frontend(log.to_string());
                   start_robot_program().await;
-
+                  
                   // 在这里执行针对 value == 3 的操作
               }
               4 => {
                   // 如果 value 是 4，给机器人复位信号
-                  alarm_reset().await;
+                  let log = "[plc] [log] [机器人复位-->>>]";
+                  sendlog2frontend(log.to_string());
+                  // alarm_reset().await;
+
+                  tauri::async_runtime::spawn(async {
+                    let (resp_tx, resp_rx) = oneshot::channel(); 
+                    let tx = GLOBAL_TX.lock().await.clone().unwrap_or_else(|| {
+                      panic!("GLOBAL_TX is not initialized. Ensure that start_global_task() has been called.");
+                    });
+                    tx.send(GeneralRequest::StartRobotProgram(resp_tx)).await.map_err(|_| "启动机器人程序失败".to_string());
+                  });
+
+                  let log = "[robot] [log] [机器人复位<<<--]";
+                  sendlog2frontend(log.to_string());
                   // 等待200ms
                   thread::sleep(Duration::from_millis(200));
-                  println!("启动报警复位");
-                  // 机器人上电
-                  on_battery().await;
-                  println!("机器人上电");
-                  // 等待200ms
-                  thread::sleep(Duration::from_millis(200));
-                  // 机器人主程序选择
-                  select_robot_program().await;
-                  println!("主程序选择");
-                  // 等待200ms
-                  thread::sleep(Duration::from_millis(200));
-                  // 启动机器人程序
-                  let result = start_robot_program().await;
+                  write_register_robot(0, 0).await;
                   
-                  // 在这里执行针对 value == 4 的操作
               }
               _ => {
                   // 如果 value 不是 2、3、或 4，执行默认操作
-                  println!("Received an unknown command: {}", value);
+                  // println!("Received an unknown command: {}", value);
               }
 
             }
@@ -1156,7 +1333,7 @@ async fn monitor_plc() -> Result<(), String> {
         }
 
 
-      }
+      
 
   }
 }
@@ -1186,9 +1363,11 @@ async fn get_start_robot_from_plc_started() -> Result<u16, String>{
 }
 
 
-async fn get_start_robot_from_plc_finished(){
-  write_register_plc(7201, 0).await;
-}
+// async fn get_start_robot_from_plc_finished(){
+//   // write_register_plc(7201, 0).await;
+//   let log = "[robot] [log] [工件已到位<<---]";
+//   sendlog2frontend(log.to_string());
+// }
 
 
 
@@ -1217,6 +1396,11 @@ async fn send_continue_command_finished_to_plc(){
 // 中转完成信号-复位
 async fn send_reset_command_finished_to_plc(){
   write_register_plc(7302, 4).await;
+}
+
+// 机器人急停信号
+async fn send_robot_err_to_plc(){
+  write_register_plc(7302, 5).await;
 }
 
 // =========================================================================================
@@ -1524,6 +1708,8 @@ pub fn run_tauri_app() {
                                             read_register_frontend_robot,
                                             write_register_frontend_plc,
                                             write_register_frontend_robot,
+                                            reset_start_robot,
+                                            reset_robot,
                                             sidecar::sidecar::start_sidecar,
                                             sidecar::sidecar::shutdown_sidecar])
     .run(tauri::generate_context!())
