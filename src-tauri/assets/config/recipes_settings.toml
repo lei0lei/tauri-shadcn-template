@@ -1,7 +1,7 @@
 # 型号检测配置
 
 [type]
-all_type = ['EH09','EH12','EY28','EK30','EK40','TEST']
+all_type = ['EH09','EH12','EK30','EK40','EY28','TEST']
 current_type = 'TEST'
 
 [type.EH09]

@@ -35,6 +35,8 @@ const iconMap : Record<string, React.ComponentType>= {
   "硬盘": IconDeviceFloppy,
 };
 
+import { invoke } from '@tauri-apps/api/core';
+
 export default function Dashboard() {
   // 后端rust调用测试
   // const [response, setResponse] = useState<string>('');
@@ -49,7 +51,39 @@ export default function Dashboard() {
   //   }
   // };
   // @ts-ignore
-  const { logs, setLogs, artifactType,statics,artifact} = useDashboardStore();
+  const { logs, setLogs, artifactType,setArtifactType,statics,artifact} = useDashboardStore();
+
+  useEffect(() => {
+    // 监听后端发送的 log_received 事件
+    const handleTypeReceived = (event: { payload: string }) => {
+      const current_type = event.payload;
+
+      setArtifactType(current_type);
+    };
+
+    // 监听 "log_received" 事件
+    const unlisten = listen("current-type", handleTypeReceived);
+
+    // 清理监听器
+    return () => {
+      unlisten.then((unlistenFn) => unlistenFn());
+    };
+  }, [setArtifactType]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const result = await invoke("selected_artifact_type"); // 调用后端命令
+        console.log("后端返回的数据:", result);
+      } catch (error) {
+        console.error("调用后端命令失败:", error);
+      }
+    };
+
+    fetchData();
+  }, []); // 空数组表示只在组件挂载时执行一次
+
+
 
   const initSidecarListeners = async () => {
     // Listen for stdout lines from the sidecar
@@ -117,10 +151,7 @@ export default function Dashboard() {
                   </svg>
                 </CardHeader>
                 <CardContent>
-                  <div className='text-2xl font-bold'>{artifactType}</div>
-                  <p className='text-xs text-muted-foreground'>
-                    +20.1% from last month
-                  </p>
+                  <div className='text-5xl font-bold'>{artifactType}</div>
                 </CardContent>
               </Card>
               <Card className="select-none">

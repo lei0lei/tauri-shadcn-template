@@ -512,6 +512,33 @@ pub async fn stop_plc_connection() {
     }
   }
   
+pub async fn stop_robot_connection() {
+    let (resp_tx, resp_rx):(oneshot::Sender<Result<(), String>>, oneshot::Receiver<Result<(), String>>) = oneshot::channel();
+    // 尝试获取 PLC_TX 锁，并确保 tx 可用
+    let tx_guard = ROBOT_TX.lock().await;
+  
+    // 确保 tx 存在，并且通道未关闭
+    if let Some(tx) = tx_guard.clone() {
+        // 发送停止命令
+        match tx.send(ModbusRequest::STOP(resp_tx)).await {
+            Ok(()) => {
+                println!("成功发送停止命令");
+            }
+            Err(e) => {
+                println!("发送停止命令失败: {:?}", e);
+            }
+        }
+    } else {
+        println!("机器人 连接通道已关闭");
+    }
+    
+    // 这里处理接收到的响应
+    match resp_rx.await {
+        Ok(Ok(())) => println!("成功停止 机器人 任务"),
+        Ok(Err(e)) => println!("停止 机器人 任务失败: {}", e),
+        Err(_) => println!("接收停止信号失败"),
+    }
+  }
   
 
 pub fn set_plc_test() -> Result<(), Box<dyn std::error::Error>> {

@@ -24,3 +24,14 @@ enable_detect = true
 
 
 [result]
+
+
+[current_state]
+OK_NUM = 0
+NG_NUM = 0
+ALL = 0
+
+
+
+
+

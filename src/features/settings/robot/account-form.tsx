@@ -134,14 +134,43 @@ export function AccountForm() {
       console.error('启动机器人失败:', error);
     }
   };
-  const reset_robot = async () => {
+  const reset_alarm_robot = async () => {
     try {
-      await invoke('reset_robot');
+      await invoke('reset_alarm_robot');
       console.log('机器人复位成功');
     } catch (error) {
       console.error('复位机器人失败:', error);
     }
   };
+
+  const stop_robot = async () => {
+    try {
+      await invoke('stop_robot');
+      console.log('机器人复位成功');
+    } catch (error) {
+      console.error('复位机器人失败:', error);
+    }
+  };
+
+
+  const position_robot = async () => {
+    try {
+      await invoke('position_robot');
+      console.log('机器人复位成功');
+    } catch (error) {
+      console.error('复位机器人失败:', error);
+    }
+  };
+
+  const start_robot = async () => {
+    try {
+      await invoke('start_robot');
+      console.log('机器人复位成功');
+    } catch (error) {
+      console.error('复位机器人失败:', error);
+    }
+  };
+
 
   return (
     <Form {...form}>
@@ -291,14 +320,17 @@ export function AccountForm() {
             <Button type="button" onClick={() => reset_start_robot()}>
               启动机器人
             </Button>
-            <Button type="button" onClick={() => reset_robot() }>
-              复位机器人
+            <Button type="button" onClick={() => reset_alarm_robot() }>
+              报警复位机器人
             </Button>
-            <Button type="button" onClick={() => { /* 停止机器人逻辑 */ }}>
+            <Button type="button" onClick={() => stop_robot()}>
               停止机器人
             </Button>
-            <Button type="button" onClick={() => { /* 继续机器人逻辑 */ }}>
+            <Button type="button" onClick={() => start_robot()}>
               继续机器人
+            </Button>
+            <Button type="button" onClick={() => position_robot()}>
+              工件到位
             </Button>
           </div>
         </FormItem>

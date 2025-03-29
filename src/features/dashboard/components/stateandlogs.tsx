@@ -11,6 +11,7 @@ export default function LogWindow() {
   const addLog = useDashboardStore((state) => state.addLogComponentValueEntry); // 获取日志更新方法
   
   const logEndRef = useRef<HTMLDivElement | null>(null); // 引用滚动到最后的元素
+  const lastLogRef = useRef<{ sender: string; level: string; info: string } | null>(null); // 追踪最新日志
 
   useEffect(() => {
     // 监听后端发送的 log_received 事件
@@ -25,8 +26,20 @@ export default function LogWindow() {
         const sender = match[1]; // 日志来源 (如 camera)
         const info = match[3]; // 日志内容 (如 打开相机成功: 0)
         const level = match[2];
-        // 将解析后的日志信息添加到日志列表中
-        addLog({ sender, level, info });
+        const newLog = { sender, level, info };
+
+        // 获取 Zustand 中的最新日志
+        const lastLog = lastLogRef.current;
+
+        // 只有当日志不同才更新 Zustand
+        if (!lastLog || lastLog.sender !== sender || lastLog.level !== level || lastLog.info !== info) {
+          addLog(newLog);
+
+          // ✅ 确保在 Zustand 更新后才更新 lastLogRef
+          setTimeout(() => {
+            lastLogRef.current = newLog;
+          }, 0);
+        }
       } else {
         console.warn("日志格式不符合预期: ", logMessage);
       }

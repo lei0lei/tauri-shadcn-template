@@ -126,6 +126,39 @@ export function AccountForm() {
     })
   }
 
+  const robot_finished = async () => {
+    try {
+      await invoke('robot_run_finished');
+      console.log('机器人复位成功');
+    } catch (error) {
+      console.error('复位机器人失败:', error);
+    }
+  };
+  const robot_reset_finished = async () => {
+    try {
+      await invoke('robot_reset_finished');
+      console.log('机器人复位成功');
+    } catch (error) {
+      console.error('复位机器人失败:', error);
+    }
+  };
+  const robot_stop_finished = async () => {
+    try {
+      await invoke('robot_pausing');
+      console.log('机器人复位成功');
+    } catch (error) {
+      console.error('复位机器人失败:', error);
+    }
+  };
+  const robot_running = async () => {
+    try {
+      await invoke('robot_running');
+      console.log('机器人复位成功');
+    } catch (error) {
+      console.error('复位机器人失败:', error);
+    }
+  };
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-8'>
@@ -265,7 +298,25 @@ export function AccountForm() {
           </div>
           <FormMessage />
         </FormItem>
-
+        <FormItem>
+        <FormLabel>plc指令</FormLabel>
+        <div className="flex gap-2">
+          
+            <Button type="button" onClick={() => robot_finished()}>
+              拍照完成
+            </Button>
+            <Button type="button" onClick={() => robot_reset_finished() }>
+              机器人复位完成
+            </Button>
+            <Button type="button" onClick={() => robot_stop_finished()}>
+              机器人停止完成
+            </Button>
+            <Button type="button" onClick={() => robot_running()}>
+              机器人运行中
+            </Button>
+            
+          </div>
+        </FormItem>
         <Separator />
         <Button type='submit'>更新设置</Button>
       </form>

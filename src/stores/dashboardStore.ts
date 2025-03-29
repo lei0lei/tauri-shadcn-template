@@ -18,9 +18,6 @@ interface LogShow {
     sensor_connected: boolean | null;
     algo: boolean |null;
     hardware: string|null;
-
-
-
   }
 
 interface DashboardState {
@@ -38,7 +35,7 @@ interface DashboardState {
     systemstate: SystemState;
     // 方法
     setIsRunning:(state:boolean)=>void;
-    // setArtifactType:(atype: string)=>void;
+    setArtifactType:(atype: string)=>void;
     // setStatics:(statics: string)=>void;
     // setArtifact:(result: string)=>void;
     // setSystemstate:(state: SystemState)=>void;
@@ -81,6 +78,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
       { surface: "E", status: "NULL", holes: [] },
       { surface: "F", status: "NULL", holes: [] }
     ],
+  setArtifactType:(atype:string) => set({artifactType:atype}),
   setIsRunning: (state: boolean) => set({ isRunning: state }),
   setLogs: (log) => set((state) => ({ logs: state.logs + `\n${log}` })),
   addLogComponentValueEntry: (log) =>
