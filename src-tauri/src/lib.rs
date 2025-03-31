@@ -121,7 +121,7 @@ lazy_static! {
       Arc::new(std::sync::Mutex::new(None));
 }
 
-// pub type SharedTaskState = Arc<tokio::sync::RwLock<TaskState>>;
+pub type SharedTaskState = Arc<tokio::sync::RwLock<TaskState>>;
 
 // 检测状态
 pub struct TaskState {
@@ -197,32 +197,32 @@ impl TaskState {
     }
   }
 
-//   pub async fn update_action2(&mut self, face_id: usize, hole_id: usize, data: Vec<f64>) {
-//       if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
-//           hole.action2 = data;
-//       }
-//   }
+  pub async fn update_action2(&mut self, face_id: usize, hole_id: usize, data: Vec<f64>) {
+      if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
+          hole.action2 = data;
+      }
+  }
 
-//   pub async fn update_action3(&mut self, face_id: usize, hole_id: usize, detection: Yolov8Result) {
-//       if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
-//           hole.action3 = Some(detection);
-//       }
-//   }
+  pub async fn update_action3(&mut self, face_id: usize, hole_id: usize, detection: Yolov8Result) {
+      if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
+          hole.action3 = Some(detection);
+      }
+  }
 
-//   pub async fn update_action4(&mut self, face_id: usize, hole_id: usize, diameter: HoleDiameter) {
-//       if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
-//           hole.action4 = Some(diameter);
-//       }
-//   }
-//   pub async fn get_hole_state(&self, face_id: usize, hole_id: usize) -> Option<HoleState> {
-//     self.holes.get(&(face_id, hole_id)).cloned()
-//   }
-//   pub async fn clear(&mut self) {
-//     self.holes.clear();
-//     self.current_face = 0;
-//     self.current_hole = 0;
-//   }
-// }
+  pub async fn update_action4(&mut self, face_id: usize, hole_id: usize, diameter: HoleDiameter) {
+      if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
+          hole.action4 = Some(diameter);
+      }
+  }
+  pub async fn get_hole_state(&self, face_id: usize, hole_id: usize) -> Option<HoleState> {
+    self.holes.get(&(face_id, hole_id)).cloned()
+  }
+  pub async fn clear(&mut self) {
+    self.holes.clear();
+    self.current_face = 0;
+    self.current_hole = 0;
+  }
+}
 
 // 
 // 保存路径相关
