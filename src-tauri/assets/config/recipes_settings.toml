@@ -3,45 +3,345 @@
 [type]
 all_type = ['EH09','EH12','EK30','EK40','EY28','TEST']
 current_type = 'TEST'
+pixel_length = 1
+
 
 [type.EH09]
-run_sequence = ['A','B','C','D','E']
+run_sequence = ['A','B','C','D','E','F']
 
+# +++++++++++++++++++++++++++++++EH09-A++++++++++++++++++++++++++++++++++++++++
 [type.EH09.A]
 run_sequence = [1,2]
+
 [type.EH09.A.1]
-thru_home = false
-screw_hole = 'M8'
-diameter_min = 0
-diameter_max = 0
-depth_min = 0
-depth_max = 0
+thru_home = true
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 16.5
+depth_max = 17.5
 
 [type.EH09.A.2]
-thru_home = false
+thru_home = true
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 16.5
+depth_max = 17.5
+
+# +++++++++++++++++++++++++++++++EH09-B++++++++++++++++++++++++++++++++++++++++
+
+[type.EH09.B]
+run_sequence = [1,2,3,4,5,6,7,8,9]
+
+[type.EH09.B.1]
+thru_home = true
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 1000
+depth_max = 2000
+
+[type.EH09.B.2]
+thru_home = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 19.5
+depth_max = 20.5
+
+[type.EH09.B.3]
+thru_home = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 19.5
+depth_max = 20.5
+
+[type.EH09.B.4]
+thru_home = true
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 1000
+depth_max = 2000
+
+[type.EH09.B.5]
+thru_home = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 13
+depth_max = 14
+
+[type.EH09.B.6]
+thru_home = true
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 1000
+depth_max = 2000
+
+[type.EH09.B.7]
+thru_home = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 13
+depth_max = 14
+
+[type.EH09.B.8]
+thru_home = true
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 20
+depth_max = 21
+
+[type.EH09.B.9]
+thru_home = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 13
+depth_max = 14
+
+# +++++++++++++++++++++++++++++++EH09-C++++++++++++++++++++++++++++++++++++++++
+
+[type.EH09.C]
+run_sequence = [1,2,3,4,5]
+
+[type.EH09.C.1]
+thru_home = true
+screw_hole = 'M6'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 1000
+depth_max = 2000
+
+[type.EH09.C.2]
+thru_home = true
+screw_hole = 'M6'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 1000
+depth_max = 2000
+
+[type.EH09.C.3]
+thru_home = true
+screw_hole = 'M6'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 14.5
+depth_max = 15.5
+
+[type.EH09.C.4]
+thru_home = true
+screw_hole = '-'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 14.5
+depth_max = 15.5
+
+[type.EH09.C.5]
+thru_home = true
+screw_hole = 'M6'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 14.5
+depth_max = 15.5
+# +++++++++++++++++++++++++++++++EH09-D++++++++++++++++++++++++++++++++++++++++
+
+[type.EH09.D]
+run_sequence = [1,2,3,4,5,6,7,8,9,10,11,12]
+
+[type.EH09.D.1]
+thru_home = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 1000
+depth_max = 2000
+
+[type.EH09.D.2]
+thru_home = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 16.5
+depth_max = 17.5
+
+[type.EH09.D.3]
+thru_home = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 16.5
+depth_max = 17.5
+
+[type.EH09.D.4]
+thru_home = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 16.5
+depth_max = 17.5
+
+[type.EH09.D.5]
+thru_home = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 15.5
+depth_max = 16.5
+
+
+
+[type.EH09.D.6]
+thru_home = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 1000
+depth_max = 2000
+
+[type.EH09.D.7]
+thru_home = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 1000
+depth_max = 2000
+
+[type.EH09.D.8]
+thru_home = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 1000
+depth_max = 2000
+
+[type.EH09.D.9]
+thru_home = true
+screw_hole = 'M5-0.8'
+diameter_min = 4.1
+diameter_max = 4.3
+depth_min = 1000
+depth_max = 2000
+
+[type.EH09.D.10]
+thru_home = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 1000
+depth_max = 2000
+
+[type.EH09.D.11]
+thru_home = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 1000
+depth_max = 2000
+
+[type.EH09.D.12]
+thru_home = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 1000
+depth_max = 2000
+# +++++++++++++++++++++++++++++++EH09-E++++++++++++++++++++++++++++++++++++++++
+
+[type.EH09.E]
+run_sequence = [1,2,3,4,5,6]
+
+[type.EH09.E.1]
+thru_home = true
 screw_hole = 'M8'
-diameter_min = 0
-diameter_max = 0
-depth_min = 0
-depth_max = 0
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 18
+depth_max = 19
 
+[type.EH09.E.2]
+thru_home = true
+screw_hole = 'M6'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 15
+depth_max = 16
 
+[type.EH09.E.3]
+thru_home = true
+screw_hole = 'M8'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 18
+depth_max = 19
 
+[type.EH09.E.4]
+thru_home = true
+screw_hole = 'M8'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 18
+depth_max = 19
 
+[type.EH09.E.5]
+thru_home = true
+screw_hole = 'M6'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 15
+depth_max = 16
 
+[type.EH09.E.6]
+thru_home = true
+screw_hole = 'M8'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 18
+depth_max = 19
+# +++++++++++++++++++++++++++++++EH09-F++++++++++++++++++++++++++++++++++++++++
 
+[type.EH09.F]
+run_sequence = [1,2,3,4]
 
+[type.EH09.F.1]
+thru_home = true
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 1000
+depth_max = 2000
 
+[type.EH09.F.2]
+thru_home = true
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 1000
+depth_max = 2000
 
+[type.EH09.F.3]
+thru_home = true
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 1000
+depth_max = 2000
 
+[type.EH09.F.4]
+thru_home = true
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 31.5
+depth_max = 32.5
 
-
-
-
-
-
-
-
+# ==========================================================================================
 
 
 

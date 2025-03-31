@@ -121,15 +121,97 @@ lazy_static! {
       Arc::new(std::sync::Mutex::new(None));
 }
 
-// 机器人消息队列(读写)
+pub type SharedTaskState = Arc<tokio::sync::RwLock<TaskState>>;
 
-// 当前任务存放
+// 检测状态
 pub struct TaskState {
-
+  pub current_artifact: String, // 当前型号
+  pub current_face: usize, // 当前正在检测的面编号
+  pub current_hole: usize, // 当前正在检测的孔编号
+  pub holes: HashMap<(usize, usize), HoleState>, // (face_id, hole_id) -> HoleState
 }
 
+// 每个孔的状态
 pub struct HoleState {
+  pub face_id: usize,   //面编号
+  pub hole_id: usize,   // 孔编号
+  pub action1: Vec<f64>, // 动作1的数据
+  pub action2: Vec<f64>, // 动作2的数据
+  pub action3: Option<Yolov8Result>, // 动作3的检测结果
+  pub action4: Option<HoleDiameter>, // 动作4的检测结果，如圆心、直径等
+}
 
+pub struct Yolov8Result {
+  pub detections: Vec<Detection>,
+}
+pub struct HoleDiameter {
+  pub nei_center: (f64,f64),
+  pub nei_diameter: f64,
+  pub wai_center: (f64,f64),
+  pub wai_diameter: f64,
+}
+
+// 检测结果
+pub struct Detection {
+  pub class_id: u32,
+  pub confidence: f64,
+  pub bbox: (f64, f64, f64, f64), // x, y, x, y
+}
+
+impl TaskState {
+  pub fn new(artifact: String) -> SharedTaskState {
+      Arc::new(RwLock::new(Self {
+          current_artifact: artifact,
+          current_face: 1,
+          current_hole: 1,
+          holes: HashMap::new(),
+      }))
+  }
+  /// 更新当前检测的面和孔
+  pub async fn update_current_position(&mut self, face_id: usize, hole_id: usize) {
+    self.current_face = face_id;
+    self.current_hole = hole_id;
+  }
+  // 添加孔位
+  pub async fn add_hole(&mut self, face_id: usize, hole_id: usize) {
+    self.holes.insert((face_id, hole_id), HoleState {
+        action1: Vec::new(),
+        action2: Vec::new(),
+        action3: None,
+        action4: None,
+    });
+  }
+  pub async fn update_action1(&mut self, face_id: usize, hole_id: usize, data: Vec<f64>) {
+    if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
+        hole.action1 = data;
+    }
+  }
+
+  pub async fn update_action2(&mut self, face_id: usize, hole_id: usize, data: Vec<f64>) {
+      if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
+          hole.action2 = data;
+      }
+  }
+
+  pub async fn update_action3(&mut self, face_id: usize, hole_id: usize, detection: Yolov8Result) {
+      if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
+          hole.action3 = Some(detection);
+      }
+  }
+
+  pub async fn update_action4(&mut self, face_id: usize, hole_id: usize, diameter: HoleDiameter) {
+      if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
+          hole.action4 = Some(diameter);
+      }
+  }
+  pub async fn get_hole_state(&self, face_id: usize, hole_id: usize) -> Option<HoleState> {
+    self.holes.get(&(face_id, hole_id)).cloned()
+  }
+  pub async fn clear(&mut self) {
+    self.holes.clear();
+    self.current_face = 0;
+    self.current_hole = 0;
+  }
 }
 
 // 数据消息队列(相机、传感器)
@@ -785,8 +867,6 @@ async fn monitor_robot() -> Result<(), String> {
               let log = "[robot] [log] [工件检测结束-->>>]";
               sendlog2frontend(log.to_string());
               // 向plc发送结束信号
-              
-              // 拍照结束
               write_register_plc(7201, 0).await;
               send_robot_finished_to_plc().await;
               end_robot_process().await;
@@ -796,13 +876,15 @@ async fn monitor_robot() -> Result<(), String> {
               let mut lock = START_PROCESS_STATE.lock().await; // 获取锁
               *lock = SoftwareState::STOP; // 设置为 START
 
+              // 清除结果存储
+
             }else{
               // println!("等待工件到位");
             }
           }
           Err(err) => {
-            let log = "[robot] [error] [无法读取工件结束信息]";
-            sendlog2frontend(log.to_string());
+            // let log = "[robot] [error] [无法读取工件结束信息]";
+            // sendlog2frontend(log.to_string());
           }
         }
 
@@ -828,8 +910,8 @@ async fn monitor_robot() -> Result<(), String> {
                   }
                 }
                 Err(err) => {
-                  let log = "[plc] [error] [无法读取工件指令信息]";
-                  sendlog2frontend(log.to_string());
+                  // let log = "[plc] [error] [无法读取工件指令信息]";
+                  // sendlog2frontend(log.to_string());
                   }
               }
             }
@@ -852,8 +934,8 @@ async fn monitor_robot() -> Result<(), String> {
                     }
                   }
                   Err(err) => {
-                    let log = "[plc] [error] [无法读取工件指令信息]";
-                    sendlog2frontend(log.to_string());
+                    // let log = "[plc] [error] [无法读取工件指令信息]";
+                    // sendlog2frontend(log.to_string());
                     }
                 }
             }
@@ -888,8 +970,8 @@ async fn monitor_robot() -> Result<(), String> {
                     }
                   }
                   Err(err) => {
-                    let log = "[plc] [error] [无法读取工件指令信息]";
-                    sendlog2frontend(log.to_string());
+                    // let log = "[plc] [error] [无法读取工件指令信息]";
+                    // sendlog2frontend(log.to_string());
                     }
                 }
             }
@@ -899,8 +981,8 @@ async fn monitor_robot() -> Result<(), String> {
           }
           }
           Err(err) => {
-            let log = "[robot] [error] [无法读取工件指令信息]";
-            sendlog2frontend(log.to_string());
+            // let log = "[robot] [error] [无法读取工件指令信息]";
+            // sendlog2frontend(log.to_string());
             }
         }
       }
@@ -1234,8 +1316,8 @@ async fn monitor_plc() -> Result<(), String> {
           }
         }
         Err(err) => {
-          let log = "[plc] [error] [无法读取工件型号信息]";
-          sendlog2frontend(log.to_string());
+          // let log = "[plc] [error] [无法读取工件型号信息]";
+          // sendlog2frontend(log.to_string());
           }
       }
 
@@ -1248,7 +1330,7 @@ async fn monitor_plc() -> Result<(), String> {
       }else{
         match get_start_robot_from_plc_started().await{
           Ok(value) => {
-            if value != 0 {
+            if value != 0 &&  state ==SoftwareState::STOP {
 
               // 修改状态为START
               let mut lock = START_PROCESS_STATE.lock().await; // 获取锁
@@ -1274,16 +1356,20 @@ async fn monitor_plc() -> Result<(), String> {
                     return Err("无法获取当前型号".to_string()); // 明确返回错误
                 }
               }
+              // 创建保存状态
+
+
+
 
               // 发送到位信号到机器人
               start_robot_process().await;
             }else{
-              // println!("等待工件到位");
+              // println!("等待工件到位或上次过程完成");
             }
           }
           Err(err) => {
-                let log = "[plc] [error] [无法读取工件位置信息]";
-                sendlog2frontend(log.to_string());
+                // let log = "[plc] [error] [无法读取工件位置信息]";
+                // sendlog2frontend(log.to_string());
                 }
         }
 
@@ -1346,8 +1432,8 @@ async fn monitor_plc() -> Result<(), String> {
             }
           }
           Err(err) => {
-            let log = "[plc] [error] [无法读取工件指令信息]";
-            sendlog2frontend(log.to_string());
+            // let log = "[plc] [error] [无法读取工件指令信息]";
+            // sendlog2frontend(log.to_string());
             }
         }
       }
