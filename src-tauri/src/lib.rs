@@ -121,98 +121,98 @@ lazy_static! {
       Arc::new(std::sync::Mutex::new(None));
 }
 
-pub type SharedTaskState = Arc<tokio::sync::RwLock<TaskState>>;
+// pub type SharedTaskState = Arc<tokio::sync::RwLock<TaskState>>;
 
-// 检测状态
-pub struct TaskState {
-  pub current_artifact: String, // 当前型号
-  pub current_face: usize, // 当前正在检测的面编号
-  pub current_hole: usize, // 当前正在检测的孔编号
-  pub holes: HashMap<(usize, usize), HoleState>, // (face_id, hole_id) -> HoleState
-}
+// // 检测状态
+// pub struct TaskState {
+//   pub current_artifact: String, // 当前型号
+//   pub current_face: usize, // 当前正在检测的面编号
+//   pub current_hole: usize, // 当前正在检测的孔编号
+//   pub holes: HashMap<(usize, usize), HoleState>, // (face_id, hole_id) -> HoleState
+// }
 
-// 每个孔的状态
-pub struct HoleState {
-  pub face_id: usize,   //面编号
-  pub hole_id: usize,   // 孔编号
-  pub action1: Vec<f64>, // 动作1的数据
-  pub action2: Vec<f64>, // 动作2的数据
-  pub action3: Option<Yolov8Result>, // 动作3的检测结果
-  pub action4: Option<HoleDiameter>, // 动作4的检测结果，如圆心、直径等
-}
+// // 每个孔的状态
+// pub struct HoleState {
+//   pub face_id: usize,   //面编号
+//   pub hole_id: usize,   // 孔编号
+//   pub action1: Vec<f64>, // 动作1的数据
+//   pub action2: Vec<f64>, // 动作2的数据
+//   pub action3: Option<Yolov8Result>, // 动作3的检测结果
+//   pub action4: Option<HoleDiameter>, // 动作4的检测结果，如圆心、直径等
+// }
 
-pub struct Yolov8Result {
-  pub detections: Vec<Detection>,
-}
-pub struct HoleDiameter {
-  pub nei_center: (f64,f64),
-  pub nei_diameter: f64,
-  pub wai_center: (f64,f64),
-  pub wai_diameter: f64,
-}
+// pub struct Yolov8Result {
+//   pub detections: Vec<Detection>,
+// }
+// pub struct HoleDiameter {
+//   pub nei_center: (f64,f64),
+//   pub nei_diameter: f64,
+//   pub wai_center: (f64,f64),
+//   pub wai_diameter: f64,
+// }
 
-// 检测结果
-pub struct Detection {
-  pub class_id: u32,
-  pub confidence: f64,
-  pub bbox: (f64, f64, f64, f64), // x, y, x, y
-}
+// // 检测结果
+// pub struct Detection {
+//   pub class_id: u32,
+//   pub confidence: f64,
+//   pub bbox: (f64, f64, f64, f64), // x, y, x, y
+// }
 
-impl TaskState {
-  pub fn new(artifact: String) -> SharedTaskState {
-      Arc::new(RwLock::new(Self {
-          current_artifact: artifact,
-          current_face: 1,
-          current_hole: 1,
-          holes: HashMap::new(),
-      }))
-  }
-  /// 更新当前检测的面和孔
-  pub async fn update_current_position(&mut self, face_id: usize, hole_id: usize) {
-    self.current_face = face_id;
-    self.current_hole = hole_id;
-  }
-  // 添加孔位
-  pub async fn add_hole(&mut self, face_id: usize, hole_id: usize) {
-    self.holes.insert((face_id, hole_id), HoleState {
-        action1: Vec::new(),
-        action2: Vec::new(),
-        action3: None,
-        action4: None,
-    });
-  }
-  pub async fn update_action1(&mut self, face_id: usize, hole_id: usize, data: Vec<f64>) {
-    if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
-        hole.action1 = data;
-    }
-  }
+// impl TaskState {
+//   pub fn new(artifact: String) -> SharedTaskState {
+//       Arc::new(RwLock::new(Self {
+//           current_artifact: artifact,
+//           current_face: 1,
+//           current_hole: 1,
+//           holes: HashMap::new(),
+//       }))
+//   }
+//   /// 更新当前检测的面和孔
+//   pub async fn update_current_position(&mut self, face_id: usize, hole_id: usize) {
+//     self.current_face = face_id;
+//     self.current_hole = hole_id;
+//   }
+//   // 添加孔位
+//   pub async fn add_hole(&mut self, face_id: usize, hole_id: usize) {
+//     self.holes.insert((face_id, hole_id), HoleState {
+//         action1: Vec::new(),
+//         action2: Vec::new(),
+//         action3: None,
+//         action4: None,
+//     });
+//   }
+//   pub async fn update_action1(&mut self, face_id: usize, hole_id: usize, data: Vec<f64>) {
+//     if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
+//         hole.action1 = data;
+//     }
+//   }
 
-  pub async fn update_action2(&mut self, face_id: usize, hole_id: usize, data: Vec<f64>) {
-      if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
-          hole.action2 = data;
-      }
-  }
+//   pub async fn update_action2(&mut self, face_id: usize, hole_id: usize, data: Vec<f64>) {
+//       if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
+//           hole.action2 = data;
+//       }
+//   }
 
-  pub async fn update_action3(&mut self, face_id: usize, hole_id: usize, detection: Yolov8Result) {
-      if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
-          hole.action3 = Some(detection);
-      }
-  }
+//   pub async fn update_action3(&mut self, face_id: usize, hole_id: usize, detection: Yolov8Result) {
+//       if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
+//           hole.action3 = Some(detection);
+//       }
+//   }
 
-  pub async fn update_action4(&mut self, face_id: usize, hole_id: usize, diameter: HoleDiameter) {
-      if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
-          hole.action4 = Some(diameter);
-      }
-  }
-  pub async fn get_hole_state(&self, face_id: usize, hole_id: usize) -> Option<HoleState> {
-    self.holes.get(&(face_id, hole_id)).cloned()
-  }
-  pub async fn clear(&mut self) {
-    self.holes.clear();
-    self.current_face = 0;
-    self.current_hole = 0;
-  }
-}
+//   pub async fn update_action4(&mut self, face_id: usize, hole_id: usize, diameter: HoleDiameter) {
+//       if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
+//           hole.action4 = Some(diameter);
+//       }
+//   }
+//   pub async fn get_hole_state(&self, face_id: usize, hole_id: usize) -> Option<HoleState> {
+//     self.holes.get(&(face_id, hole_id)).cloned()
+//   }
+//   pub async fn clear(&mut self) {
+//     self.holes.clear();
+//     self.current_face = 0;
+//     self.current_hole = 0;
+//   }
+// }
 
 // 数据消息队列(相机、传感器)
 pub enum SensorsDataRequest {
@@ -233,28 +233,45 @@ pub fn start_sensor_task(mut rx: std::sync::mpsc::Receiver<SensorsDataRequest>) 
         if *state != SoftwareState::START {
         } else{
         // 发送图片到前端
-        rt.spawn(async move {
-            let (resp_tx, resp_rx) = oneshot::channel();
-            let tx = GLOBAL_TX.lock().await.clone().unwrap_or_else(|| {
-                panic!("GLOBAL_TX is not initialized. Ensure that start_plc_connect() has been called.");
-            });
-            tx.send(GeneralRequest::SendImageToFastapi(frame_info,image_data, resp_tx))
-                .await
-                .map_err(|_| "发送请求失败".to_string());
+          rt.spawn(async move {
+              let (resp_tx, resp_rx) = oneshot::channel();
+              let tx = GLOBAL_TX.lock().await.clone().unwrap_or_else(|| {
+                  panic!("GLOBAL_TX is not initialized. Ensure that start_plc_connect() has been called.");
+              });
+              // 获取当前位置
+              let pos = match read_multiple_registers_robot(256, 3).await {
+                Ok(values) if values.len() == 3 => values, 
+                _ => {
+                    println!("读取寄存器失败，数据不足");
+                    return Err("读取寄存器失败".to_string());
+                }
+              };
+
+            // 发送数据到 FastAPI
+            // if let Err(_) = tx.send(GeneralRequest::SendImageToFastapi(pos.clone(), frame_info, image_data, resp_tx)).await {
+            //     println!("发送请求失败");
+            //     return Err("发送请求失败".to_string());
+            // }
             // 如果需要禁用算法，修改此处代码
-            // tx.send(GeneralRequest::SendImageToFrontend(frame_info,image_data, resp_tx))
-            //     .await
-            //     .map_err(|_| "发送请求失败".to_string());
-            match resp_rx.await {
-                      Ok(_) => {
-                      }
-                      Err(e) => {
-                          println!("图片发送请求失败 {}！",e);
-                      }
-                  }
-      });
+              tx.send(GeneralRequest::SendImageToFastapi(pos.clone(),frame_info,image_data, resp_tx))
+                  .await
+                  .map_err(|_| "发送请求失败".to_string());
+              // 如果需要禁用算法，修改此处代码
+              // tx.send(GeneralRequest::SendImageToFrontend(frame_info,image_data, resp_tx))
+              //     .await
+              //     .map_err(|_| "发送请求失败".to_string());
+              match resp_rx.await {
+                        Ok(_) => {
+                          Ok(())
+                        }
+                        Err(e) => {
+                          return Err("图片发送请求失败".to_string());
+                        }
+                    }
+          });
         }
       }
+
       SensorsDataRequest::Cf3000(data)=>{
         println!("获取传感器数据:{}",data);
         rt.spawn(async move {
@@ -263,14 +280,23 @@ pub fn start_sensor_task(mut rx: std::sync::mpsc::Receiver<SensorsDataRequest>) 
               panic!("GLOBAL_TX is not initialized. Ensure that start_plc_connect() has been called.");
           });
 
-          tx.send(GeneralRequest::SendSensorDataToFrontend(data, resp_tx))
+          let pos = match read_multiple_registers_robot(256, 3).await {
+            Ok(values) if values.len() == 3 => values, 
+            _ => {
+                println!("读取寄存器失败，数据不足");
+                return Err("读取寄存器失败".to_string());
+            }
+          };
+
+          tx.send(GeneralRequest::SendSensorDataToFrontend(pos.clone(),data, resp_tx))
               .await
               .map_err(|_| "发送请求失败".to_string());
           match resp_rx.await {
                     Ok(_) => {
+                      Ok(())
                     }
                     Err(e) => {
-                        println!("图片发送请求失败 {}！",e);
+                      return Err("图片发送请求失败".to_string());
                     }
                 }
         });
@@ -320,11 +346,11 @@ pub enum GeneralRequest {
   // 向前端发送Log,显示在log框中
   SendLogToFrontend(String, oneshot::Sender<Result<(), String>>),  // 发送日志到前端
   // 向fastapi发送待处理图片
-  SendImageToFastapi(cameras::hik_camera::FrameInfoSafe,Vec<u8>, oneshot::Sender<Result<(), String>>),
+  SendImageToFastapi(Vec<u16>,cameras::hik_camera::FrameInfoSafe,Vec<u8>, oneshot::Sender<Result<(), String>>),
   // 发送图片到前端
   SendImageToFrontend(cameras::hik_camera::FrameInfoSafe,Vec<u8>, oneshot::Sender<Result<(), String>>),
   // 发送传感器数据到前端
-  SendSensorDataToFrontend(f64, oneshot::Sender<Result<(), String>>),
+  SendSensorDataToFrontend(Vec<u16>,f64, oneshot::Sender<Result<(), String>>),
   // 从plc获取当前状态
   GetCurrentState(oneshot::Sender<Result<String, String>>),  // 获取当前状态
   // 像前端发送json
@@ -448,8 +474,8 @@ pub async fn start_global_task(mut rx: mpsc::Receiver<GeneralRequest>,app_handle
           }
         }
       }
-      GeneralRequest::SendSensorDataToFrontend(data, resp_tx) => {
-        let result = send_sensor_data_to_frontend(app_handle.clone(), data).await;
+      GeneralRequest::SendSensorDataToFrontend(pos,data, resp_tx) => {
+        let result = send_sensor_data_to_frontend(app_handle.clone(),  pos,data).await;
         
         match result {
           Ok(_) => {
@@ -466,8 +492,8 @@ pub async fn start_global_task(mut rx: mpsc::Receiver<GeneralRequest>,app_handle
         }
       }
 
-      GeneralRequest::SendImageToFastapi(frame_info,image_data, resp_tx) => {
-        let result = send_image_to_fastapi(app_handle.clone(), frame_info, image_data).await;
+      GeneralRequest::SendImageToFastapi(pos,frame_info,image_data, resp_tx) => {
+        let result = send_image_to_fastapi(app_handle.clone(), pos,frame_info, image_data).await;
         
         match result {
           Ok(_) => {
@@ -537,6 +563,7 @@ async fn send_image_to_frontend(
   app_handle:tauri::AppHandle,
   frame_info:cameras::hik_camera::FrameInfoSafe,
   image_data: Vec<u8>)-> Result<(), &'static str> {
+  let result = read_multiple_registers_robot(256, 3).await;
   // 模拟发送图像到前端
   println!("发送图像到前端，图像大小: {} bytes", image_data.len());
 
@@ -583,7 +610,7 @@ async fn send_image_to_frontend(
   let base64_image = base64::encode(&opencv_vector);
   //  获取当前位置信息
 
-  let result = read_multiple_registers_robot(256, 3).await;
+  // let result = read_multiple_registers_robot(256, 3).await;
   let mut reciever = String::from("image-send-image-1");
   match result {
     Ok(values) => {
@@ -617,31 +644,24 @@ async fn send_image_to_frontend(
 
 async fn send_sensor_data_to_frontend(  
   app_handle:tauri::AppHandle,
+  pos:Vec<u16>,
   data:f64,
 )-> Result<(), &'static str>{
-  let result = read_multiple_registers_robot(256, 3).await;
+  // let result = read_multiple_registers_robot(256, 3).await;
   let mut reciever = String::from("sensor-send-data-1");
-  match result {
-    Ok(values) => {
-        if values.len() == 3 {
-            // 检查最后一个值，并执行相应的操作
-            match values.last() {
-                Some(&1) => {
-                }
-                Some(&2) => {
-                    reciever = String::from("sensor-send-data-2");
-                }
-                _ => {
-                    // 触发错误，抛弃
-                }
-            }
-        } else {
-            // 如果返回值不为 3 个元素，表示出错
-            return Err("读取寄存器失败，返回的数据不足"); // 修改为 &'static str
-        }
+  match pos.last() {
+    Some(&3) => {sendlog2frontend("[robot] [log] [传感器触发3]".to_string());}
+    Some(&4) => {
+        sendlog2frontend("[robot] [log] [传感器触发4]".to_string());
+        reciever = "sensor-send-data-2".to_string();
     }
-    Err(_) => return Err("读取寄存器失败"), // 修改为 &'static str
+    Some(&1) => {sendlog2frontend("[robot] [log] [传感器触发-1左侧]".to_string());}
+    Some(&2) => {sendlog2frontend("[robot] [log] [传感器触发-2右侧]".to_string());}
+    _ => {
+        println!("无效的机器人位置数据: {:?}", pos);
+    }
   }
+
   if data > 100.0 || data < -100.0 {
     //  获取当前位置信息
     app_handle.emit(&reciever, "---").unwrap();
@@ -656,11 +676,12 @@ async fn send_sensor_data_to_frontend(
 
 async fn send_image_to_fastapi(
   app_handle:tauri::AppHandle,
+  pos:Vec<u16>,
   frame_info:cameras::hik_camera::FrameInfoSafe,
   image_data: Vec<u8>)-> Result<(), &'static str>
 {
   // bayerGB到RGB转换
-
+  // let result = pos;
   let width = frame_info.nWidth as i32;
   let height = frame_info.nHeight as i32;
   let mut mat = unsafe {
@@ -708,28 +729,20 @@ async fn send_image_to_fastapi(
 
   let mut fastapi_request = String::from("http://localhost:8000/detect_luowen_with_draw/");
   let mut reciever = String::from("image-send-image-1");
-  let result = read_multiple_registers_robot(256, 3).await;
+  // let result = read_multiple_registers_robot(256, 3).await;
   
-  match result {
-    Ok(values) => {
-        if values.len() == 3 {
-            // 检查最后一个值，并执行相应的操作
-            match values.last() {
-                Some(&3) => {
-                }
-                Some(&4) => {
-                    // 发送第4步采集的图片
-                    reciever = String::from("image-send-image-2");
-                }
-                _ => {
-                    // 步骤错误，发送触发，抛弃
-                }
-            }
-        } else {
-            return Err("读取寄存器失败，返回的数据不足"); // 修改为 &'static str
-        }
+
+  match pos.last() {
+    Some(&3) => {sendlog2frontend("[robot] [log] [相机触发3 -左侧]".to_string());}
+    Some(&4) => {
+        sendlog2frontend("[robot] [log] [相机触发4 -右侧]".to_string());
+        reciever = "image-send-image-2".to_string();
     }
-    Err(_) => return Err("读取寄存器失败"), // 修改为 &'static str
+    Some(&1) => {sendlog2frontend("[robot] [log] [相机触发-1]".to_string());}
+    Some(&2) => {sendlog2frontend("[robot] [log] [相机触发-2]".to_string());}
+    _ => {
+        println!("无效的机器人位置数据: {:?}", pos);
+    }
   }
 
   let response = client
