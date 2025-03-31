@@ -128,10 +128,12 @@ pub struct TaskState {
   pub current_artifact: String, // 当前型号
   pub current_face: usize, // 当前正在检测的面编号
   pub current_hole: usize, // 当前正在检测的孔编号
+  pub current_artifact_type: String,
   pub holes: HashMap<(usize, usize), HoleState>, // (face_id, hole_id) -> HoleState
 }
 
 // 每个孔的状态
+#[derive(Clone)]
 pub struct HoleState {
   pub face_id: usize,   //面编号
   pub hole_id: usize,   // 孔编号
@@ -141,9 +143,12 @@ pub struct HoleState {
   pub action4: Option<HoleDiameter>, // 动作4的检测结果，如圆心、直径等
 }
 
+#[derive(Clone)]
 pub struct Yolov8Result {
   pub detections: Vec<Detection>,
 }
+
+#[derive(Clone)]
 pub struct HoleDiameter {
   pub nei_center: (f64,f64),
   pub nei_diameter: f64,
@@ -152,6 +157,7 @@ pub struct HoleDiameter {
 }
 
 // 检测结果
+#[derive(Clone)]
 pub struct Detection {
   pub class_id: u32,
   pub confidence: f64,
@@ -159,9 +165,10 @@ pub struct Detection {
 }
 
 impl TaskState {
-  pub fn new(artifact: String) -> SharedTaskState {
-      Arc::new(RwLock::new(Self {
+  pub fn new(artifact: String,artifact_type: String) -> SharedTaskState {
+      Arc::new(tokio::sync::RwLock::new(Self {
           current_artifact: artifact,
+          current_artifact_type: artifact_type,
           current_face: 1,
           current_hole: 1,
           holes: HashMap::new(),
@@ -175,12 +182,15 @@ impl TaskState {
   // 添加孔位
   pub async fn add_hole(&mut self, face_id: usize, hole_id: usize) {
     self.holes.insert((face_id, hole_id), HoleState {
+        face_id,
+        hole_id,
         action1: Vec::new(),
         action2: Vec::new(),
         action3: None,
         action4: None,
     });
   }
+
   pub async fn update_action1(&mut self, face_id: usize, hole_id: usize, data: Vec<f64>) {
     if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
         hole.action1 = data;
@@ -213,6 +223,10 @@ impl TaskState {
     self.current_hole = 0;
   }
 }
+
+// 
+// 保存路径相关
+
 
 // 数据消息队列(相机、传感器)
 pub enum SensorsDataRequest {
