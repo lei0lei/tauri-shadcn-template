@@ -51,9 +51,13 @@ interface DashboardState {
     clearInfo_1: () => void;
     clearInfo_2: () => void;
     updateResultComponent: (
-      surface: string, // 要更新的 surface 名称
-      newStatus?: "OK" | "NG" | "NULL", // 更新的状态
-      newHoles?: (boolean | null)[] // 更新的 holes 数组
+      surface: string,                      // 要更新的 surface 名称
+      options?: { 
+        newStatus?: "OK" | "NG" | "NULL";   // 更新整个面的状态（可选）
+        newHoles?: (boolean | null)[];      // 更新整个面的 holes（可选）
+        holeIndex?: number;                 // 更新某个特定孔（可选）
+        holeState?: boolean | null;         // 要更新的孔的新状态（可选）
+      }
     ) => void;
   }
 
@@ -78,7 +82,42 @@ export const useDashboardStore = create<DashboardState>((set) => ({
       { surface: "E", status: "NULL", holes: [] },
       { surface: "F", status: "NULL", holes: [] }
     ],
-  setArtifactType:(atype:string) => set({artifactType:atype}),
+  setArtifactType: (atype: string) => {
+    set({ artifactType: atype });
+
+    // 根据不同型号设置 holes
+    const holesPreset: Record<string, SurfaceData[]> = {
+      "EH09": [
+        { surface: "A", status: "NULL", holes: [null, null] },
+        { surface: "B", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,] },
+        { surface: "C", status: "NULL", holes: [null, null, null,null,null,] },
+        { surface: "D", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null,null,null,] },
+        { surface: "E", status: "NULL", holes: [null,null,null,null,null,null,] },
+        { surface: "F", status: "NULL", holes: [null,null,null,null,] }
+      ],
+      "EH12": [
+        { surface: "A", status: "NULL", holes: [false, true] },
+        { surface: "B", status: "NULL", holes: [true, false, true] },
+        { surface: "C", status: "NULL", holes: [false, false, false] },
+        { surface: "D", status: "NULL", holes: [true] },
+        { surface: "E", status: "NULL", holes: [] },
+        { surface: "F", status: "NULL", holes: [null, true] }
+      ],
+      "EK30": [ /* 其他型号的配置... */ ],
+      "EK40": [ /* 其他型号的配置... */ ],
+      "EY28": [ /* 其他型号的配置... */ ],
+      "TEST": [
+        { surface: "A", status: "NULL", holes: [] },
+        { surface: "B", status: "NULL", holes: [] },
+        { surface: "C", status: "NULL", holes: [] },
+        { surface: "D", status: "NULL", holes: [] },
+        { surface: "E", status: "NULL", holes: [] },
+        { surface: "F", status: "NULL", holes: [] }
+      ],
+    };
+
+    set({ resultComponentValue: holesPreset[atype] || [] });
+  },
   setIsRunning: (state: boolean) => set({ isRunning: state }),
   setLogs: (log) => set((state) => ({ logs: state.logs + `\n${log}` })),
   addLogComponentValueEntry: (log) =>
@@ -113,16 +152,40 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   clearInfo_1: () => set(() => ({ image_1: null })),
   clearInfo_2: () => set(() => ({ image_2: null })),
 
-  updateResultComponent: (surface, newStatus, newHoles) =>
-    set((state) => ({
-      resultComponentValue: state.resultComponentValue.map((item) =>
-        item.surface === surface
-          ? {
-              ...item,
-              status: newStatus !== undefined ? newStatus : item.status, // 如果传入了新的状态，更新状态，否则保留旧状态
-              holes: newHoles !== undefined ? newHoles : item.holes, // 如果传入了新的 holes，更新 holes，否则保留旧 holes
-            }
-          : item // 其他 item 保持不变
-      ),
-    })),
+  updateResultComponent: (surface, options) =>
+    set((state) => {
+      const updatedResult = state.resultComponentValue.map((item) => {
+        if (item.surface === surface) {
+          let newHoles = [...item.holes];
+  
+          // 更新特定的 hole
+          if (options?.holeIndex !== undefined && options?.holeState !== undefined) {
+            newHoles[options.holeIndex] = options.holeState;
+          }
+  
+          // 如果提供了 newHoles，整体更新 holes
+          if (options?.newHoles) {
+            newHoles = options.newHoles;
+          }
+  
+          // 计算新的 status
+          let newStatus: "OK" | "NG" | "NULL" = "NULL";
+          if (newHoles.includes(false)) {
+            newStatus = "NG";
+          } else if (newHoles.length > 0 && newHoles.every(h => h === true)) {
+            newStatus = "OK";
+          }
+  
+          // 如果手动指定 newStatus，则覆盖自动计算的状态
+          if (options?.newStatus) {
+            newStatus = options.newStatus;
+          }
+  
+          return { ...item, holes: newHoles, status: newStatus };
+        }
+        return item;
+      });
+  
+      return { resultComponentValue: updatedResult };
+    }),
   }));

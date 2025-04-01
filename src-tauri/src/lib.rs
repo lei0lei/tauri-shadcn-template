@@ -311,13 +311,13 @@ pub fn start_sensor_task(mut rx: std::sync::mpsc::Receiver<SensorsDataRequest>) 
               //     .await
               //     .map_err(|_| "发送请求失败".to_string());
               match resp_rx.await {
-                        Ok(_) => {
-                          Ok(())
-                        }
-                        Err(e) => {
-                          return Err("图片发送请求失败".to_string());
-                        }
-                    }
+                Ok(_) => {
+                  Ok(())
+                }
+                Err(e) => {
+                  return Err("图片发送请求失败".to_string());
+                }
+              }
           });
         }
       }
@@ -420,6 +420,7 @@ pub async fn start_global_task(mut rx: mpsc::Receiver<GeneralRequest>,app_handle
             // 等待200ms
             thread::sleep(Duration::from_millis(1000));
             // 机器人主程序选择
+            write_register_robot(4, 3).await;
             select_robot_program().await;
             let log = "[robot] [log] [机器人主程序选择]";
             sendlog2frontend(log.to_string());
@@ -937,7 +938,7 @@ async fn monitor_robot() -> Result<(), String> {
           Ok(value)=>{
             if value & 1 != 0 {
               // "[plc] [log] [机器人运行中<<<--]";
-              
+              write_register_robot(0, 0).await;
               send_continue_command_finished_to_plc().await;
               
               match get_command_from_plc().await {
@@ -946,11 +947,9 @@ async fn monitor_robot() -> Result<(), String> {
                     3 => {
                       write_register_plc(7202,0).await;
                     }
-                    
                     _ => {
                         // 
                     }
-      
                   }
                 }
                 Err(err) => {
@@ -1053,7 +1052,7 @@ async fn reset_alarm_robot() -> Result<(), String> {
   tauri::async_runtime::spawn(async {
     alarm_reset().await;
     thread::sleep(Duration::from_millis(200));
-    write_register_robot(0, 0).await
+    write_register_robot(0, 0).await;
 
   });
 
@@ -1072,10 +1071,9 @@ async fn alarm_reset() -> Result<(), String> {
 #[tauri::command(rename_all = "snake_case")]
 async fn stop_robot() -> Result<(), String> {
   tauri::async_runtime::spawn(async {
-    write_register_robot(0, 2).await;
-    write_register_robot(4, 2).await;
+    write_register_robot(0, 0).await;
     thread::sleep(Duration::from_millis(200));
-    write_register_robot(0, 0).await
+    write_register_robot(4, 1).await;
 
   });
 
@@ -1084,8 +1082,8 @@ async fn stop_robot() -> Result<(), String> {
 
 // 暂停
 async fn pause_robot() -> Result<(), String>{
-  write_register_robot(0, 2).await;
-  write_register_robot(4, 2).await
+  write_register_robot(0, 0).await;
+  write_register_robot(4, 1).await
 }
 
 
@@ -1097,7 +1095,6 @@ async fn start_robot() -> Result<(), String> {
     write_register_robot(0, 1).await
 
   });
-
   Ok(())
 }
 
@@ -1423,24 +1420,26 @@ async fn monitor_plc() -> Result<(), String> {
             match value {
               2 => {
                   // 如果 value 是 2，给机器人暂停信号
-                  // let log = "[plc] [log] [机器人暂停-->>>]";
-                  // sendlog2frontend(log.to_string());
+                  let log = "[plc] [log] [机器人暂停-->>>]";
+                  sendlog2frontend(log.to_string());
                   pause_robot().await;
-                  
+                  let log = "[robot] [log] [机器人暂停<<<--]";
+                  sendlog2frontend(log.to_string());
                   // 在这里执行针对 value == 2 的操作
               }
               3 => {
                   // 如果 value 是 3，给机器人继续信号
-                  // let log = "[plc] [log] [机器人继续-->>>]";
-                  // sendlog2frontend(log.to_string());
+                  let log = "[plc] [log] [机器人继续-->>>]";
+                  sendlog2frontend(log.to_string());
                   start_robot_program().await;
-                  
+                  let log = "[robot] [log] [机器人继续<<<--]";
+                  sendlog2frontend(log.to_string());
                   // 在这里执行针对 value == 3 的操作
               }
               4 => {
                   // 如果 value 是 4，给机器人复位信号
-                  // let log = "[plc] [log] [机器人复位-->>>]";
-                  // sendlog2frontend(log.to_string());
+                  let log = "[plc] [log] [机器人复位-->>>]";
+                  sendlog2frontend(log.to_string());
                   // alarm_reset().await;
                   let state = {
                     let lock = ON_ROBOT_RESET.lock().await; // 获取锁
@@ -1458,7 +1457,8 @@ async fn monitor_plc() -> Result<(), String> {
                       });
                       tx.send(GeneralRequest::StartRobotProgram(resp_tx)).await.map_err(|_| "启动机器人程序失败".to_string());
                     });
-
+                    let log = "[robot] [log] [机器人复位<<<--]";
+                  sendlog2frontend(log.to_string());
                   }else{
 
                   }
