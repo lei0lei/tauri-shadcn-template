@@ -8,11 +8,11 @@ import psutil
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi import BackgroundTasks
 from fastapi.responses import FileResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 import os
 import socket
 import subprocess
 import signal
-from fastapi.responses import JSONResponse
 from multiprocessing import Process
 import uvicorn
 from fastapi.routing import APIRouter
@@ -38,7 +38,7 @@ from pydantic import BaseModel
 # from cameras.hik.image_gen import router as image_hik_get_websocket_router
 # 配置 CORS
 import cv2
-
+import io
 from ultralytics import YOLO
 import torch
 
@@ -48,7 +48,8 @@ origins = [
 ]
 
 model_path = {
-    'luowen_detect':"D:\\code\\tauri-shadcn-template\\fastapi\\app\\algo\\best.pt",
+    'luowen_detect':"D:\\code\\tauri-shadcn-template\\fastapi\\app\\algo\\det.pt",
+    'diameter_segment':"D:\\code\\tauri-shadcn-template\\fastapi\\app\\algo\\seg.pt",
 }
 
 # JSON 数据格式
@@ -59,12 +60,16 @@ class ImageMetadata(BaseModel):
 async def lifespan(app: FastAPI):
     """应用启动时加载 YOLOv8，关闭时释放"""
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    model_str = model_path["luowen_detect"]
-    global yolo_model
-    yolo_model = YOLO(model_str).to(device)
-    print("✅ YOLOv8 模型加载完成")
+    det_model_str = model_path["luowen_detect"]
+    seg_model_str = model_path["diameter_segment"]
+    global yolo_model,yolo_seg_model
+    yolo_model = YOLO(det_model_str).to(device)
+    print("✅ YOLOv8 det模型加载完成")
+    yolo_seg_model = YOLO(seg_model_str).to(device)
+    print("✅ YOLOv8 seg模型加载完成")
     dummy_img = np.zeros((640, 640, 3), dtype=np.uint8)  # 创建黑色图片
     yolo_model(dummy_img)
+    yolo_seg_model(dummy_img)
     print("🔥 预热完成，YOLOv8 已准备就绪")
     yield  # 运行 FastAPI
     # del yolo_model
@@ -128,11 +133,56 @@ async def detect_diameter(
 ):
     pass
 
-@app.post("/detect_diameter_with_draw")
+@app.post("/detect_diameter_with_draw/")
 async def detect_diameter_with_draw(
     file: UploadFile = File(...),
 ):
-    pass
+# 读取图片数据
+    contents = await file.read()
+    image = np.frombuffer(contents, np.uint8)
+    image = cv2.imdecode(image, cv2.IMREAD_COLOR)
+
+    # 使用 YOLOv8 进行推理
+    try:
+
+        results = yolo_seg_model(image)[0]
+        detections = sv.Detections.from_ultralytics(results)
+        
+        mask_annotator = sv.MaskAnnotator()
+        label_annotator = sv.LabelAnnotator(text_position=sv.Position.CENTER_OF_MASS)
+
+        annotated_image = mask_annotator.annotate(
+            scene=image, detections=detections)
+        annotated_image = label_annotator.annotate(
+            scene=annotated_image, detections=detections)
+
+        # 解析检测结果
+        # detection_json = parse_yolo_results(results)
+
+        # 使用 Supervision 绘制检测框
+        # image_with_boxes = draw_detections(image, results)
+        # box_annotator = sv.BoxAnnotator()
+        # annotated_frame = box_annotator.annotate(
+        #     scene=image.copy(),
+        #     detections=detections)
+
+        # **直接用 OpenCV 编码为 PNG**
+        _, buffer = cv2.imencode('.jpg', annotated_image)
+        img_base64 = base64.b64encode(buffer).decode("utf-8")
+        img_bytes = io.BytesIO(buffer)
+    except:
+        _, buffer = cv2.imencode('.jpg', image)
+        img_base64 = base64.b64encode(buffer).decode("utf-8")
+        detection_json = {}
+        img_bytes = io.BytesIO(buffer)
+        
+    detection_json = {'a':'a'}
+    return {"results": detection_json, "image_base64": img_base64}
+
+    # 直接返回图片文件
+    headers = {"Content-Disposition": "attachment; filename=detected_image.png"}
+    return StreamingResponse(img_bytes, media_type="image/png", headers=headers)
+
 
 
 
@@ -149,9 +199,8 @@ async def detect_luowen_with_draw(
 
     # 使用 YOLOv8 进行推理
     try:
+
         results = yolo_model(image,conf=0.5)[0]
-
-
         detections = sv.Detections.from_ultralytics(results)
         
         # 解析检测结果
@@ -167,13 +216,19 @@ async def detect_luowen_with_draw(
         # **直接用 OpenCV 编码为 PNG**
         _, buffer = cv2.imencode('.png', annotated_frame)
         img_base64 = base64.b64encode(buffer).decode("utf-8")
+        img_bytes = io.BytesIO(buffer)
     except:
         _, buffer = cv2.imencode('.png', image)
         img_base64 = base64.b64encode(buffer).decode("utf-8")
         detection_json = {}
+        img_bytes = io.BytesIO(buffer)
         
     detection_json = {'a':'a'}
     return {"results": detection_json, "image_base64": img_base64}
+
+    # 直接返回图片文件
+    # headers = {"Content-Disposition": "attachment; filename=detected_image.png"}
+    # return StreamingResponse(img_bytes, media_type="image/png", headers=headers)
 
 
 

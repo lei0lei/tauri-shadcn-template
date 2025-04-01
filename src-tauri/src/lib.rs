@@ -761,10 +761,15 @@ async fn send_image_to_fastapi(
   
 
   match pos.last() {
-    Some(&3) => {sendlog2frontend("[robot] [log] [相机触发3 -左侧]".to_string());}
+    Some(&3) => {
+      sendlog2frontend("[robot] [log] [相机触发3 -左侧]".to_string());
+      reciever = "image-send-image-1".to_string();
+      fastapi_request = "http://localhost:8000/detect_diameter_with_draw/".to_string();
+    }
     Some(&4) => {
-        sendlog2frontend("[robot] [log] [相机触发4 -右侧]".to_string());
-        reciever = "image-send-image-2".to_string();
+      sendlog2frontend("[robot] [log] [相机触发4 -右侧]".to_string());
+      reciever = "image-send-image-2".to_string();
+      fastapi_request = "http://localhost:8000/detect_luowen_with_draw/".to_string();
     }
     Some(&1) => {sendlog2frontend("[robot] [log] [相机触发-1]".to_string());}
     Some(&2) => {sendlog2frontend("[robot] [log] [相机触发-2]".to_string());}
@@ -775,7 +780,7 @@ async fn send_image_to_fastapi(
 
   let response = client
       .post(&fastapi_request)
-      .timeout(Duration::from_secs(1))
+      .timeout(Duration::from_secs(2))
       .multipart(form)
       .send()
       .await
@@ -962,7 +967,7 @@ async fn monitor_robot() -> Result<(), String> {
                 let log = "[plc] [log] [机器人暂停中<<<--]";
                 sendlog2frontend(log.to_string());
                 send_pause_command_finished_to_plc().await;
-
+                write_register_robot(4, 3).await;
                 match get_command_from_plc().await {
                   Ok(value)=>{
                     match value {
@@ -1083,7 +1088,10 @@ async fn stop_robot() -> Result<(), String> {
 // 暂停
 async fn pause_robot() -> Result<(), String>{
   write_register_robot(0, 0).await;
-  write_register_robot(4, 1).await
+  write_register_robot(4, 1).await;
+  thread::sleep(Duration::from_millis(200));
+  write_register_robot(4, 3).await
+
 }
 
 
@@ -1429,6 +1437,7 @@ async fn monitor_plc() -> Result<(), String> {
               }
               3 => {
                   // 如果 value 是 3，给机器人继续信号
+                  write_register_robot(4, 3).await;
                   let log = "[plc] [log] [机器人继续-->>>]";
                   sendlog2frontend(log.to_string());
                   start_robot_program().await;
@@ -1438,6 +1447,7 @@ async fn monitor_plc() -> Result<(), String> {
               }
               4 => {
                   // 如果 value 是 4，给机器人复位信号
+                  write_register_robot(4, 3).await;
                   let log = "[plc] [log] [机器人复位-->>>]";
                   sendlog2frontend(log.to_string());
                   // alarm_reset().await;
@@ -1467,6 +1477,7 @@ async fn monitor_plc() -> Result<(), String> {
                   sendlog2frontend(log.to_string());
                   // 等待200ms
                   thread::sleep(Duration::from_millis(200));
+                  write_register_robot(4, 3).await;
                   write_register_robot(0, 0).await;
                   
               }
