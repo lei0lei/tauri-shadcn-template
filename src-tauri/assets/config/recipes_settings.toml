@@ -5,6 +5,28 @@ all_type = ['EH09','EH12','EK30','EK40','EY28','TEST']
 current_type = 'TEST'
 pixel_length = 1
 
+# ===============================TEST===========================
+[type.TEST]
+run_sequence = ['A','B','C','D','E','F']
+[type.TEST.A]
+run_sequence = [1,2]
+[type.TEST.A.1]
+thru_home = true
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 16.5
+depth_max = 17.5
+
+[type.TEST.A.2]
+thru_home = true
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 16.5
+depth_max = 17.5
+
+# =====================================================================
 
 [type.EH09]
 run_sequence = ['A','B','C','D','E','F']

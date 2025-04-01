@@ -14,6 +14,7 @@ use tokio::sync::{oneshot, Mutex, mpsc};
 use tauri::{State, WindowEvent};
 mod sidecar;
 use std::collections::HashMap;
+use once_cell::sync::Lazy;
 mod plc;
 use plc::modbusTCP;
 use plc::modbusTCP::{PLC_TX, 
@@ -69,7 +70,7 @@ use std::fs;
 use reqwest::Client;
 use tokio::sync::OnceCell;
 mod sensors;
-
+use chrono::Local;
 // 主流程启动状态
 #[derive(Debug, PartialEq,Copy, Clone)]
 pub enum SoftwareState{
@@ -120,23 +121,26 @@ lazy_static! {
   static ref GLOBAL_SENSOR_TX: Arc<std::sync::Mutex<Option<std::sync::mpsc::SyncSender<SensorsDataRequest>>>> =
       Arc::new(std::sync::Mutex::new(None));
 }
+// 定义全局变量
+pub static GLOBAL_TASK_STATE: Lazy<Arc<tokio::sync::RwLock::<TaskState>>> = Lazy::new(|| {
+  Arc::new(tokio::sync::RwLock::new(TaskState::new("EH09".to_string(), "1999_99_99_99".to_string())))
+});
 
-pub type SharedTaskState = Arc<tokio::sync::RwLock<TaskState>>;
 
 // 检测状态
 pub struct TaskState {
-  pub current_artifact: String, // 当前型号
-  pub current_face: usize, // 当前正在检测的面编号
-  pub current_hole: usize, // 当前正在检测的孔编号
-  pub current_artifact_type: String,
-  pub holes: HashMap<(usize, usize), HoleState>, // (face_id, hole_id) -> HoleState
+  pub current_artifact: String, // 当前零件
+  pub current_artifact_type: String, //当前型号
+  pub current_face: u16, // 当前正在检测的面编号
+  pub current_hole: u16, // 当前正在检测的孔编号
+  pub holes: HashMap<(u16, u16), HoleState>, // (face_id, hole_id) -> HoleState
 }
 
 // 每个孔的状态
 #[derive(Clone)]
 pub struct HoleState {
-  pub face_id: usize,   //面编号
-  pub hole_id: usize,   // 孔编号
+  pub face_id: u16,   //面编号
+  pub hole_id: u16,   // 孔编号
   pub action1: Vec<f64>, // 动作1的数据
   pub action2: Vec<f64>, // 动作2的数据
   pub action3: Option<Yolov8Result>, // 动作3的检测结果
@@ -165,22 +169,18 @@ pub struct Detection {
 }
 
 impl TaskState {
-  pub fn new(artifact: String,artifact_type: String) -> SharedTaskState {
-      Arc::new(tokio::sync::RwLock::new(Self {
-          current_artifact: artifact,
-          current_artifact_type: artifact_type,
-          current_face: 1,
-          current_hole: 1,
-          holes: HashMap::new(),
-      }))
+  pub fn new(artifact: String, artifact_type: String) -> Self {
+    Self { 
+      current_artifact: artifact, 
+      current_artifact_type: artifact_type,
+      current_face: 1,  // 默认值
+      current_hole: 1,  // 默认值
+      holes: HashMap::new(), // 空的 HashMap
+       }
   }
-  /// 更新当前检测的面和孔
-  pub async fn update_current_position(&mut self, face_id: usize, hole_id: usize) {
-    self.current_face = face_id;
-    self.current_hole = hole_id;
-  }
+
   // 添加孔位
-  pub async fn add_hole(&mut self, face_id: usize, hole_id: usize) {
+  pub async fn add_hole(&mut self, face_id: u16, hole_id: u16) {
     self.holes.insert((face_id, hole_id), HoleState {
         face_id,
         hole_id,
@@ -191,42 +191,83 @@ impl TaskState {
     });
   }
 
-  pub async fn update_action1(&mut self, face_id: usize, hole_id: usize, data: Vec<f64>) {
+  pub async fn update_action1(&mut self, face_id: u16, hole_id: u16, data: f64) {
     if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
-        hole.action1 = data;
+        hole.action1.push(data);
     }
   }
 
-  pub async fn update_action2(&mut self, face_id: usize, hole_id: usize, data: Vec<f64>) {
+  pub async fn update_action2(&mut self, face_id: u16, hole_id: u16, data: f64) {
       if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
-          hole.action2 = data;
+        hole.action2.push(data);
       }
   }
 
-  pub async fn update_action3(&mut self, face_id: usize, hole_id: usize, detection: Yolov8Result) {
+  pub async fn update_action3(&mut self, face_id: u16, hole_id: u16, detection: Yolov8Result) {
       if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
           hole.action3 = Some(detection);
       }
   }
 
-  pub async fn update_action4(&mut self, face_id: usize, hole_id: usize, diameter: HoleDiameter) {
+  pub async fn update_action4(&mut self, face_id: u16, hole_id: u16, diameter: HoleDiameter) {
       if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
           hole.action4 = Some(diameter);
       }
   }
-  pub async fn get_hole_state(&self, face_id: usize, hole_id: usize) -> Option<HoleState> {
+  pub async fn get_hole_state(&self, face_id: u16, hole_id: u16) -> Option<HoleState> {
     self.holes.get(&(face_id, hole_id)).cloned()
   }
+
   pub async fn clear(&mut self) {
     self.holes.clear();
     self.current_face = 0;
     self.current_hole = 0;
   }
 }
+// generate_detection_result
+pub fn generate_detection_result(result: &Yolov8Result) -> bool {
+  result.detections.iter().any(|d| d.class_id == 0)
+}
+
+// generate_depth_result
+pub fn generate_depth_result(action1: &[f64], action2: &[f64], min_val: f64, max_val: f64) -> bool {
+  if action1.is_empty() || action2.is_empty() {
+    return false; // 避免空数组计算平均值导致错误
+  }
+
+  let avg1 = action1.iter().sum::<f64>() / action1.len() as f64;
+  let avg2 = action2.iter().sum::<f64>() / action2.len() as f64;
+  let diff = (avg1 - avg2).abs();
+  // 判断 diff 是否在 [min_val, max_val] 区间内
+  (min_val..=max_val).contains(&diff)
+}
+
+// generate_diameter_result
+// 判断直径是否在指定范围内
+pub fn generate_diameter_result(diameter: &HoleDiameter, min_val: f64, max_val: f64) -> bool {
+  (min_val..=max_val).contains(&diameter.nei_diameter) && (min_val..=max_val).contains(&diameter.wai_diameter)
+}
 
 // 
 // 保存路径相关
+// 
+static BASE_PATH: &str = "D:"; // 你的全局 base_path
+fn generate_file_path(paths: &[&str], filename: &str) -> PathBuf {
+  let mut dir_path = PathBuf::from(BASE_PATH);
+  
+  // 依次添加路径参数
+  for p in paths {
+      dir_path.push(p);
+  }
 
+  // 确保目录存在
+  if let Err(e) = fs::create_dir_all(&dir_path) {
+      eprintln!("Failed to create directory: {:?}", e);
+  }
+
+  // 返回完整的文件路径
+  dir_path.join(filename)
+}
 
 // 数据消息队列(相机、传感器)
 pub enum SensorsDataRequest {
@@ -261,11 +302,6 @@ pub fn start_sensor_task(mut rx: std::sync::mpsc::Receiver<SensorsDataRequest>) 
                 }
               };
 
-            // 发送数据到 FastAPI
-            // if let Err(_) = tx.send(GeneralRequest::SendImageToFastapi(pos.clone(), frame_info, image_data, resp_tx)).await {
-            //     println!("发送请求失败");
-            //     return Err("发送请求失败".to_string());
-            // }
             // 如果需要禁用算法，修改此处代码
               tx.send(GeneralRequest::SendImageToFastapi(pos.clone(),frame_info,image_data, resp_tx))
                   .await
@@ -345,18 +381,10 @@ pub enum GeneralRequest {
   StartMonitorPLCProcess(oneshot::Sender<Result<(), String>>),
   // 启动机器人监控
   StartMonitorRobotProcess(oneshot::Sender<Result<(), String>>),
-  // 向机器人写入当前类型
-  SetCurrrentType(String, oneshot::Sender<Result<(), String>>),
-  // 零件到位，启动
-  StartProcess(oneshot::Sender<Result<(), String>>),
-  // 零件检测完成
-  StopProcess(oneshot::Sender<Result<(), String>>),
   // 保存图像结果到本地
   SaveImageResult(Vec<u8>, String, oneshot::Sender<Result<(), String>>), // 保存图像结果
   // 保存json到本地
   SaveJsonResult(String, String, oneshot::Sender<Result<(), String>>),  // 保存 JSON 结果
-  GetImageResult(Vec<u8>, String, oneshot::Sender<Result<String, String>>), // 获取图像结果,
-  GetSensorResult(f64, oneshot::Sender<Result<String, String>>),  // 获取传感器结果
   // 向前端发送Log,显示在log框中
   SendLogToFrontend(String, oneshot::Sender<Result<(), String>>),  // 发送日志到前端
   // 向fastapi发送待处理图片
@@ -429,14 +457,6 @@ pub async fn start_global_task(mut rx: mpsc::Receiver<GeneralRequest>,app_handle
         });
       }
 
-      GeneralRequest::SetCurrrentType(t,resp_tx) => {
-      }
-      GeneralRequest::StartProcess(resp_tx)=>{
-
-      }
-      GeneralRequest::StopProcess(resp_tx)=>{
-
-      }
       // 保存图像结果
       GeneralRequest::SaveImageResult(image_data, path, resp_tx) => {
         // 假设这里是保存图片的逻辑
@@ -447,20 +467,6 @@ pub async fn start_global_task(mut rx: mpsc::Receiver<GeneralRequest>,app_handle
       GeneralRequest::SaveJsonResult(json_data, path, resp_tx) => {
         // 假设这里是保存 JSON 文件的逻辑
         let result = save_json(json_data, path).await;
-        let _ = resp_tx.send(result);
-      }
-      // 获取图像结果
-      GeneralRequest::GetImageResult(image_data, path, resp_tx) => {
-        // 假设这里是返回处理结果
-        let result = process_image(image_data, path).await;
-        let _ = resp_tx.send(result);
-        // 异步获取图像检测结果
-
-      }
-      // 获取传感器结果
-      GeneralRequest::GetSensorResult(sensor_value, resp_tx) => {
-        // 假设这里是传感器结果的处理逻辑
-        let result = handle_sensor(sensor_value).await;
         let _ = resp_tx.send(result);
       }
       // 发送日志到前端
@@ -553,18 +559,6 @@ async fn save_json(json_data: String, path: String) -> Result<(), String> {
   // 模拟保存 JSON 文件的逻辑
   println!("保存 JSON 到路径: {}", path);
   Ok(())
-}
-
-async fn process_image(image_data: Vec<u8>, path: String) -> Result<String, String> {
-  // 模拟图像处理逻辑
-  println!("处理图像: {}，路径: {}", image_data.len(), path);
-  Ok("图像处理成功".to_string())
-}
-
-async fn handle_sensor(sensor_value: f64) -> Result<String, String> {
-  // 模拟传感器数据处理
-  println!("处理传感器数据: {}", sensor_value);
-  Ok("传感器数据处理成功".to_string())
 }
 
 async fn send_log_to_frontend(app_handle:tauri::AppHandle, log_message: String) {
@@ -664,13 +658,32 @@ async fn send_sensor_data_to_frontend(
   // let result = read_multiple_registers_robot(256, 3).await;
   let mut reciever = String::from("sensor-send-data-1");
   match pos.last() {
-    Some(&3) => {sendlog2frontend("[robot] [log] [传感器触发3]".to_string());}
+    Some(&3) => {sendlog2frontend("[robot] [error] [传感器错误触发3]".to_string());}
     Some(&4) => {
-        sendlog2frontend("[robot] [log] [传感器触发4]".to_string());
-        reciever = "sensor-send-data-2".to_string();
+        sendlog2frontend("[robot] [error] [传感器错误触发4]".to_string());
     }
-    Some(&1) => {sendlog2frontend("[robot] [log] [传感器触发-1左侧]".to_string());}
-    Some(&2) => {sendlog2frontend("[robot] [log] [传感器触发-2右侧]".to_string());}
+    Some(&1) => {
+      let mut task_state = GLOBAL_TASK_STATE.write().await;
+      task_state.current_face = pos[0];
+      task_state.current_hole = pos[1];
+      task_state.add_hole(pos[0], pos[1]);
+      if -40.0<data && data<40.0 {
+        task_state.update_action1(pos[0],pos[1],data);
+        }
+      sendlog2frontend("[robot] [info] [传感器触发-1左侧]".to_string());
+    }
+    Some(&2) => {
+      let mut task_state = GLOBAL_TASK_STATE.write().await;
+      task_state.current_face = pos[0];
+      task_state.current_hole = pos[1];
+
+      if -40.0<data && data<40.0 {
+        task_state.update_action2(pos[0],pos[1],data);
+        }
+
+      sendlog2frontend("[robot] [info] [传感器触发-2右侧]".to_string());
+      reciever = "sensor-send-data-2".to_string();
+    }
     _ => {
         println!("无效的机器人位置数据: {:?}", pos);
     }
@@ -888,7 +901,7 @@ async fn monitor_robot() -> Result<(), String> {
             let state = {
               let lock = START_PROCESS_STATE.lock().await; // 获取锁
               *lock // 复制出来，避免持有锁
-          };
+            };
 
             if value != 0 && state == SoftwareState::START{
               let log = "[robot] [log] [工件检测结束-->>>]";
@@ -900,10 +913,14 @@ async fn monitor_robot() -> Result<(), String> {
 
               let log = "[plc] [log] [工件退出<<<--]";
               sendlog2frontend(log.to_string());
+              // 清除结果存储
+              let mut task_state = GLOBAL_TASK_STATE.write().await;
+              task_state.clear().await;
+              // task_state.current_artifact = Local::now().format("%Y_%m_%d_%H_%M_%S_%3f").to_string();
+              // task_state.current_artifact_type = current_type.clone().expect("current_type should not be None");
+
               let mut lock = START_PROCESS_STATE.lock().await; // 获取锁
               *lock = SoftwareState::STOP; // 设置为 START
-
-              // 清除结果存储
 
             }else{
               // println!("等待工件到位");
@@ -1279,127 +1296,128 @@ async fn monitor_plc() -> Result<(), String> {
       // 每500ms读取某个PLC寄存器，模拟读取过程
       tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
+      // 机器人是否处于运行中
       let state = {
-        let lock = START_PROCESS_STATE.lock().await; // 使用 async 锁
-        *lock // 复制出来，避免持有锁
+        let lock = START_PROCESS_STATE.lock().await; 
+        *lock 
       };
-      
-      let current_type = get_current_type().clone();
 
-      match get_type_from_plc().await{
-        Ok(value)=>{
-          let plc_type = map_value_to_type_plc(value);
-
-          // 写入类型到机器人
-          match (plc_type, current_type.clone()) {
-            (Some(plc_type_str), Some(current_type_str)) => {
-                if plc_type_str != current_type_str {
-                    // 如果不同，调用 set_current_type 更新类型
-                    println!("类型不同，更新机器人型号...");
-
-                    set_current_type(plc_type_str); // 调用异步函数更新型号
-                    let log = "[plc] [log] [修改机器人型号-->>>]";
-                    sendlog2frontend(log.to_string());
-                    // 写入类型到机器人
-
-                    let new_type = get_current_type();
-                    match new_type {
-                      Some(robot_type) => {
-                          println!("当前型号: {}", robot_type);
-      
-                          // 将型号写入机器人
-                          match write_current_type_to_robot(&robot_type).await {
-                              Ok(_) => {
-                                  let log = "[robot] [log] [写入机器人型号<<<--]";
-                                  sendlog2frontend(log.to_string());
-                                  // 继续执行，不需要返回 Err
-                              }
-                              Err(err) => {
-                                  println!("写入机器人型号失败: {}", err);
-                                  return Err(err); // 明确返回错误
-                              }
-                          }
-
-                          tauri::async_runtime::spawn(async {
-                            let (resp_tx, resp_rx) = oneshot::channel(); 
-                            let tx = GLOBAL_TX.lock().await.clone().unwrap_or_else(|| {
-                              panic!("GLOBAL_TX is not initialized. Ensure that start_global_task() has been called.");
-                            });
-                            tx.send(GeneralRequest::SendCurrentTypeToFrontend(resp_tx)).await.map_err(|_| "发送型号失败".to_string());
-                          });
-                      }
-                      None => {
-                          println!("无法获取当前型号");
-                          return Err("无法获取当前型号".to_string()); // 明确返回错误
-                      }
-                    }
-                } else {
-                    // println!("当前类型与PLC获取的类型一致，无需更新");
-                }
-            }
-            _ => {
-                println!("无法获取类型进行比较");
-            }
-          }
-        }
-        Err(err) => {
-          // let log = "[plc] [error] [无法读取工件型号信息]";
-          // sendlog2frontend(log.to_string());
-          }
-      }
-
+      // 硬件DEV模式
       let dev_state = {
-        let lock = HARDWARE_DEV_STATE.lock().await; // 获取锁
-        *lock // 复制出来，避免持有锁
+          let lock = HARDWARE_DEV_STATE.lock().await; 
+          *lock 
       };
+
       if dev_state == HardwareDevState::ON{
-        continue
+        // continue
       }else{
-        match get_start_robot_from_plc_started().await{
-          Ok(value) => {
-            if value != 0 &&  state ==SoftwareState::STOP {
+        if state ==SoftwareState::STOP {
+          let current_type = get_current_type().clone();
 
-              // 修改状态为START
-              let mut lock = START_PROCESS_STATE.lock().await; // 获取锁
-              *lock = SoftwareState::START; // 设置为 START
+          match get_type_from_plc().await{
+            Ok(value)=>{
+              let plc_type = map_value_to_type_plc(value);
 
-              match current_type.clone() {
-                Some(robot_type) => {
+              // 写入类型到机器人
+              match (plc_type, current_type.clone()) {
+                (Some(plc_type_str), Some(current_type_str)) => {
+                    if plc_type_str != current_type_str {
+                        // 如果不同，调用 set_current_type 更新类型
 
-                    // 将型号写入机器人
-                    match write_current_type_to_robot(&robot_type).await {
-                        Ok(_) => {
-                          // let log = format!("[robot] [log] [写入型号：{} <<<--]",robot_type);
-                          // sendlog2frontend(log.to_string());
+                        set_current_type(plc_type_str); // 调用异步函数更新型号
+                        let log = "[plc] [log] [修改机器人型号-->>>]";
+                        sendlog2frontend(log.to_string());
+                        // 写入类型到机器人
+
+                        let new_type = get_current_type();
+                        match new_type {
+                          Some(robot_type) => {
+                              println!("当前型号: {}", robot_type);
+          
+                              // 将型号写入机器人
+                              match write_current_type_to_robot(&robot_type).await {
+                                  Ok(_) => {
+                                      let log = "[robot] [log] [写入机器人型号<<<--]";
+                                      sendlog2frontend(log.to_string());
+                                      // 继续执行，不需要返回 Err
+                                  }
+                                  Err(err) => {
+                                      println!("写入机器人型号失败: {}", err);
+                                      return Err(err); // 明确返回错误
+                                  }
+                              }
+
+                              tauri::async_runtime::spawn(async {
+                                let (resp_tx, resp_rx) = oneshot::channel(); 
+                                let tx = GLOBAL_TX.lock().await.clone().unwrap_or_else(|| {
+                                  panic!("GLOBAL_TX is not initialized. Ensure that start_global_task() has been called.");
+                                });
+                                tx.send(GeneralRequest::SendCurrentTypeToFrontend(resp_tx)).await.map_err(|_| "发送型号失败".to_string());
+                              });
+                          }
+                          None => {
+                              println!("无法获取当前型号");
+                              return Err("无法获取当前型号".to_string()); // 明确返回错误
+                          }
                         }
-                        Err(err) => {
-                          // println!("写入机器人型号失败: {}", err);
-                          return Err(err); // 明确返回错误
-                        }
+                    } else {
+                        // println!("当前类型与PLC获取的类型一致，无需更新");
                     }
                 }
-                None => {
-                    println!("无法获取当前型号");
-                    return Err("无法获取当前型号".to_string()); // 明确返回错误
+                _ => {
+                    println!("无法获取类型进行比较");
                 }
               }
-              // 创建保存状态
-
-
-
-
-              // 发送到位信号到机器人
-              start_robot_process().await;
-            }else{
-              // println!("等待工件到位或上次过程完成");
+            }
+            Err(err) => {
+              // let log = "[plc] [error] [无法读取工件型号信息]";
+              // sendlog2frontend(log.to_string());
             }
           }
-          Err(err) => {
-                // let log = "[plc] [error] [无法读取工件位置信息]";
-                // sendlog2frontend(log.to_string());
-                }
-        }
+          match get_start_robot_from_plc_started().await{
+            Ok(value) => {
+              if value != 0 {
 
+                // 修改状态为START
+                let mut lock = START_PROCESS_STATE.lock().await; // 获取锁
+                *lock = SoftwareState::START; // 设置为 START
+
+                match current_type.clone() {
+                  Some(robot_type) => {
+
+                      // 将型号写入机器人
+                      match write_current_type_to_robot(&robot_type).await {
+                          Ok(_) => {
+                            // let log = format!("[robot] [log] [写入型号：{} <<<--]",robot_type);
+                            // sendlog2frontend(log.to_string());
+                          }
+                          Err(err) => {
+                            // println!("写入机器人型号失败: {}", err);
+                            return Err(err); // 明确返回错误
+                          }
+                      }
+                  }
+                  None => {
+                      println!("无法获取当前型号");
+                      return Err("无法获取当前型号".to_string()); // 明确返回错误
+                  }
+                }
+                // 创建保存状态
+                let mut task_state = GLOBAL_TASK_STATE.write().await;
+                task_state.current_artifact = Local::now().format("%Y_%m_%d_%H_%M_%S_%3f").to_string();
+                task_state.current_artifact_type = current_type.clone().expect("current_type should not be None");
+                // 发送到位信号到机器人
+                start_robot_process().await;
+              }else{
+                // println!("等待工件到位或上次过程完成");
+              }
+            }
+            Err(err) => {
+                  // let log = "[plc] [error] [无法读取工件位置信息]";
+                  // sendlog2frontend(log.to_string());
+                  }
+          }
+        }
         match get_command_from_plc().await {
           Ok(value)=>{
             match value {
@@ -1463,7 +1481,7 @@ async fn monitor_plc() -> Result<(), String> {
             // sendlog2frontend(log.to_string());
             }
         }
-      }
+    }
   }
 }
 
