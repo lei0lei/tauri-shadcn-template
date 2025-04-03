@@ -149,8 +149,8 @@ export function Overview() {
       
       {/* 数字信息区域，增加 `mt-4` 以分隔图片区域 */}
       <div className="grid grid-cols-2 gap-2 h-[70px] text-center mt-4 select-none">
-        <div className="flex justify-center items-center bg-gray-200 rounded-lg">{value1}</div>
-        <div className="flex justify-center items-center bg-gray-200 rounded-lg">{value2}</div>
+        <div className="flex justify-center items-center bg-gray-200 rounded-lg text-xl">{value1}</div>
+        <div className="flex justify-center items-center bg-gray-200 rounded-lg text-xl">{value2}</div>
       </div>
     </div>
   )

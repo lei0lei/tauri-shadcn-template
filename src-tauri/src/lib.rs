@@ -1,4 +1,5 @@
 #![allow(warnings)] 
+
 use std::sync::{Arc, RwLock};
 use std::thread;
 use std::fs::File;
@@ -122,10 +123,12 @@ lazy_static! {
       Arc::new(std::sync::Mutex::new(None));
 }
 // 定义全局变量
-pub static GLOBAL_TASK_STATE: Lazy<Arc<tokio::sync::RwLock::<TaskState>>> = Lazy::new(|| {
-  Arc::new(tokio::sync::RwLock::new(TaskState::new("EH09".to_string(), "1999_99_99_99".to_string())))
+pub static GLOBAL_TASK_STATE: Lazy<Arc<tokio::sync::RwLock<TaskState>>> = Lazy::new(|| {
+  Arc::new(tokio::sync::RwLock::new(TaskState::new(
+      "EH09".to_string(),
+      "1999_99_99_99".to_string(),
+  )))
 });
-
 
 // 检测状态
 pub struct TaskState {
@@ -249,9 +252,9 @@ pub fn generate_diameter_result(diameter: &HoleDiameter, min_val: f64, max_val: 
 }
 
 // 
-// 保存路径相关
+// ===========================================保存路径相关===========================
 // 
-static BASE_PATH: &str = "D:"; // 你的全局 base_path
+static BASE_PATH: &str = "D:/data"; // 你的全局 base_path
 fn generate_file_path(paths: &[&str], filename: &str) -> PathBuf {
   let mut dir_path = PathBuf::from(BASE_PATH);
   
@@ -431,8 +434,8 @@ pub async fn start_global_task(mut rx: mpsc::Receiver<GeneralRequest>,app_handle
             let log = "[robot] [log] [机器人主程序启动<<<--]";
             sendlog2frontend(log.to_string());
             thread::sleep(Duration::from_millis(200));
+            write_register_robot(3, 0).await;
             write_register_robot(0, 0).await;
-
             let _ = resp_tx.send(result);
         });
       }
@@ -461,7 +464,7 @@ pub async fn start_global_task(mut rx: mpsc::Receiver<GeneralRequest>,app_handle
       // 保存图像结果
       GeneralRequest::SaveImageResult(image_data, path, resp_tx) => {
         // 假设这里是保存图片的逻辑
-        let result = save_image(image_data, path).await;
+        let result = save_image_tmp(image_data, path).await;
         let _ = resp_tx.send(result);
       }
       // 保存 JSON 结果
@@ -550,7 +553,7 @@ pub async fn start_global_task(mut rx: mpsc::Receiver<GeneralRequest>,app_handle
 }
 
 // 以下是一些假设的函数来模拟保存、处理等操作
-async fn save_image(image_data: Vec<u8>, path: String) -> Result<(), String> {
+async fn save_image_tmp(image_data: Vec<u8>, path: String) -> Result<(), String> {
   // 模拟保存图像文件的逻辑
   println!("保存图像到路径: {}", path);
   Ok(())
@@ -656,7 +659,12 @@ async fn send_sensor_data_to_frontend(
   pos:Vec<u16>,
   data:f64,
 )-> Result<(), &'static str>{
+
   // let result = read_multiple_registers_robot(256, 3).await;
+
+  // 获取当前孔位配置信息
+
+
   let mut reciever = String::from("sensor-send-data-1");
   match pos.last() {
     Some(&3) => {sendlog2frontend("[robot] [error] [传感器错误触发3]".to_string());}
@@ -664,24 +672,37 @@ async fn send_sensor_data_to_frontend(
         sendlog2frontend("[robot] [error] [传感器错误触发4]".to_string());
     }
     Some(&1) => {
+
+      // 更新前端的当前位
+
       let mut task_state = GLOBAL_TASK_STATE.write().await;
       task_state.current_face = pos[0];
       task_state.current_hole = pos[1];
       task_state.add_hole(pos[0], pos[1]);
+
+      let face = task_state.current_face;
+      let hole = task_state.current_hole;
+      let artifact = task_state.current_artifact.clone();
+      let current_stage = CurrentStage{
+          face,         // u16 类型
+          hole,         // u16 类型
+          artifact: artifact.clone(),  // 假设 artifact 仍然是 String 类型
+      };
+
       if -40.0<data && data<40.0 {
         task_state.update_action1(pos[0],pos[1],data);
         }
       sendlog2frontend("[robot] [info] [传感器触发-1左侧]".to_string());
+      drop(task_state);
+      app_handle.emit("current_stage", current_stage)
+        .map_err(|_| "发送到前端失败")?;
     }
     Some(&2) => {
       let mut task_state = GLOBAL_TASK_STATE.write().await;
-      task_state.current_face = pos[0];
-      task_state.current_hole = pos[1];
-
       if -40.0<data && data<40.0 {
         task_state.update_action2(pos[0],pos[1],data);
         }
-
+        drop(task_state);
       sendlog2frontend("[robot] [info] [传感器触发-2右侧]".to_string());
       reciever = "sensor-send-data-2".to_string();
     }
@@ -692,12 +713,45 @@ async fn send_sensor_data_to_frontend(
 
   if data > 100.0 || data < -100.0 {
     //  获取当前位置信息
-    app_handle.emit(&reciever, "---").unwrap();
+    app_handle.emit(&reciever, "通孔").unwrap();
   } else {
       // 保证 data 总是保留 5 位有效数字
       let formatted_data = format!("{:.*}", 5, data);
       app_handle.emit(&reciever, formatted_data).unwrap();
   }
+  Ok(())
+}
+
+use serde::Serialize;
+#[derive(Serialize,Clone)]
+struct FinalResultData {
+    face: u16,  // 假设 face 是 String 类型，根据你的需求调整类型
+    hole: u16,  // 假设 hole 是 String 类型，根据你的需求调整类型
+    // artifact: String, // 假设 artifact 是 String 类型，根据你的需求调整类型
+    final_result: bool,
+}
+
+#[derive(Serialize,Clone)]
+struct CurrentStage {
+    face: u16,  // 假设 face 是 String 类型，根据你的需求调整类型
+    hole: u16,  // 假设 hole 是 String 类型，根据你的需求调整类型
+    artifact: String, // 假设 artifact 是 String 类型，根据你的需求调整类型
+}
+
+fn save_image(encoded_data: &opencv::core::Vector<u8>, full_path: &PathBuf) -> Result<(), &'static str> {
+  fs::write(full_path, &encoded_data)
+    .map_err(|_| "保存图片失败")?; // 直接返回 &'static str
+
+  println!("图片已保存: {:?}", full_path);
+  Ok(())
+}
+use base64::decode;
+
+pub fn save_image_base64(encoded_data: &str, full_path: &PathBuf) -> Result<(), &'static str> {
+  let decoded_data = decode(encoded_data).map_err(|_| "Base64 解码失败")?;
+  fs::write(full_path, &decoded_data).map_err(|_| "保存图片失败")?;
+  
+  println!("图片已保存: {:?}", full_path);
   Ok(())
 }
 
@@ -708,6 +762,16 @@ async fn send_image_to_fastapi(
   frame_info:cameras::hik_camera::FrameInfoSafe,
   image_data: Vec<u8>)-> Result<(), &'static str>
 {
+  // 获取当前位置
+  let task_state_tmp = GLOBAL_TASK_STATE.read().await;
+  let face = task_state_tmp.current_face;
+  let hole = task_state_tmp.current_hole;
+  let artifact = task_state_tmp.current_artifact.clone();
+  drop(task_state_tmp);
+  
+  // 获取当前孔位配置信息
+
+
   // bayerGB到RGB转换
   // let result = pos;
   let width = frame_info.nWidth as i32;
@@ -746,7 +810,33 @@ async fn send_image_to_fastapi(
   imgcodecs::imencode(".jpg", &rgb_mat, &mut opencv_vector, &opencv::core::Vector::new())
       .map_err(|_| "JPEG 编码失败")?;
 
+  // 保存原图
+  let mut paths: Vec<String> = Vec::new();
+  let date_part = artifact.split('_')
+                        .take(3)  // 取前3个部分，分别是年份、月份、日期
+                        .collect::<Vec<&str>>()
+                        .join("_");  // 使用 "_" 拼接起来
 
+  let artifact_part = artifact.clone();
+  let pp = vec![date_part, artifact_part,face.to_string(),hole.to_string()]; // 使用 Vec<String>
+
+  match pos.last() {
+    Some(&1) => {}
+    Some(&2) => {}
+    Some(&3) => {
+      let flie_name = "3_orig.jpg";
+      let pp_refs: Vec<&str> = pp.iter().map(|s| s.as_str()).collect(); // 转换为 Vec<&str>
+      let full_path = generate_file_path(&pp_refs, flie_name);
+      save_image(&opencv_vector, &full_path)?;
+    }
+    Some(&4) => {
+      let flie_name = "4_orig.jpg";
+      let pp_refs: Vec<&str> = pp.iter().map(|s| s.as_str()).collect(); // 转换为 Vec<&str>
+      let full_path = generate_file_path(&pp_refs, flie_name);
+      save_image(&opencv_vector, &full_path)?;
+    }
+    _ => {}
+  }
   let client = get_client().await;
   let part = Part::bytes(opencv_vector.to_vec())
       .file_name("image.jpg")
@@ -758,9 +848,11 @@ async fn send_image_to_fastapi(
   let mut fastapi_request = String::from("http://localhost:8000/detect_luowen_with_draw/");
   let mut reciever = String::from("image-send-image-1");
   // let result = read_multiple_registers_robot(256, 3).await;
-  
+  let mut finished = false;
 
   match pos.last() {
+    Some(&1) => {sendlog2frontend("[robot] [log] [相机触发-1]".to_string());}
+    Some(&2) => {sendlog2frontend("[robot] [log] [相机触发-2]".to_string());}
     Some(&3) => {
       sendlog2frontend("[robot] [log] [相机触发3 -左侧]".to_string());
       reciever = "image-send-image-1".to_string();
@@ -770,9 +862,8 @@ async fn send_image_to_fastapi(
       sendlog2frontend("[robot] [log] [相机触发4 -右侧]".to_string());
       reciever = "image-send-image-2".to_string();
       fastapi_request = "http://localhost:8000/detect_luowen_with_draw/".to_string();
+      finished = true;
     }
-    Some(&1) => {sendlog2frontend("[robot] [log] [相机触发-1]".to_string());}
-    Some(&2) => {sendlog2frontend("[robot] [log] [相机触发-2]".to_string());}
     _ => {
         println!("无效的机器人位置数据: {:?}", pos);
     }
@@ -780,7 +871,7 @@ async fn send_image_to_fastapi(
 
   let response = client
       .post(&fastapi_request)
-      .timeout(Duration::from_secs(2))
+      .timeout(Duration::from_secs(1))
       .multipart(form)
       .send()
       .await
@@ -803,9 +894,45 @@ async fn send_image_to_fastapi(
 
   // 6. 发送结果到前端
   //  获取当前位置信息
+match pos.last() {
+    Some(&1) => {}
+    Some(&2) => {}
+    Some(&3) => {
+      let flie_name = "3_det.jpg";
+      let pp_refs: Vec<&str> = pp.iter().map(|s| s.as_str()).collect(); // 转换为 Vec<&str>
+      let full_path = generate_file_path(&pp_refs, flie_name);
+      save_image_base64(&image_base64, &full_path)?;
+      println!("发送3");
+      app_handle.emit(&reciever, image_base64)
+                .map_err(|_| "发送图像到前端失败")?;
+    }
+    Some(&4) => {
+      let flie_name = "4_det.jpg";
+      let pp_refs: Vec<&str> = pp.iter().map(|s| s.as_str()).collect(); // 转换为 Vec<&str>
+      let full_path = generate_file_path(&pp_refs, flie_name);
+      save_image_base64(&image_base64, &full_path)?;
+      println!("发送4");
+      app_handle.emit(&reciever, image_base64)
+                .map_err(|_| "发送到前端失败")?;
+      // 返回一个结果到前端
+      // let final_result = true;
 
-  app_handle.emit(&reciever, image_base64)
-      .map_err(|_| "发送到前端失败")?;
+      let final_result_data = FinalResultData {
+        face,         // u16 类型
+        hole,         // u16 类型
+        // artifact: artifact.clone(),  // 假设 artifact 仍然是 String 类型
+        final_result: true,
+      };
+
+      app_handle.emit("hole_final_result", final_result_data)
+                  .map_err(|_| "发送到前端失败")?;
+      }
+    _ => {
+      println!("无效的机器人位置数据: {:?}", pos);
+    }
+  }
+  // app_handle.emit(&reciever, image_base64)
+  //     .map_err(|_| "发送到前端失败")?;
 
   Ok(())
 }
@@ -922,6 +1049,7 @@ async fn monitor_robot() -> Result<(), String> {
               // 清除结果存储
               let mut task_state = GLOBAL_TASK_STATE.write().await;
               task_state.clear().await;
+              drop(task_state);
               // task_state.current_artifact = Local::now().format("%Y_%m_%d_%H_%M_%S_%3f").to_string();
               // task_state.current_artifact_type = current_type.clone().expect("current_type should not be None");
 
@@ -1001,7 +1129,7 @@ async fn monitor_robot() -> Result<(), String> {
             if value & 16 != 0 {
                 // "[robot] [log] [机器人报警复位完成<<<--]";
                 let mut lock = ON_ROBOT_RESET.lock().await; // 获取锁
-                *lock = ResetState::OFF;
+                // *lock = ResetState::OFF;
                 send_reset_command_finished_to_plc().await;
 
                 match get_command_from_plc().await {
@@ -1279,6 +1407,7 @@ async fn robot_pausing() -> Result<(), String> {
 #[tauri::command(rename_all = "snake_case")]
 async fn robot_reset_finished() -> Result<(), String> {
   send_reset_command_finished_to_plc().await;
+  thread::sleep(Duration::from_millis(500));
   Ok(())
 }
 
@@ -1287,6 +1416,7 @@ async fn robot_reset_finished() -> Result<(), String> {
 async fn robot_run_finished() -> Result<(), String> {
   write_register_plc(7201, 0).await;
   send_robot_finished_to_plc().await;
+  thread::sleep(Duration::from_millis(500));
   end_robot_process().await;
 
   Ok(())
@@ -1379,9 +1509,13 @@ async fn monitor_plc() -> Result<(), String> {
               // sendlog2frontend(log.to_string());
             }
           }
+          let pstate = {
+            let lock = START_PROCESS_STATE.lock().await; // 获取锁
+            *lock // 复制出来，避免持有锁
+          };
           match get_start_robot_from_plc_started().await{
             Ok(value) => {
-              if value != 0 {
+              if value != 0 && pstate == SoftwareState::STOP {
 
                 // 修改状态为START
                 let mut lock = START_PROCESS_STATE.lock().await; // 获取锁
@@ -1411,6 +1545,7 @@ async fn monitor_plc() -> Result<(), String> {
                 let mut task_state = GLOBAL_TASK_STATE.write().await;
                 task_state.current_artifact = Local::now().format("%Y_%m_%d_%H_%M_%S_%3f").to_string();
                 task_state.current_artifact_type = current_type.clone().expect("current_type should not be None");
+                drop(task_state);
                 // 发送到位信号到机器人
                 start_robot_process().await;
               }else{
@@ -1455,10 +1590,10 @@ async fn monitor_plc() -> Result<(), String> {
                     let lock = ON_ROBOT_RESET.lock().await; // 获取锁
                     *lock // 复制出来，避免持有锁
                   };
-                  if state == ResetState::OFF {
+                  // if state == ResetState::OFF {
                     
-                    let mut lock = ON_ROBOT_RESET.lock().await; // 获取锁
-                    *lock = ResetState::ON;
+                  //   let mut lock = ON_ROBOT_RESET.lock().await; // 获取锁
+                  //   *lock = ResetState::ON;
 
                     tauri::async_runtime::spawn(async {
                       let (resp_tx, resp_rx) = oneshot::channel(); 
@@ -1468,10 +1603,10 @@ async fn monitor_plc() -> Result<(), String> {
                       tx.send(GeneralRequest::StartRobotProgram(resp_tx)).await.map_err(|_| "启动机器人程序失败".to_string());
                     });
                     let log = "[robot] [log] [机器人复位<<<--]";
-                  sendlog2frontend(log.to_string());
-                  }else{
+                    sendlog2frontend(log.to_string());
+                  // }else{
 
-                  }
+                  // }
 
                   let log = "[robot] [log] [机器人复位<<<--]";
                   sendlog2frontend(log.to_string());

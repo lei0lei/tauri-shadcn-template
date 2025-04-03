@@ -38,21 +38,27 @@ const iconMap : Record<string, React.ComponentType>= {
 import { invoke } from '@tauri-apps/api/core';
 
 export default function Dashboard() {
-  // 后端rust调用测试
-  // const [response, setResponse] = useState<string>('');
 
-  // const callRustCommand = async () => {
-  //   try {
-  //     // 调用 Rust 后端的自定义命令
-  //     const result = await invoke('test_call_from_frontend');
-  //     setResponse(result as string); // 更新响应内容
-  //   } catch (error) {
-  //     console.error("Error calling Rust command:", error);
-  //   }
-  // };
   // @ts-ignore
-  const { logs, setLogs, artifactType,setArtifactType,statics,artifact} = useDashboardStore();
+  const { logs, setLogs, artifactType,setArtifactType,statics,artifact,setArtifact} = useDashboardStore();
+  const {current_hole,setCurrentHole,current_face}= useDashboardStore();
+  useEffect(() => {
+    // 监听后端发送的 log_received 事件
+    const handleStageReceived = (event: { payload: { face: number, hole: number, artifact: string} }) => {
+      const { face, hole,artifact} = event.payload;
 
+      setCurrentHole(hole.toString(),face.toString());
+      setArtifact(artifact)
+    };
+
+    // 监听 "log_received" 事件
+    const unlisten = listen("current_stage", handleStageReceived);
+
+    // 清理监听器
+    return () => {
+      unlisten.then((unlistenFn) => unlistenFn());
+    };
+  }, [setCurrentHole]);
   useEffect(() => {
     // 监听后端发送的 log_received 事件
     const handleTypeReceived = (event: { payload: string }) => {
@@ -199,10 +205,8 @@ export default function Dashboard() {
                   </svg>
                 </CardHeader>
                 <CardContent>
-                  <div className='text-2xl font-bold'>{artifact}</div>
-                  <p className='text-xs text-muted-foreground'>
-                    +19% from last month
-                  </p>
+                <div className='text-lg font-bold'>{artifact}</div>
+                <p className="text-sm text-muted-foreground">面: {current_face} | 孔: {current_hole}</p>
                 </CardContent>
               </Card>
               <Card className="select-none">

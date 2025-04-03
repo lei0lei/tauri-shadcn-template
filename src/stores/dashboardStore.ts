@@ -30,6 +30,8 @@ interface DashboardState {
     image_2: string|null;
     info_1: string|null;
     info_2: string|null;
+    current_hole: string|null;
+    current_face: string|null;
     logComponentValue: LogShow[]; // 子组件状态示例
     resultComponentValue: SurfaceData[];
     systemstate: SystemState;
@@ -37,7 +39,7 @@ interface DashboardState {
     setIsRunning:(state:boolean)=>void;
     setArtifactType:(atype: string)=>void;
     // setStatics:(statics: string)=>void;
-    // setArtifact:(result: string)=>void;
+    setArtifact:(result: string)=>void;
     // setSystemstate:(state: SystemState)=>void;
 
     setLogs: (log: string) => void;
@@ -50,6 +52,7 @@ interface DashboardState {
     clearImage_2: () => void;
     clearInfo_1: () => void;
     clearInfo_2: () => void;
+    setCurrentHole:(hole: string, face:string)=>void;
     updateResultComponent: (
       surface: string,                      // 要更新的 surface 名称
       options?: { 
@@ -71,6 +74,8 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   image_2: null,
   info_1: "---",
   info_2: "---",
+  current_hole:"---",
+  current_face:"---",
   systemstate: {camera_connected:null,plc_connected:null,robot_connected:null,sensor_connected:null,algo:null,hardware:null},
 
   logComponentValue: [{ sender: "System", level: "info", info: "程序启动." }],
@@ -121,7 +126,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   setIsRunning: (state: boolean) => set({ isRunning: state }),
   setLogs: (log) => set((state) => ({ logs: state.logs + `\n${log}` })),
   addLogComponentValueEntry: (log) =>
-  set((state) => ({ logComponentValue: [...state.logComponentValue, log] })),
+  set((state) => ({ logComponentValue: [...state.logComponentValue, log].slice(-100),  })),
   addImage_1: (image: string) => set((state) => {
     // 只有在新图片和当前图片不同的时候才更新
     if (state.image_1 !== image) {
@@ -144,11 +149,21 @@ export const useDashboardStore = create<DashboardState>((set) => ({
       return { info_1: info };
     }
     return state;}), // 如果图片没有变化，保持不变),
+  setArtifact:   (artifact:string) => set((state) => {
+    if (state.artifact !== artifact) {
+      return { artifact: artifact };
+    }
+    return state;}), // 如果图片没有变化，保持不变),
   setInfo_2:   (info:string) => set((state) => {
     if (state.info_2 !== info) {
       return { info_2: info };
     }
     return state;}),
+  setCurrentHole:   (hole:string, face:string) => set((state) => {
+    if (state.current_hole !== hole|| state.current_face !== face ) {
+      return { current_hole: hole, current_face: face};
+    }
+    return state;}), // 如果图片没有变化，保持不变),
   clearInfo_1: () => set(() => ({ image_1: null })),
   clearInfo_2: () => set(() => ({ image_2: null })),
 
@@ -160,7 +175,10 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   
           // 更新特定的 hole
           if (options?.holeIndex !== undefined && options?.holeState !== undefined) {
-            newHoles[options.holeIndex] = options.holeState;
+            const adjustedIndex = options.holeIndex - 1; // 关键点
+            if (adjustedIndex >= 0 && adjustedIndex < newHoles.length) {
+              newHoles[adjustedIndex] = options.holeState;
+            }
           }
   
           // 如果提供了 newHoles，整体更新 holes

@@ -133,6 +133,26 @@ async def detect_diameter(
 ):
     pass
 
+def get_largest_mask_info(masks):
+    largest_contour = None
+    max_area = 0
+    
+    for mask in masks:
+        mask = np.array(mask, dtype=np.uint8) * 255
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        for contour in contours:
+            area = cv2.contourArea(contour)
+            if area > max_area:
+                max_area = area
+                largest_contour = contour
+    
+    if largest_contour is not None:
+        (x, y), radius = cv2.minEnclosingCircle(largest_contour)
+        return {"center_x": int(x), "center_y": int(y), "diameter": int(radius * 2)}
+    
+    return None
+
+
 @app.post("/detect_diameter_with_draw/")
 async def detect_diameter_with_draw(
     file: UploadFile = File(...),
@@ -144,10 +164,11 @@ async def detect_diameter_with_draw(
 
     # 使用 YOLOv8 进行推理
     try:
+        orig_h, orig_w = image.shape[:2]
 
         results = yolo_seg_model(image)[0]
         detections = sv.Detections.from_ultralytics(results)
-        
+        # 绘制mask图片
         mask_annotator = sv.MaskAnnotator()
         label_annotator = sv.LabelAnnotator(text_position=sv.Position.CENTER_OF_MASS)
 
@@ -155,16 +176,49 @@ async def detect_diameter_with_draw(
             scene=image, detections=detections)
         annotated_image = label_annotator.annotate(
             scene=annotated_image, detections=detections)
+        
+        detection_json = {}
+        for class_name in ["diameter-nei", "diameter-wai"]:
+            class_id = next((k for k, v in results.names.items() if v == class_name), None)
+            if class_id is None:
+                continue
+            
+            class_id = int(class_id)
 
-        # 解析检测结果
-        # detection_json = parse_yolo_results(results)
+            masks = [
+                cv2.resize(mask.cpu().numpy(), (orig_w, orig_h), interpolation=cv2.INTER_NEAREST)
+                for mask, cls in zip(results.masks.data, results.boxes.cls)
+                if int(cls) == class_id
+            ]
 
-        # 使用 Supervision 绘制检测框
-        # image_with_boxes = draw_detections(image, results)
-        # box_annotator = sv.BoxAnnotator()
-        # annotated_frame = box_annotator.annotate(
-        #     scene=image.copy(),
-        #     detections=detections)
+            if not masks:
+                continue
+
+            mask_info = get_largest_mask_info(masks)
+            if mask_info:
+                detection_json[class_name] = mask_info
+
+        text_position_y = 70  # 从30像素开始绘制文本
+
+
+        for class_name, info in detection_json.items():
+            center_text = f"{class_name}_center: ({info['center_x']}, {info['center_y']})"
+            diameter_text = f"{class_name}_diameter: {info['diameter']}"
+
+            font_scale = 2  # 增大字体大小
+            font_color = (0, 255, 0)  # 绿色
+            thickness = 3  # 增加字体的厚度
+            # 绘制文本
+            cv2.putText(annotated_image, center_text, 
+                        (10, text_position_y), 
+                        cv2.FONT_HERSHEY_SIMPLEX, font_scale, font_color, thickness, cv2.LINE_AA)
+            text_position_y += 70  # 下一行文本向下偏移50像素
+
+            cv2.putText(annotated_image, diameter_text, 
+                        (10, text_position_y), 
+                        cv2.FONT_HERSHEY_SIMPLEX, font_scale, font_color, thickness, cv2.LINE_AA)
+            text_position_y += 70  # 下一行文本向下偏移50像素
+
 
         # **直接用 OpenCV 编码为 PNG**
         _, buffer = cv2.imencode('.jpg', annotated_image)
@@ -176,12 +230,11 @@ async def detect_diameter_with_draw(
         detection_json = {}
         img_bytes = io.BytesIO(buffer)
         
-    detection_json = {'a':'a'}
     return {"results": detection_json, "image_base64": img_base64}
-
+    # print(detection_json)
     # 直接返回图片文件
-    headers = {"Content-Disposition": "attachment; filename=detected_image.png"}
-    return StreamingResponse(img_bytes, media_type="image/png", headers=headers)
+    # headers = {"Content-Disposition": "attachment; filename=detected_image.png"}
+    # return StreamingResponse(img_bytes, media_type="image/png", headers=headers, background=JSONResponse(content=detection_json))
 
 
 
@@ -205,10 +258,10 @@ async def detect_luowen_with_draw(
         
         # 解析检测结果
         detection_json = parse_yolo_results(results)
-
+        GREEN = (0, 255, 0)
         # 使用 Supervision 绘制检测框
         # image_with_boxes = draw_detections(image, results)
-        box_annotator = sv.BoxAnnotator()
+        box_annotator = sv.BoxAnnotator(thickness=5)
         annotated_frame = box_annotator.annotate(
             scene=image.copy(),
             detections=detections)
@@ -223,7 +276,6 @@ async def detect_luowen_with_draw(
         detection_json = {}
         img_bytes = io.BytesIO(buffer)
         
-    detection_json = {'a':'a'}
     return {"results": detection_json, "image_base64": img_base64}
 
     # 直接返回图片文件
