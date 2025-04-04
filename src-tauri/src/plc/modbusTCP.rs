@@ -7,17 +7,15 @@ use tokio_modbus::client::tcp;
 use tokio_modbus::prelude::*;
 use tokio::sync::oneshot;
 use std::sync::Arc;
-
 use lazy_static::lazy_static;
-lazy_static! {
-    pub static ref PLC_TX: Arc<Mutex<Option<mpsc::Sender<ModbusRequest>>>> = Arc::new(Mutex::new(None));
-  }
   
-lazy_static! {
-pub static ref ROBOT_TX: Arc<Mutex<Option<mpsc::Sender<ModbusRequest>>>> = Arc::new(Mutex::new(None));
-}
+// ███╗   ███╗ ██████╗ ██████╗ ██████╗ ██╗   ██╗███████╗
+// ████╗ ████║██╔═══██╗██╔══██╗██╔══██╗██║   ██║██╔════╝
+// ██╔████╔██║██║   ██║██║  ██║██████╔╝██║   ██║███████╗
+// ██║╚██╔╝██║██║   ██║██║  ██║██╔══██╗██║   ██║╚════██║
+// ██║ ╚═╝ ██║╚██████╔╝██████╔╝██████╔╝╚██████╔╝███████║
+// ╚═╝     ╚═╝ ╚═════╝ ╚═════╝ ╚═════╝  ╚═════╝ ╚══════╝                                                   
 
-// 定义 PLC 读写请求类型
 pub enum ModbusRequest {
     // 读取保持寄存器
     ReadRegister(u16, oneshot::Sender<Result<u16, String>>),
@@ -49,9 +47,18 @@ pub enum ModbusRequest {
 }
 
 
-// 启动 PLC 任务
+// ██████╗ ██╗      ██████╗
+// ██╔══██╗██║     ██╔════╝
+// ██████╔╝██║     ██║     
+// ██╔═══╝ ██║     ██║     
+// ██║     ███████╗╚██████╗
+// ╚═╝     ╚══════╝ ╚═════╝
+                        
+lazy_static! {
+    pub static ref PLC_TX: Arc<Mutex<Option<mpsc::Sender<ModbusRequest>>>> = Arc::new(Mutex::new(None));
+}
+
 pub async fn start_plc_task(plc_addr: SocketAddr, mut rx: mpsc::Receiver<ModbusRequest>) -> Result<(), String> {
-    
     match tcp::connect(plc_addr).await {
         Ok(mut ctx) => {
             println!("PLC 连接成功");
@@ -154,7 +161,200 @@ pub async fn start_plc_task(plc_addr: SocketAddr, mut rx: mpsc::Receiver<ModbusR
 
 }
 
-// 启动 PLC 任务
+// 读取plc寄存器
+pub async fn read_register_plc(reg_address: u16) -> Result<u16, String> {
+    let (resp_tx, resp_rx) = oneshot::channel();  // 创建响应通道
+    // 获取全局的 tx
+    let tx = PLC_TX.lock().await.clone().unwrap_or_else(|| {
+      panic!("PLC_TX is not initialized. Ensure that start_plc_connect() has been called.");
+    });
+    tx.send(ModbusRequest::ReadRegister(reg_address, resp_tx)).await.map_err(|_| "发送请求失败".to_string())?;
+  
+    match resp_rx.await {
+        Ok(Ok(value)) => Ok(value),  // 返回读取的寄存器值
+        Ok(Err(err)) => Err(err),    // Modbus 读取失败
+        Err(err) => Err("响应通道关闭".to_string()),  // 响应通道关闭
+    }
+  }
+
+// 写入plc寄存器
+pub async fn write_register_plc(reg_address: u16, value: u16)-> Result<(), String>{
+    let (resp_tx, resp_rx) = oneshot::channel();
+    let tx = PLC_TX.lock().await.clone().unwrap();
+    // 注意此处没有对消息发送出错的处理
+    tx.send(ModbusRequest::WriteRegister(reg_address, value, resp_tx)).await.map_err(|_| "发送请求失败".to_string())?;
+    match resp_rx.await {
+        Ok(Ok(())) => Ok(()),
+        Ok(Err(e)) => Err(e.to_string()),
+        Err(_) => Err("Modbus 响应通道关闭".to_string()),
+    }
+  }
+
+// 读取plc线圈
+pub async fn read_coil(coil_address: u16){
+    let (resp_tx, resp_rx) = oneshot::channel();
+    let tx = PLC_TX.lock().await.clone().unwrap();
+    tx.send(ModbusRequest::ReadCoil(coil_address, resp_tx)).await.unwrap();
+    match resp_rx.await {
+        Ok(Ok(value)) => println!("Coil 5 状态: {}", value),
+        Ok(Err(e)) => println!("读取 Coil 失败: {}", e),
+        Err(_) => println!("Modbus 响应通道关闭"),
+    }
+  }
+  
+// 写入plc线圈
+pub async fn write_coil(coil_address: u16, value: bool){
+    let (resp_tx, resp_rx) = oneshot::channel();
+    let tx = PLC_TX.lock().await.clone().unwrap();
+    tx.send(ModbusRequest::WriteCoil(coil_address, value, resp_tx)).await.unwrap();
+    match resp_rx.await {
+        Ok(Ok(())) => println!("Coil 写入成功"),
+        Ok(Err(e)) => println!("Coil 写入失败: {}", e),
+        Err(_) => println!("Modbus 响应通道关闭"),
+    }
+  }
+
+// 启动plc连接
+pub async fn start_plc_connect(plc_addr: std::net::SocketAddr) -> Result<bool, String> {
+    // 使用 tauri 的 async_runtime::mpsc::channel 创建通道
+    let (tx, rx) = mpsc::channel::<ModbusRequest>(32);
+  
+    let tx = Arc::new(Mutex::new(Some(tx))); // 用 Mutex 包装 tx
+    // 将 tx 存储在全局变量中
+    *PLC_TX.lock().await = Some(tx.lock().await.clone().unwrap());
+  
+    // 启动异步任务
+    tokio::spawn(start_plc_task(plc_addr.clone(), rx));
+  
+    Ok(true) // 成功返回 true
+  }
+
+//   获取plc配置
+fn get_plc_ip_port() -> Option<String> {
+    // 获取全局配置
+    let config = crate::config::config::CONFIG.read().unwrap();  // 获取只读锁
+  
+    // 检查配置是否已经加载
+    if let Some(config) = &*config {
+        // 访问硬件配置中的 plc 子配置项
+        if let Some(plc_ip_port) = config.hardware.get_value("plc.ip_port") {
+            if let Some(plc_addr_str) = plc_ip_port.as_str(){
+                // 返回ip_port
+                return Some(plc_addr_str.to_string());
+              } else {
+                println!("PLC ip_port 不是字符串类型");
+              }
+        } else {
+            println!("PLC ip_port not found.");
+        }
+    } else {
+        println!("配置加载失败");
+    }
+    None  // 如果找不到，返回 None
+  }
+
+//   程序启动时启动plc连接
+pub fn start_plc_connection(){
+    tauri::async_runtime::spawn(async {
+        // 这里可以执行一些后台任务
+        println!("plc: 创建modbus tcp连接...");
+
+        if let Some(plc_addr) = get_plc_ip_port() {
+        // 将读取到的 ip_port 转换为 SocketAddr 类型
+        
+        if let Ok(socket_addr) = plc_addr.parse::<SocketAddr>() {
+            // 启动 PLC 连接
+            let _ = start_plc_connect(socket_addr).await;
+            println!("plc:modbus tcp连接创建完毕");
+        } else {
+            println!("PLC ip_port 格式错误: {}", plc_addr);
+        }
+    } else {
+        println!("PLC ip_port not found.");
+    }
+    });
+}
+  
+
+pub async fn stop_plc_connection() {
+    let (resp_tx, resp_rx):(oneshot::Sender<Result<(), String>>, oneshot::Receiver<Result<(), String>>) = oneshot::channel();
+    // 尝试获取 PLC_TX 锁，并确保 tx 可用
+    let tx_guard = PLC_TX.lock().await;
+
+    // 确保 tx 存在，并且通道未关闭
+    if let Some(tx) = tx_guard.clone() {
+        // 发送停止命令
+        match tx.send(ModbusRequest::STOP(resp_tx)).await {
+            Ok(()) => {
+                println!("成功发送停止命令");
+            }
+            Err(e) => {
+                println!("发送停止命令失败: {:?}", e);
+            }
+        }
+    } else {
+        println!("PLC 连接通道已关闭");
+    }
+
+    // 这里处理接收到的响应
+    match resp_rx.await {
+        Ok(Ok(())) => println!("成功停止 PLC 任务"),
+        Ok(Err(e)) => println!("停止 PLC 任务失败: {}", e),
+        Err(_) => println!("接收停止信号失败"),
+    }
+}
+
+  
+pub fn set_plc_test() -> Result<(), Box<dyn std::error::Error>> {
+    // 获取全局配置
+    let mut config = match crate::config::config::CONFIG.write() {
+        Ok(config) => config,
+        Err(_) => {
+            println!("获取配置失败");
+            return Err("获取配置失败".into());
+        }
+    };
+    if let Some(ref mut config) = *config {
+      // 设置 plc.test 为 true
+      let new_value = toml::Value::Boolean(true); // 设置为布尔值 true
+      config.hardware.set_value("sensors.ip", new_value)?;
+      Ok(())
+  } else {
+      Err("配置为空".into())
+  }
+  }
+  
+  
+pub fn remove_plc_test()-> Result<(), Box<dyn std::error::Error>> {
+    let mut config = match crate::config::config::CONFIG.write() {
+      Ok(config) => config,
+      Err(_) => {
+          println!("获取配置失败");
+          return Err("获取配置失败".into());
+      }
+    };
+    if let Some(ref mut config) = *config {
+      // 设置 plc.test 为 true
+      let new_value = toml::Value::Boolean(true); // 设置为布尔值 true
+      config.hardware.remove_value("plc.test")?;
+      Ok(())
+    } else {
+      Err("配置为空".into())
+    }
+  }
+  
+
+// ██████╗  ██████╗ ██████╗  ██████╗ ████████╗
+// ██╔══██╗██╔═══██╗██╔══██╗██╔═══██╗╚══██╔══╝
+// ██████╔╝██║   ██║██████╔╝██║   ██║   ██║   
+// ██╔══██╗██║   ██║██╔══██╗██║   ██║   ██║   
+// ██║  ██║╚██████╔╝██████╔╝╚██████╔╝   ██║   
+// ╚═╝  ╚═╝ ╚═════╝ ╚═════╝  ╚═════╝    ╚═╝   
+                                 
+lazy_static! {
+    pub static ref ROBOT_TX: Arc<Mutex<Option<mpsc::Sender<ModbusRequest>>>> = Arc::new(Mutex::new(None));
+}
+    
 pub async fn start_robot_task(plc_addr: SocketAddr, mut rx: mpsc::Receiver<ModbusRequest>) -> Result<(), String> {
     
     match tcp::connect(plc_addr).await {
@@ -259,30 +459,12 @@ pub async fn start_robot_task(plc_addr: SocketAddr, mut rx: mpsc::Receiver<Modbu
 
 }
 
-
-
-// 读取寄存器的函数
-pub async fn read_register_plc(reg_address: u16) -> Result<u16, String> {
-    let (resp_tx, resp_rx) = oneshot::channel();  // 创建响应通道
-    // 获取全局的 tx
-    let tx = PLC_TX.lock().await.clone().unwrap_or_else(|| {
-      panic!("PLC_TX is not initialized. Ensure that start_plc_connect() has been called.");
-    });
-    tx.send(ModbusRequest::ReadRegister(reg_address, resp_tx)).await.map_err(|_| "发送请求失败".to_string())?;
-  
-    match resp_rx.await {
-        Ok(Ok(value)) => Ok(value),  // 返回读取的寄存器值
-        Ok(Err(err)) => Err(err),    // Modbus 读取失败
-        Err(err) => Err("响应通道关闭".to_string()),  // 响应通道关闭
-    }
-  }
-
-// 读取寄存器的函数
+// 读取机器人寄存器
 pub async fn read_register_robot(reg_address: u16) -> Result<u16, String> {
     let (resp_tx, resp_rx) = oneshot::channel();  // 创建响应通道
     // 获取全局的 tx
     let tx = ROBOT_TX.lock().await.clone().unwrap_or_else(|| {
-      panic!("ROBOT_TX is not initialized. Ensure that start_plc_connect() has been called.");
+      panic!("ROBOT_TX is not initialized. Ensure that start_robot_connect() has been called.");
     });
     tx.send(ModbusRequest::ReadRegister(reg_address, resp_tx)).await.map_err(|_| "发送请求失败".to_string())?;
   
@@ -293,13 +475,13 @@ pub async fn read_register_robot(reg_address: u16) -> Result<u16, String> {
     }
   }
 
-// 读取多个寄存器的函数
+// 读取多个机器人寄存器
 pub async fn read_multiple_registers_robot(start_address: u16, count: u16) -> Result<Vec<u16>, String> {
     let (resp_tx, resp_rx) = oneshot::channel();  // 创建响应通道
 
     // 获取全局的 tx
     let tx = ROBOT_TX.lock().await.clone().unwrap_or_else(|| {
-        panic!("PLC_TX is not initialized. Ensure that start_plc_connect() has been called.");
+        panic!("PLC_TX is not initialized. Ensure that start_robot_connect() has been called.");
     });
 
     // 发送读取多个寄存器的请求
@@ -314,20 +496,7 @@ pub async fn read_multiple_registers_robot(start_address: u16, count: u16) -> Re
     }
 }
 
-
-pub async fn write_register_plc(reg_address: u16, value: u16)-> Result<(), String>{
-    let (resp_tx, resp_rx) = oneshot::channel();
-    let tx = PLC_TX.lock().await.clone().unwrap();
-    // 注意此处没有对消息发送出错的处理
-    tx.send(ModbusRequest::WriteRegister(reg_address, value, resp_tx)).await.map_err(|_| "发送请求失败".to_string())?;
-    match resp_rx.await {
-        Ok(Ok(())) => Ok(()),
-        Ok(Err(e)) => Err(e.to_string()),
-        Err(_) => Err("Modbus 响应通道关闭".to_string()),
-    }
-  }
-
-
+// 写入机器人寄存器
 pub async fn write_register_robot(reg_address: u16, value: u16)-> Result<(), String>{
     let (resp_tx, resp_rx) = oneshot::channel();
     let tx = ROBOT_TX.lock().await.clone().unwrap();
@@ -340,45 +509,7 @@ pub async fn write_register_robot(reg_address: u16, value: u16)-> Result<(), Str
     }
   }
 
-
-
-pub async fn read_coil(coil_address: u16){
-    let (resp_tx, resp_rx) = oneshot::channel();
-    let tx = PLC_TX.lock().await.clone().unwrap();
-    tx.send(ModbusRequest::ReadCoil(coil_address, resp_tx)).await.unwrap();
-    match resp_rx.await {
-        Ok(Ok(value)) => println!("Coil 5 状态: {}", value),
-        Ok(Err(e)) => println!("读取 Coil 失败: {}", e),
-        Err(_) => println!("Modbus 响应通道关闭"),
-    }
-  }
-  
-pub async fn write_coil(coil_address: u16, value: bool){
-    let (resp_tx, resp_rx) = oneshot::channel();
-    let tx = PLC_TX.lock().await.clone().unwrap();
-    tx.send(ModbusRequest::WriteCoil(coil_address, value, resp_tx)).await.unwrap();
-    match resp_rx.await {
-        Ok(Ok(())) => println!("Coil 写入成功"),
-        Ok(Err(e)) => println!("Coil 写入失败: {}", e),
-        Err(_) => println!("Modbus 响应通道关闭"),
-    }
-  }
-
-
-pub async fn start_plc_connect(plc_addr: std::net::SocketAddr) -> Result<bool, String> {
-    // 使用 tauri 的 async_runtime::mpsc::channel 创建通道
-    let (tx, rx) = mpsc::channel::<ModbusRequest>(32);
-  
-    let tx = Arc::new(Mutex::new(Some(tx))); // 用 Mutex 包装 tx
-    // 将 tx 存储在全局变量中
-    *PLC_TX.lock().await = Some(tx.lock().await.clone().unwrap());
-  
-    // 启动异步任务
-    tokio::spawn(start_plc_task(plc_addr.clone(), rx));
-  
-    Ok(true) // 成功返回 true
-  }
-  
+//   启动机器人连接
 pub async fn start_robot_connect(plc_addr: std::net::SocketAddr) -> Result<bool, String> {
     // 使用 tauri 的 async_runtime::mpsc::channel 创建通道
     let (tx, rx) = mpsc::channel::<ModbusRequest>(32);
@@ -393,29 +524,7 @@ pub async fn start_robot_connect(plc_addr: std::net::SocketAddr) -> Result<bool,
     Ok(true) // 成功返回 true
   }
 
-fn get_plc_ip_port() -> Option<String> {
-    // 获取全局配置
-    let config = crate::config::config::CONFIG.read().unwrap();  // 获取只读锁
-  
-    // 检查配置是否已经加载
-    if let Some(config) = &*config {
-        // 访问硬件配置中的 plc 子配置项
-        if let Some(plc_ip_port) = config.hardware.get_value("plc.ip_port") {
-            if let Some(plc_addr_str) = plc_ip_port.as_str(){
-                // 返回ip_port
-                return Some(plc_addr_str.to_string());
-              } else {
-                println!("PLC ip_port 不是字符串类型");
-              }
-        } else {
-            println!("PLC ip_port not found.");
-        }
-    } else {
-        println!("配置加载失败");
-    }
-    None  // 如果找不到，返回 None
-  }
-
+// 机器人ip配置
 fn get_robot_ip_port() -> Option<String> {
     // 获取全局配置
     let config = crate::config::config::CONFIG.read().unwrap();  // 获取只读锁
@@ -439,27 +548,6 @@ fn get_robot_ip_port() -> Option<String> {
     None  // 如果找不到，返回 None
   }
 
-pub fn start_plc_connection(){
-    tauri::async_runtime::spawn(async {
-      // 这里可以执行一些后台任务
-      println!("plc: 创建modbus tcp连接...");
-  
-      if let Some(plc_addr) = get_plc_ip_port() {
-        // 将读取到的 ip_port 转换为 SocketAddr 类型
-        
-        if let Ok(socket_addr) = plc_addr.parse::<SocketAddr>() {
-            // 启动 PLC 连接
-            let _ = start_plc_connect(socket_addr).await;
-            println!("plc:modbus tcp连接创建完毕");
-        } else {
-            println!("PLC ip_port 格式错误: {}", plc_addr);
-        }
-    } else {
-        println!("PLC ip_port not found.");
-    }
-    });
-  }
-  
   
 pub fn start_robot_connection(){
     tauri::async_runtime::spawn(async {
@@ -482,35 +570,6 @@ pub fn start_robot_connection(){
     });
   }
 
-
-
-pub async fn stop_plc_connection() {
-    let (resp_tx, resp_rx):(oneshot::Sender<Result<(), String>>, oneshot::Receiver<Result<(), String>>) = oneshot::channel();
-    // 尝试获取 PLC_TX 锁，并确保 tx 可用
-    let tx_guard = PLC_TX.lock().await;
-  
-    // 确保 tx 存在，并且通道未关闭
-    if let Some(tx) = tx_guard.clone() {
-        // 发送停止命令
-        match tx.send(ModbusRequest::STOP(resp_tx)).await {
-            Ok(()) => {
-                println!("成功发送停止命令");
-            }
-            Err(e) => {
-                println!("发送停止命令失败: {:?}", e);
-            }
-        }
-    } else {
-        println!("PLC 连接通道已关闭");
-    }
-    
-    // 这里处理接收到的响应
-    match resp_rx.await {
-        Ok(Ok(())) => println!("成功停止 PLC 任务"),
-        Ok(Err(e)) => println!("停止 PLC 任务失败: {}", e),
-        Err(_) => println!("接收停止信号失败"),
-    }
-  }
   
 pub async fn stop_robot_connection() {
     let (resp_tx, resp_rx):(oneshot::Sender<Result<(), String>>, oneshot::Receiver<Result<(), String>>) = oneshot::channel();
@@ -539,46 +598,6 @@ pub async fn stop_robot_connection() {
         Err(_) => println!("接收停止信号失败"),
     }
   }
-  
-
-pub fn set_plc_test() -> Result<(), Box<dyn std::error::Error>> {
-    // 获取全局配置
-    let mut config = match crate::config::config::CONFIG.write() {
-        Ok(config) => config,
-        Err(_) => {
-            println!("获取配置失败");
-            return Err("获取配置失败".into());
-        }
-    };
-    if let Some(ref mut config) = *config {
-      // 设置 plc.test 为 true
-      let new_value = toml::Value::Boolean(true); // 设置为布尔值 true
-      config.hardware.set_value("sensors.ip", new_value)?;
-      Ok(())
-  } else {
-      Err("配置为空".into())
-  }
-  }
-  
-  
-pub fn remove_plc_test()-> Result<(), Box<dyn std::error::Error>> {
-    let mut config = match crate::config::config::CONFIG.write() {
-      Ok(config) => config,
-      Err(_) => {
-          println!("获取配置失败");
-          return Err("获取配置失败".into());
-      }
-    };
-    if let Some(ref mut config) = *config {
-      // 设置 plc.test 为 true
-      let new_value = toml::Value::Boolean(true); // 设置为布尔值 true
-      config.hardware.remove_value("plc.test")?;
-      Ok(())
-    } else {
-      Err("配置为空".into())
-    }
-  }
-  
   
 pub fn set_robot_test() -> Result<(), Box<dyn std::error::Error>> {
     // 获取全局配置

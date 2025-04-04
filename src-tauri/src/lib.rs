@@ -16,6 +16,7 @@ use tauri::{State, WindowEvent};
 mod sidecar;
 use std::collections::HashMap;
 use once_cell::sync::Lazy;
+
 mod plc;
 use plc::modbusTCP;
 use plc::modbusTCP::{PLC_TX, 
@@ -42,8 +43,10 @@ use sensors::cf3000::{
 };
 use std::net::SocketAddr;
 use std::{path::{Path, PathBuf}};
+
 mod config;
 use toml::Value;
+
 mod cameras;
 use cameras::hik_camera::{
                         init_mvs_sdk, 
@@ -72,6 +75,7 @@ use reqwest::Client;
 use tokio::sync::OnceCell;
 mod sensors;
 use chrono::Local;
+
 // 主流程启动状态
 #[derive(Debug, PartialEq,Copy, Clone)]
 pub enum SoftwareState{
@@ -98,9 +102,7 @@ pub enum HardwareState{
   robot(bool),
 }
 
-lazy_static::lazy_static! {
-  pub static ref START_STATE: Arc<std::sync::Mutex<SoftwareState>> = Arc::new(std::sync::Mutex::new(SoftwareState::STOP));
-}
+
 lazy_static::lazy_static! {
   pub static ref START_PROCESS_STATE: Arc<Mutex<SoftwareState>> = Arc::new(Mutex::new(SoftwareState::STOP));
 }
@@ -122,7 +124,14 @@ lazy_static! {
   static ref GLOBAL_SENSOR_TX: Arc<std::sync::Mutex<Option<std::sync::mpsc::SyncSender<SensorsDataRequest>>>> =
       Arc::new(std::sync::Mutex::new(None));
 }
-// 定义全局变量
+
+// ████████╗ █████╗ ███████╗██╗  ██╗███████╗████████╗ █████╗ ████████╗███████╗
+// ╚══██╔══╝██╔══██╗██╔════╝██║ ██╔╝██╔════╝╚══██╔══╝██╔══██╗╚══██╔══╝██╔════╝
+//    ██║   ███████║███████╗█████╔╝ ███████╗   ██║   ███████║   ██║   █████╗  
+//    ██║   ██╔══██║╚════██║██╔═██╗ ╚════██║   ██║   ██╔══██║   ██║   ██╔══╝  
+//    ██║   ██║  ██║███████║██║  ██╗███████║   ██║   ██║  ██║   ██║   ███████╗
+//    ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝   ╚═╝   ╚═╝  ╚═╝   ╚═╝   ╚══════╝
+                                                                           
 pub static GLOBAL_TASK_STATE: Lazy<Arc<tokio::sync::RwLock<TaskState>>> = Lazy::new(|| {
   Arc::new(tokio::sync::RwLock::new(TaskState::new(
       "EH09".to_string(),
@@ -132,7 +141,7 @@ pub static GLOBAL_TASK_STATE: Lazy<Arc<tokio::sync::RwLock<TaskState>>> = Lazy::
 
 // 检测状态
 pub struct TaskState {
-  pub current_artifact: String, // 当前零件
+  pub current_artifact: String, // 当前零件-名字根据时间随机生成
   pub current_artifact_type: String, //当前型号
   pub current_face: u16, // 当前正在检测的面编号
   pub current_hole: u16, // 当前正在检测的孔编号
@@ -193,46 +202,47 @@ impl TaskState {
         action4: None,
     });
   }
-
+  // 动作1的深度数据
   pub async fn update_action1(&mut self, face_id: u16, hole_id: u16, data: f64) {
     if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
         hole.action1.push(data);
     }
   }
-
+  // 动作2的深度数据
   pub async fn update_action2(&mut self, face_id: u16, hole_id: u16, data: f64) {
       if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
         hole.action2.push(data);
       }
   }
-
+  // 动作3的检测结果
   pub async fn update_action3(&mut self, face_id: u16, hole_id: u16, detection: Yolov8Result) {
       if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
           hole.action3 = Some(detection);
       }
   }
-
+  // 动作4的检测结果
   pub async fn update_action4(&mut self, face_id: u16, hole_id: u16, diameter: HoleDiameter) {
       if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
           hole.action4 = Some(diameter);
       }
   }
+  // 
   pub async fn get_hole_state(&self, face_id: u16, hole_id: u16) -> Option<HoleState> {
     self.holes.get(&(face_id, hole_id)).cloned()
   }
-
+  // 清楚孔位数据
   pub async fn clear(&mut self) {
     self.holes.clear();
-    self.current_face = 0;
-    self.current_hole = 0;
+    self.current_face = 1;
+    self.current_hole = 1;
   }
 }
-// generate_detection_result
+// 获取螺纹检测结果
 pub fn generate_detection_result(result: &Yolov8Result) -> bool {
   result.detections.iter().any(|d| d.class_id == 0)
 }
 
-// generate_depth_result
+// 获取深度结果
 pub fn generate_depth_result(action1: &[f64], action2: &[f64], min_val: f64, max_val: f64) -> bool {
   if action1.is_empty() || action2.is_empty() {
     return false; // 避免空数组计算平均值导致错误
@@ -245,16 +255,19 @@ pub fn generate_depth_result(action1: &[f64], action2: &[f64], min_val: f64, max
   (min_val..=max_val).contains(&diff)
 }
 
-// generate_diameter_result
-// 判断直径是否在指定范围内
+// 获取直径结果
 pub fn generate_diameter_result(diameter: &HoleDiameter, min_val: f64, max_val: f64) -> bool {
   (min_val..=max_val).contains(&diameter.nei_diameter) && (min_val..=max_val).contains(&diameter.wai_diameter)
 }
 
-// 
-// ===========================================保存路径相关===========================
-// 
-static BASE_PATH: &str = "D:/data"; // 你的全局 base_path
+// ██████╗  █████╗ ████████╗██╗  ██╗
+// ██╔══██╗██╔══██╗╚══██╔══╝██║  ██║
+// ██████╔╝███████║   ██║   ███████║
+// ██╔═══╝ ██╔══██║   ██║   ██╔══██║
+// ██║     ██║  ██║   ██║   ██║  ██║
+// ╚═╝     ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝
+                                 
+static BASE_PATH: &str = "D:/data"; // 全局 base_path
 fn generate_file_path(paths: &[&str], filename: &str) -> PathBuf {
   let mut dir_path = PathBuf::from(BASE_PATH);
   
@@ -263,15 +276,22 @@ fn generate_file_path(paths: &[&str], filename: &str) -> PathBuf {
       dir_path.push(p);
   }
 
-  // 确保目录存在
+  // 确保目录存在,不存在则创建
   if let Err(e) = fs::create_dir_all(&dir_path) {
       eprintln!("Failed to create directory: {:?}", e);
   }
 
   // 返回完整的文件路径
   dir_path.join(filename)
-}
+}              
 
+// ███████╗███████╗███╗   ██╗███████╗ ██████╗ ██████╗ 
+// ██╔════╝██╔════╝████╗  ██║██╔════╝██╔═══██╗██╔══██╗
+// ███████╗█████╗  ██╔██╗ ██║███████╗██║   ██║██████╔╝
+// ╚════██║██╔══╝  ██║╚██╗██║╚════██║██║   ██║██╔══██╗
+// ███████║███████╗██║ ╚████║███████║╚██████╔╝██║  ██║
+// ╚══════╝╚══════╝╚═╝  ╚═══╝╚══════╝ ╚═════╝ ╚═╝  ╚═╝
+                                                   
 // 数据消息队列(相机、传感器)
 pub enum SensorsDataRequest {
   ImageProcess(cameras::hik_camera::FrameInfoSafe,Vec<u8>),
@@ -280,16 +300,12 @@ pub enum SensorsDataRequest {
 
 // 初始化传感器消息队列,回调需要在同步环境中运行
 pub fn start_sensor_task(mut rx: std::sync::mpsc::Receiver<SensorsDataRequest>) -> Result<(), String> {
-  let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?; // 创建一个 Tokio 运行时
+  let rt = tokio::runtime::Runtime::new().map_err(|e| e.to_string())?; // 创建 Tokio 运行时
 
   while let Ok(request) = rx.recv() {
     match request {
       SensorsDataRequest::ImageProcess(frame_info,image_data)=>{
-        let log = "[camera] [log] [info]";
         // 获取当前的状态
-        let mut state = START_STATE.lock().unwrap();
-        if *state != SoftwareState::START {
-        } else{
         // 发送图片到前端
           rt.spawn(async move {
               let (resp_tx, resp_rx) = oneshot::channel();
@@ -322,7 +338,6 @@ pub fn start_sensor_task(mut rx: std::sync::mpsc::Receiver<SensorsDataRequest>) 
                 }
               }
           });
-        }
       }
 
       SensorsDataRequest::Cf3000(data)=>{
@@ -374,12 +389,18 @@ pub fn start_sensor_mpsc() -> Result<bool, String>{
   Ok(true)
 }
 
+// ██████╗ ██╗      ██████╗ ██████╗  █████╗ ██╗         ███╗   ███╗██████╗ ███████╗ ██████╗
+// ██╔════╝ ██║     ██╔═══██╗██╔══██╗██╔══██╗██║         ████╗ ████║██╔══██╗██╔════╝██╔════╝
+// ██║  ███╗██║     ██║   ██║██████╔╝███████║██║         ██╔████╔██║██████╔╝███████╗██║     
+// ██║   ██║██║     ██║   ██║██╔══██╗██╔══██║██║         ██║╚██╔╝██║██╔═══╝ ╚════██║██║     
+// ╚██████╔╝███████╗╚██████╔╝██████╔╝██║  ██║███████╗    ██║ ╚═╝ ██║██║     ███████║╚██████╗
+//  ╚═════╝ ╚══════╝ ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝    ╚═╝     ╚═╝╚═╝     ╚══════╝ ╚═════╝
+
+
 // 通用消息队列(结果判定、数据返回前端、保存相关数据等)
 pub enum GeneralRequest {
   // 启动机器人程序
   StartRobotProgram(oneshot::Sender<Result<(), String>>),
-  // 零件到位启动机器人动作
-  StartRobot(oneshot::Sender<Result<(), String>>),
   // 启动plc监控
   StartMonitorPLCProcess(oneshot::Sender<Result<(), String>>),
   // 启动机器人监控
@@ -396,11 +417,9 @@ pub enum GeneralRequest {
   SendImageToFrontend(cameras::hik_camera::FrameInfoSafe,Vec<u8>, oneshot::Sender<Result<(), String>>),
   // 发送传感器数据到前端
   SendSensorDataToFrontend(Vec<u16>,f64, oneshot::Sender<Result<(), String>>),
-  // 从plc获取当前状态
-  GetCurrentState(oneshot::Sender<Result<String, String>>),  // 获取当前状态
-  // 像前端发送json
+  // 向前端发送json
   SendJsonToFrontend(String, oneshot::Sender<Result<(), String>>), //发送结果到前端
-  // 像前端发送当前型号
+  // 向前端发送当前型号
   SendCurrentTypeToFrontend(oneshot::Sender<Result<(), String>>), //发送结果到前端
 }
 
@@ -436,13 +455,6 @@ pub async fn start_global_task(mut rx: mpsc::Receiver<GeneralRequest>,app_handle
             thread::sleep(Duration::from_millis(200));
             write_register_robot(3, 0).await;
             write_register_robot(0, 0).await;
-            let _ = resp_tx.send(result);
-        });
-      }
-      GeneralRequest::StartRobot(resp_tx) => {
-        // 启动异步任务
-        tokio::spawn(async {
-            let result = start_robot_process().await;
             let _ = resp_tx.send(result);
         });
       }
@@ -499,9 +511,13 @@ pub async fn start_global_task(mut rx: mpsc::Receiver<GeneralRequest>,app_handle
         }
       }
       GeneralRequest::SendSensorDataToFrontend(pos,data, resp_tx) => {
-        let result = send_sensor_data_to_frontend(app_handle.clone(),  pos,data).await;
+        let app_handle_tmp = app_handle.clone();
         
-        match result {
+        tokio::spawn(async move{
+
+          let result = send_sensor_data_to_frontend(app_handle_tmp,  pos,data).await;
+          
+          match result {
           Ok(_) => {
               // 成功处理图像
               let _ = resp_tx.send(Ok(()));
@@ -514,10 +530,13 @@ pub async fn start_global_task(mut rx: mpsc::Receiver<GeneralRequest>,app_handle
               let _ = resp_tx.send(Err(e.to_string()));
           }
         }
+      });
       }
 
       GeneralRequest::SendImageToFastapi(pos,frame_info,image_data, resp_tx) => {
-        let result = send_image_to_fastapi(app_handle.clone(), pos,frame_info, image_data).await;
+        let app_handle_tmp = app_handle.clone();
+        tokio::spawn(async move {
+        let result = send_image_to_fastapi(app_handle_tmp, pos,frame_info, image_data).await;
         
         match result {
           Ok(_) => {
@@ -532,13 +551,9 @@ pub async fn start_global_task(mut rx: mpsc::Receiver<GeneralRequest>,app_handle
               let _ = resp_tx.send(Err(e.to_string()));
           }
         }
+      });
       }
-      // 获取当前状态
-      GeneralRequest::GetCurrentState(resp_tx) => {
-        // 获取当前状态的逻辑
-        let current_state = "正在运行".to_string(); // 假设状态为"正在运行"
-        let _ = resp_tx.send(Ok(current_state));
-      }
+
       GeneralRequest::SendJsonToFrontend(result, resp_tx)=>{
         send_json_to_frontend(result).await;
         let _ = resp_tx.send(Ok(()));
@@ -952,7 +967,13 @@ async fn send_current_type_to_frontend(
   app_handle.emit("current-type", current_type).unwrap();
 }
 
-// =========================================== FASTapi相关 ================================
+// ███████╗ █████╗ ███████╗████████╗ █████╗ ██████╗ ██╗
+// ██╔════╝██╔══██╗██╔════╝╚══██╔══╝██╔══██╗██╔══██╗██║
+// █████╗  ███████║███████╗   ██║   ███████║██████╔╝██║
+// ██╔══╝  ██╔══██║╚════██║   ██║   ██╔══██║██╔═══╝ ██║
+// ██║     ██║  ██║███████║   ██║   ██║  ██║██║     ██║
+// ╚═╝     ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝     ╚═╝
+                                                    
 static HTTP_CLIENT: OnceCell<Arc<Client>> = OnceCell::const_new();
 
 async fn get_client() -> Arc<Client> {
@@ -961,19 +982,31 @@ async fn get_client() -> Arc<Client> {
         .await
         .clone()
 }
-// ========================================================================================
 
-// =========================================== 机器人相关 ==================================
+// ███████╗██╗   ██╗██████╗ ██████╗ ███████╗ █████╗ ██╗     
+// ██╔════╝██║   ██║██╔══██╗██╔══██╗██╔════╝██╔══██╗██║     
+// ███████╗██║   ██║██████╔╝██████╔╝█████╗  ███████║██║     
+// ╚════██║██║   ██║██╔══██╗██╔══██╗██╔══╝  ██╔══██║██║     
+// ███████║╚██████╔╝██║  ██║██║  ██║███████╗██║  ██║███████╗
+// ╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝                                                  
+
+// ██████╗  ██████╗ ██████╗  ██████╗ ████████╗
+// ██╔══██╗██╔═══██╗██╔══██╗██╔═══██╗╚══██╔══╝
+// ██████╔╝██║   ██║██████╔╝██║   ██║   ██║   
+// ██╔══██╗██║   ██║██╔══██╗██║   ██║   ██║   
+// ██║  ██║╚██████╔╝██████╔╝╚██████╔╝   ██║   
+// ╚═╝  ╚═╝ ╚═════╝ ╚═════╝  ╚═════╝    ╚═╝                                           
+
 // 机器人上电流程状态
-#[derive(Debug, PartialEq,Copy, Clone)]
-pub enum ResetState{
-  ON,
-  OFF,
-}
+// #[derive(Debug, PartialEq,Copy, Clone)]
+// pub enum ResetState{
+//   ON,
+//   OFF,
+// }
 
-lazy_static::lazy_static! {
-  pub static ref ON_ROBOT_RESET: Arc<Mutex<ResetState>> = Arc::new(Mutex::new(ResetState::OFF));
-}
+// lazy_static::lazy_static! {
+//   pub static ref ON_ROBOT_RESET: Arc<Mutex<ResetState>> = Arc::new(Mutex::new(ResetState::OFF));
+// }
 
 #[tauri::command]
 async fn start_robot_connect_frontend(robot_addr: String) -> Result<bool, String> {
@@ -1000,11 +1033,12 @@ async fn start_robot_connect_frontend(robot_addr: String) -> Result<bool, String
   }
 }
 
+// 读取机器人寄存器
 #[tauri::command(rename_all = "snake_case")]
 async fn read_register_frontend_robot(reg_address: u16) -> Result<u16, String> {
   read_register_robot(reg_address).await
 }
-
+// 写入机器人寄存器
 #[tauri::command(rename_all = "snake_case")]
 async fn write_register_frontend_robot(reg_address: u16, value: u16) -> Result<String, String> {
     // 调用原本的 write_register 函数
@@ -1013,59 +1047,67 @@ async fn write_register_frontend_robot(reg_address: u16, value: u16) -> Result<S
       Err(_) => Err("failed".to_string()),  // 失败返回 failed
   }
 }
+
 // 机器人监控信号
 async fn monitor_robot() -> Result<(), String> {
   let log = "[robot] [log] [开启机器人监控]";
   sendlog2frontend(log.to_string());
   end_robot_process().await;
+  let mut ticker = tokio::time::interval(tokio::time::Duration::from_millis(500));
+
   loop {
       // 每500ms读取某个PLC寄存器，模拟读取过程
-      tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+      // tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+      ticker.tick().await;
+
       let dev_state = {
         let lock = HARDWARE_DEV_STATE.lock().await; // 获取锁
         *lock // 复制出来，避免持有锁
       };
+
+      let state = {
+        let lock = START_PROCESS_STATE.lock().await; // 获取锁
+        *lock // 复制出来，避免持有锁
+      };
+
       if dev_state == HardwareDevState::ON{
         continue
       }else{
         // 获取plc到位信号
-        match get_finished_from_robot().await{
-          Ok(value) => {
-            let state = {
-              let lock = START_PROCESS_STATE.lock().await; // 获取锁
-              *lock // 复制出来，避免持有锁
-            };
+        if state == SoftwareState::START{
+          match get_finished_from_robot().await{
+            Ok(value) => {
 
-            if value != 0 && state == SoftwareState::START{
-              let log = "[robot] [log] [工件检测结束-->>>]";
-              sendlog2frontend(log.to_string());
-              // 向plc发送结束信号
-              write_register_plc(7201, 0).await;
-              send_robot_finished_to_plc().await;
-              end_robot_process().await;
+              if value != 0 {
+                let log = "[robot] [log] [工件检测结束-->>>]";
+                sendlog2frontend(log.to_string());
+                // 向plc发送结束信号
+                write_register_plc(7201, 0).await;
+                send_robot_finished_to_plc().await;
+                end_robot_process().await;
 
-              let log = "[plc] [log] [工件退出<<<--]";
-              sendlog2frontend(log.to_string());
-              // 清除结果存储
-              let mut task_state = GLOBAL_TASK_STATE.write().await;
-              task_state.clear().await;
-              drop(task_state);
-              // task_state.current_artifact = Local::now().format("%Y_%m_%d_%H_%M_%S_%3f").to_string();
-              // task_state.current_artifact_type = current_type.clone().expect("current_type should not be None");
+                let log = "[plc] [log] [工件退出<<<--]";
+                sendlog2frontend(log.to_string());
+                // 清除结果存储
+                let mut task_state = GLOBAL_TASK_STATE.write().await;
+                task_state.clear().await;
+                drop(task_state);
+                // task_state.current_artifact = Local::now().format("%Y_%m_%d_%H_%M_%S_%3f").to_string();
+                // task_state.current_artifact_type = current_type.clone().expect("current_type should not be None");
 
-              let mut lock = START_PROCESS_STATE.lock().await; // 获取锁
-              *lock = SoftwareState::STOP; // 设置为 START
+                let mut lock = START_PROCESS_STATE.lock().await; // 获取锁
+                *lock = SoftwareState::STOP; // 设置为 START
 
-            }else{
-              // println!("等待工件到位");
+              }else{
+                // println!("等待工件到位");
+              }
+            }
+            Err(err) => {
+              // let log = "[robot] [error] [无法读取工件结束信息]";
+              // sendlog2frontend(log.to_string());
             }
           }
-          Err(err) => {
-            // let log = "[robot] [error] [无法读取工件结束信息]";
-            // sendlog2frontend(log.to_string());
-          }
         }
-
         // 获取机器人指令信号
         match get_command_from_robot().await {
           Ok(value)=>{
@@ -1128,8 +1170,7 @@ async fn monitor_robot() -> Result<(), String> {
             }
             if value & 16 != 0 {
                 // "[robot] [log] [机器人报警复位完成<<<--]";
-                let mut lock = ON_ROBOT_RESET.lock().await; // 获取锁
-                // *lock = ResetState::OFF;
+
                 send_reset_command_finished_to_plc().await;
 
                 match get_command_from_plc().await {
@@ -1265,7 +1306,6 @@ async fn select_robot_program() -> Result<(), String> {
   write_register_robot(0, 64).await
 }
 
-
 // 从机器人获取指令结束信息
 async fn get_command_from_robot()-> Result<u16, String>{
   read_register_robot(260).await
@@ -1306,10 +1346,12 @@ async fn get_finished_from_robot()-> Result<u16, String>{
 
 }
 
-// ========================================================================================
-
-// =========================================== 算法相关 ====================================
-// 算法相关代码位于sidecar模块内
+// █████╗ ██╗      ██████╗  ██████╗ 
+// ██╔══██╗██║     ██╔════╝ ██╔═══██╗
+// ███████║██║     ██║  ███╗██║   ██║
+// ██╔══██║██║     ██║   ██║██║   ██║
+// ██║  ██║███████╗╚██████╔╝╚██████╔╝
+// ╚═╝  ╚═╝╚══════╝ ╚═════╝  ╚═════╝ 
 
 // 访问当前选择类型
 #[tauri::command(rename_all = "snake_case")]
@@ -1345,10 +1387,15 @@ async fn toggle_save_image_on() -> Result<(), String>  {
 
   Ok(())
 }
-// ========================================================================================
 
-// =========================================== plc相关 =====================================
+// ██████╗ ██╗      ██████╗
+// ██╔══██╗██║     ██╔════╝
+// ██████╔╝██║     ██║     
+// ██╔═══╝ ██║     ██║     
+// ██║     ███████╗╚██████╗
+// ╚═╝     ╚══════╝ ╚═════╝
 
+// 前端启动plc连接
 #[tauri::command]
 async fn start_plc_connect_frontend(plc_addr: String) -> Result<bool, String> {
   let plc_addr: std::net::SocketAddr = match plc_addr.parse() {
@@ -1374,6 +1421,7 @@ async fn start_plc_connect_frontend(plc_addr: String) -> Result<bool, String> {
   }
 }
 
+// 前端手动写入plc寄存器
 #[tauri::command(rename_all = "snake_case")]
 async fn write_register_frontend_plc(reg_address: u16, value: u16) -> Result<String, String> {
     // 调用原本的 write_register 函数
@@ -1383,27 +1431,27 @@ async fn write_register_frontend_plc(reg_address: u16, value: u16) -> Result<Str
   }
 }
 
-
+// 前端读取plc寄存器
 #[tauri::command(rename_all = "snake_case")]
 async fn read_register_frontend_plc(reg_address: u16) -> Result<u16, String> {
     read_register_plc(reg_address).await
 }
 
-// 手动发送机器人运行信号
+// 前端给plc发送机器人运行信号
 #[tauri::command(rename_all = "snake_case")]
 async fn robot_running() -> Result<(), String> {
   send_continue_command_finished_to_plc().await;
   Ok(())
 }
 
-// 手动发送机器人暂停中信号
+// 前端给plc发送机器人暂停中信号
 #[tauri::command(rename_all = "snake_case")]
 async fn robot_pausing() -> Result<(), String> {
   send_pause_command_finished_to_plc().await;
   Ok(())
 }
 
-// 手动发送机器人复位完成信号
+// 前端给plc发送机器人复位完成信号
 #[tauri::command(rename_all = "snake_case")]
 async fn robot_reset_finished() -> Result<(), String> {
   send_reset_command_finished_to_plc().await;
@@ -1411,7 +1459,7 @@ async fn robot_reset_finished() -> Result<(), String> {
   Ok(())
 }
 
-// 手动发送机器人拍照完成信号
+// 前端给plc发送机器人拍照完成信号
 #[tauri::command(rename_all = "snake_case")]
 async fn robot_run_finished() -> Result<(), String> {
   write_register_plc(7201, 0).await;
@@ -1422,14 +1470,16 @@ async fn robot_run_finished() -> Result<(), String> {
   Ok(())
 }
 
-
 // 启动plc监控过程的异步任务
 async fn monitor_plc() -> Result<(), String> {
   let log = "[plc] [log] [开启PLC监控]";
   sendlog2frontend(log.to_string());
+  let mut ticker = tokio::time::interval(tokio::time::Duration::from_millis(500));
+
   loop {
       // 每500ms读取某个PLC寄存器，模拟读取过程
-      tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+      // tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+      ticker.tick().await;
 
       // 机器人是否处于运行中
       let state = {
@@ -1444,7 +1494,7 @@ async fn monitor_plc() -> Result<(), String> {
       };
 
       if dev_state == HardwareDevState::ON{
-        // continue
+        continue
       }else{
         if state ==SoftwareState::STOP {
           let current_type = get_current_type().clone();
@@ -1509,17 +1559,10 @@ async fn monitor_plc() -> Result<(), String> {
               // sendlog2frontend(log.to_string());
             }
           }
-          let pstate = {
-            let lock = START_PROCESS_STATE.lock().await; // 获取锁
-            *lock // 复制出来，避免持有锁
-          };
+
           match get_start_robot_from_plc_started().await{
             Ok(value) => {
-              if value != 0 && pstate == SoftwareState::STOP {
-
-                // 修改状态为START
-                let mut lock = START_PROCESS_STATE.lock().await; // 获取锁
-                *lock = SoftwareState::START; // 设置为 START
+              if value != 0 {
 
                 match current_type.clone() {
                   Some(robot_type) => {
@@ -1548,6 +1591,10 @@ async fn monitor_plc() -> Result<(), String> {
                 drop(task_state);
                 // 发送到位信号到机器人
                 start_robot_process().await;
+                // 修改状态为START
+                let mut lock = START_PROCESS_STATE.lock().await; // 获取锁
+                *lock = SoftwareState::START; // 设置为 START
+
               }else{
                 // println!("等待工件到位或上次过程完成");
               }
@@ -1586,14 +1633,7 @@ async fn monitor_plc() -> Result<(), String> {
                   let log = "[plc] [log] [机器人复位-->>>]";
                   sendlog2frontend(log.to_string());
                   // alarm_reset().await;
-                  let state = {
-                    let lock = ON_ROBOT_RESET.lock().await; // 获取锁
-                    *lock // 复制出来，避免持有锁
-                  };
-                  // if state == ResetState::OFF {
-                    
-                  //   let mut lock = ON_ROBOT_RESET.lock().await; // 获取锁
-                  //   *lock = ResetState::ON;
+                  
 
                     tauri::async_runtime::spawn(async {
                       let (resp_tx, resp_rx) = oneshot::channel(); 
@@ -1604,9 +1644,6 @@ async fn monitor_plc() -> Result<(), String> {
                     });
                     let log = "[robot] [log] [机器人复位<<<--]";
                     sendlog2frontend(log.to_string());
-                  // }else{
-
-                  // }
 
                   let log = "[robot] [log] [机器人复位<<<--]";
                   sendlog2frontend(log.to_string());
@@ -1631,50 +1668,54 @@ async fn monitor_plc() -> Result<(), String> {
   }
 }
 
+// 从plc获取类型信息
 async fn get_type_from_plc()-> Result<u16, String>{
   read_register_plc(1000).await
 }
 
+// 从plc获取启动信息
 async fn get_start_robot_from_plc_started() -> Result<u16, String>{
   read_register_plc(7201).await
 
 }
 
-// 流程结束后写入
+// 拍照完成信号
 async fn send_robot_finished_to_plc(){
   write_register_plc(7301, 1).await;
 }
 
-
-// plc到机器人的中转信号
+// plc到机器人的中转命令信号
 async fn get_command_from_plc()-> Result<u16, String>{
   read_register_plc(7202).await
 }
 
-
-// 中转完成信号-暂停
+// 中转机器人完成信号-暂停
 async fn send_pause_command_finished_to_plc(){
   write_register_plc(7302, 2).await;
 }
 
-// 中转完成信号-继续
+// 中转机器人完成信号-继续
 async fn send_continue_command_finished_to_plc(){
   write_register_plc(7302, 3).await;
 }
 
-// 中转完成信号-复位
+// 中转机器人完成信号-复位
 async fn send_reset_command_finished_to_plc(){
   write_register_plc(7302, 4).await;
 }
 
-// 机器人急停信号
+// 机器人急停信号-暂时无用
 async fn send_robot_err_to_plc(){
   write_register_plc(7302, 5).await;
 }
 
-// =========================================================================================
+// ██████╗ ████████╗██╗  ██╗███████╗██████╗ ███████╗
+// ██╔═══██╗╚══██╔══╝██║  ██║██╔════╝██╔══██╗██╔════╝
+// ██║   ██║   ██║   ███████║█████╗  ██████╔╝███████╗
+// ██║   ██║   ██║   ██╔══██║██╔══╝  ██╔══██╗╚════██║
+// ╚██████╔╝   ██║   ██║  ██║███████╗██║  ██║███████║
+//  ╚═════╝    ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝                                              
 
-// =========================================== 其他 ========================================
 // 前端类型选择
 #[tauri::command(rename_all = "snake_case")]
 async fn selected_artifact_type(){
@@ -1821,15 +1862,11 @@ fn start_software(start_state: String) -> String {
     match start_state.as_str(){
       // 启动后端流程
       "start" => {
-        // let mut state = START_STATE.lock().unwrap();
-        // *state = SoftwareState::START;
         // 创建响应通道
         "started".to_string()
       },
       // 终止后端流程
       "end"   => {
-        let mut state = START_STATE.lock().unwrap();
-        *state = SoftwareState::STOP;
         
         "ended".to_string()
       },
@@ -1926,14 +1963,19 @@ pub fn sendlog2frontend(log:String)-> Result<(), String>{
   });
   Ok(())
 }
-// ===========================================================================================
 
-// ============================================== tauri相关 ==================================
+// ████████╗ █████╗ ██╗   ██╗██████╗ ██╗
+// ╚══██╔══╝██╔══██╗██║   ██║██╔══██╗██║
+//    ██║   ███████║██║   ██║██████╔╝██║
+//    ██║   ██╔══██║██║   ██║██╔══██╗██║
+//    ██║   ██║  ██║╚██████╔╝██║  ██║██║
+//    ╚═╝   ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝          
+
 fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 
   app.manage(Arc::new(std::sync::Mutex::new(None::<Arc<std::sync::Mutex<Child>>>)));
 
-  // 加载全局配置
+  // 加载全局配置文件
   let run_path = app.path().resolve("assets/config/run_settings.toml", BaseDirectory::Resource)?.to_path_buf();
   let recipes_path = app.path().resolve("assets/config/recipes_settings.toml", BaseDirectory::Resource)?.to_path_buf();
   let hardware_path = app.path().resolve("assets/config/hardware_settings.toml", BaseDirectory::Resource)?.to_path_buf();
@@ -1942,12 +1984,12 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
   let config_tmp = config::config::Config::load(run_path, recipes_path, hardware_path, algo_path)?;
 
   {
-  let mut config = config::config::CONFIG.write().unwrap();  // 获取写入锁
-  *config = Some(config_tmp.clone());  // 更新配置
+    let mut config = config::config::CONFIG.write().unwrap();  // 获取写入锁
+    *config = Some(config_tmp.clone());  // 更新配置
   }
-  // Clone the app handle for use elsewhere
-  let app_handle = app.handle().clone();
 
+  let app_handle = app.handle().clone();                                     
+  
   // 启动plc modbus tcp异步通道
   start_plc_connection();
   // 启动机器人 modbus tcp异步通道
@@ -1959,11 +2001,10 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
 
   // 启动相机
   init_mvs_sdk();
-  // sensors::cf3000::main_();
 
   // 启动机器人异步通道
   tauri::async_runtime::spawn(async {
-    // 启动PLC监控程序
+    // 启动硬件
     let (resp_tx, resp_rx) = oneshot::channel(); 
     let (resp_tx1, resp_rx1) = oneshot::channel(); 
     let (resp_tx2, resp_rx2) = oneshot::channel(); 
@@ -1979,7 +2020,6 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
     enumerate_devices(MvEnumDeviceLayerType::GigeDevice).await;
     match create_handle().await{
       Ok(results) => {
-        // 打印返回的结果 Vec<bool>
         if let Some(first_element) = results.get(0) {
           let log = format!("[camera] [log] [相机句柄: {}]", first_element);
           sendlog2frontend(log.to_string());
@@ -2050,15 +2090,10 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
 
   });
 
-  println!("前端窗口已加载，启动后台任务");
+  println!("前端窗口已加载，启动后台fastapi任务");
   println!("[tauri] Creating fastapi sidecar...");
   sidecar::sidecar::spawn_and_monitor_sidecar(app_handle.clone()).ok();
   println!("[tauri] Fastapi Sidecar spawned and monitoring started.");
-  // 启动后端任务
-  let mut state = START_STATE.lock().unwrap();
-  *state = SoftwareState::START;
-
-  
 
   Ok(())
 }

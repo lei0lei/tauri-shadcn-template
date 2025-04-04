@@ -12,5 +12,5 @@ fn main() {
     // 运行 Tauri 后端
     env_logger::init();
     run_tauri_app();
-    println!("如果你看到这条消息，说明tauri启动错误");
+    println!("tauri启动错误");
 }

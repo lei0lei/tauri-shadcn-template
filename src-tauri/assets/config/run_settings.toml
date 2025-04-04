@@ -1,6 +1,6 @@
 # 运行时设置
-[log]
-log_dir = ''
+[path]
+data_save_dir = 'D:/data'
 
 
 [service]
