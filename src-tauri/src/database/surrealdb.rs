@@ -15,11 +15,24 @@ pub enum SurrealdbRequest{
 
     // 写入log
 
+    // 写入run_log
 
-    // 写入某个动作结果
+
+    // 写入某个hole结果
 
 
     // 写入某个型号
 
+    // log查询
 
+
+    // run_log查询
+
+
+    // 某个零件结果查询
+
+    // 所有零件查询
+
+    
 }
+

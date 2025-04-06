@@ -429,6 +429,7 @@ pub async fn start_global_task(mut rx: mpsc::Receiver<GeneralRequest>,app_handle
             thread::sleep(Duration::from_millis(200));
             let log = "[robot] [log] [机器人报警复位<<<--]";
             sendlog2frontend(log.to_string());
+            send_continue_command_finished_to_plc().await;
             // 机器人上电
             on_battery().await;
             let log = "[robot] [log] [机器人上电<<<--]";
@@ -706,7 +707,7 @@ async fn send_sensor_data_to_frontend(
       }else{
         let reciever = String::from("sensor-send-data-1");
         app_handle.emit(&reciever, "通孔").unwrap();
-        sendlog2frontend("[robot] [info] [传感器触发-1无效数据]".to_string());
+        sendlog2frontend("[robot] [info] [传感器触发-1通孔]".to_string());
       }
 
     }
@@ -721,10 +722,11 @@ async fn send_sensor_data_to_frontend(
         let reciever = String::from("sensor-send-data-2");
         let formatted_data = format!("{:.*}", 5, data);
         app_handle.emit(&reciever, formatted_data).unwrap();
-
+        sendlog2frontend("[robot] [info] [传感器触发-2右侧]".to_string());
       }else{
         let reciever = String::from("sensor-send-data-2");
         app_handle.emit(&reciever, "通孔").unwrap();
+        sendlog2frontend("[robot] [info] [传感器触发-2通孔]".to_string());
       }
     }
     _ => {
@@ -840,6 +842,8 @@ async fn send_image_to_fastapi(
   match pos.last() {
 
     Some(&3) => {
+      sendlog2frontend("[robot] [info] [相机触发-3]".to_string());
+
       let flie_name = "3_orig.jpg";
       let pp_refs: Vec<&str> = pp.iter().map(|s| s.as_str()).collect(); // 转换为 Vec<&str>
       let full_path = generate_file_path(&pp_refs, flie_name);
@@ -886,6 +890,8 @@ async fn send_image_to_fastapi(
 
     }
     Some(&4) => {
+      sendlog2frontend("[robot] [info] [相机触发-4]".to_string());
+
       let flie_name = "4_orig.jpg";
       let pp_refs: Vec<&str> = pp.iter().map(|s| s.as_str()).collect(); // 转换为 Vec<&str>
       let full_path = generate_file_path(&pp_refs, flie_name);
@@ -1962,8 +1968,11 @@ pub fn sendlog2frontend(log:String)-> Result<(), String>{
 //    ╚═╝   ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝          
 
 fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+  let fastapi_state = Arc::new(std::sync::Mutex::new(None::<Arc<std::sync::Mutex<Child>>>));
+  app.manage(fastapi_state.clone());
+  let surrealdb_state = Arc::new(std::sync::Mutex::new(None::<Arc<std::sync::Mutex<Child>>>));
+  app.manage(surrealdb_state.clone());
 
-  app.manage(Arc::new(std::sync::Mutex::new(None::<Arc<std::sync::Mutex<Child>>>)));
 
   // 加载全局配置文件
   let run_path = app.path().resolve("assets/config/run_settings.toml", BaseDirectory::Resource)?.to_path_buf();
@@ -1980,6 +1989,8 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
 
   let app_handle = app.handle().clone();                                     
   
+  sidecar::sidecar::spawn_and_monitor_surrealdb_sidecar(app_handle.clone()).ok();
+
   // 启动plc modbus tcp异步通道
   start_plc_connection();
   // 启动机器人 modbus tcp异步通道
@@ -2082,7 +2093,7 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
 
   println!("前端窗口已加载，启动后台fastapi任务");
   println!("[tauri] Creating fastapi sidecar...");
-  sidecar::sidecar::spawn_and_monitor_sidecar(app_handle.clone()).ok();
+  sidecar::sidecar::spawn_and_monitor_fastapi_sidecar(app_handle.clone()).ok();
   println!("[tauri] Fastapi Sidecar spawned and monitoring started.");
 
   Ok(())
@@ -2169,8 +2180,8 @@ pub fn run_tauri_app() {
                                             toggle_depth_on,
                                             toggle_diameter_on,
                                             toggle_save_image_on,
-                                            sidecar::sidecar::start_sidecar,
-                                            sidecar::sidecar::shutdown_sidecar])
+                                            sidecar::sidecar::start_fastapi_sidecar,
+                                            sidecar::sidecar::shutdown_fastapi_sidecar])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }
