@@ -305,8 +305,6 @@ pub fn start_sensor_task(mut rx: std::sync::mpsc::Receiver<SensorsDataRequest>) 
   while let Ok(request) = rx.recv() {
     match request {
       SensorsDataRequest::ImageProcess(frame_info,image_data)=>{
-        // 获取当前的状态
-        // 发送图片到前端
           rt.spawn(async move {
               let (resp_tx, resp_rx) = oneshot::channel();
               let tx = GLOBAL_TX.lock().await.clone().unwrap_or_else(|| {
@@ -325,10 +323,6 @@ pub fn start_sensor_task(mut rx: std::sync::mpsc::Receiver<SensorsDataRequest>) 
               tx.send(GeneralRequest::SendImageToFastapi(pos.clone(),frame_info,image_data, resp_tx))
                   .await
                   .map_err(|_| "发送请求失败".to_string());
-              // 如果需要禁用算法，修改此处代码
-              // tx.send(GeneralRequest::SendImageToFrontend(frame_info,image_data, resp_tx))
-              //     .await
-              //     .map_err(|_| "发送请求失败".to_string());
               match resp_rx.await {
                 Ok(_) => {
                   Ok(())
@@ -406,11 +400,11 @@ pub enum GeneralRequest {
   // 启动机器人监控
   StartMonitorRobotProcess(oneshot::Sender<Result<(), String>>),
   // 保存图像结果到本地
-  SaveImageResult(Vec<u8>, String, oneshot::Sender<Result<(), String>>), // 保存图像结果
+  SaveImageResult(Vec<u8>, String, oneshot::Sender<Result<(), String>>),
   // 保存json到本地
-  SaveJsonResult(String, String, oneshot::Sender<Result<(), String>>),  // 保存 JSON 结果
+  SaveJsonResult(String, String, oneshot::Sender<Result<(), String>>),
   // 向前端发送Log,显示在log框中
-  SendLogToFrontend(String, oneshot::Sender<Result<(), String>>),  // 发送日志到前端
+  SendLogToFrontend(String, oneshot::Sender<Result<(), String>>),
   // 向fastapi发送待处理图片
   SendImageToFastapi(Vec<u16>,cameras::hik_camera::FrameInfoSafe,Vec<u8>, oneshot::Sender<Result<(), String>>),
   // 发送图片到前端
@@ -418,9 +412,9 @@ pub enum GeneralRequest {
   // 发送传感器数据到前端
   SendSensorDataToFrontend(Vec<u16>,f64, oneshot::Sender<Result<(), String>>),
   // 向前端发送json
-  SendJsonToFrontend(String, oneshot::Sender<Result<(), String>>), //发送结果到前端
+  SendJsonToFrontend(String, oneshot::Sender<Result<(), String>>),
   // 向前端发送当前型号
-  SendCurrentTypeToFrontend(oneshot::Sender<Result<(), String>>), //发送结果到前端
+  SendCurrentTypeToFrontend(oneshot::Sender<Result<(), String>>),
 }
 
 pub async fn start_global_task(mut rx: mpsc::Receiver<GeneralRequest>,app_handle: tauri::AppHandle) -> Result<(), String> {
@@ -472,7 +466,6 @@ pub async fn start_global_task(mut rx: mpsc::Receiver<GeneralRequest>,app_handle
             let _ = resp_tx.send(result);
         });
       }
-
       // 保存图像结果
       GeneralRequest::SaveImageResult(image_data, path, resp_tx) => {
         // 假设这里是保存图片的逻辑
@@ -493,22 +486,25 @@ pub async fn start_global_task(mut rx: mpsc::Receiver<GeneralRequest>,app_handle
       }
       // 发送图像到前端
       GeneralRequest::SendImageToFrontend(frame_info,image_data, resp_tx) => {
+        let app_handle_tmp = app_handle.clone();
+        tokio::spawn(async move{
         // 假设这里是发送图像到前端的逻辑
-        let result = send_image_to_frontend(app_handle.clone(), frame_info, image_data).await;
+          let result = send_image_to_frontend(app_handle_tmp, frame_info, image_data).await;
 
-        match result {
-          Ok(_) => {
-              // 成功处理图像
-              let _ = resp_tx.send(Ok(()));
+          match result {
+            Ok(_) => {
+                // 成功处理图像
+                let _ = resp_tx.send(Ok(()));
+            }
+            Err(e) => {
+                // 处理失败的情况，记录错误
+                eprintln!("发送图像失败: {}", e);
+                
+                // 发送错误时，将 `&str` 转换为 `String`
+                let _ = resp_tx.send(Err(e.to_string()));
+            }
           }
-          Err(e) => {
-              // 处理失败的情况，记录错误
-              eprintln!("发送图像失败: {}", e);
-              
-              // 发送错误时，将 `&str` 转换为 `String`
-              let _ = resp_tx.send(Err(e.to_string()));
-          }
-        }
+        });
       }
       GeneralRequest::SendSensorDataToFrontend(pos,data, resp_tx) => {
         let app_handle_tmp = app_handle.clone();
@@ -536,21 +532,21 @@ pub async fn start_global_task(mut rx: mpsc::Receiver<GeneralRequest>,app_handle
       GeneralRequest::SendImageToFastapi(pos,frame_info,image_data, resp_tx) => {
         let app_handle_tmp = app_handle.clone();
         tokio::spawn(async move {
-        let result = send_image_to_fastapi(app_handle_tmp, pos,frame_info, image_data).await;
-        
-        match result {
-          Ok(_) => {
-              // 成功处理图像
-              let _ = resp_tx.send(Ok(()));
+          let result = send_image_to_fastapi(app_handle_tmp, pos,frame_info, image_data).await;
+          
+          match result {
+            Ok(_) => {
+                // 成功处理图像
+                let _ = resp_tx.send(Ok(()));
+            }
+            Err(e) => {
+                // 处理失败的情况，记录错误
+                eprintln!("发送图像失败: {}", e);
+                
+                // 发送错误时，将 `&str` 转换为 `String`
+                let _ = resp_tx.send(Err(e.to_string()));
+            }
           }
-          Err(e) => {
-              // 处理失败的情况，记录错误
-              eprintln!("发送图像失败: {}", e);
-              
-              // 发送错误时，将 `&str` 转换为 `String`
-              let _ = resp_tx.send(Err(e.to_string()));
-          }
-        }
       });
       }
 
@@ -591,8 +587,6 @@ async fn send_image_to_frontend(
   frame_info:cameras::hik_camera::FrameInfoSafe,
   image_data: Vec<u8>)-> Result<(), &'static str> {
   let result = read_multiple_registers_robot(256, 3).await;
-  // 模拟发送图像到前端
-  println!("发送图像到前端，图像大小: {} bytes", image_data.len());
 
   // bayerGB到RGB转换
 
@@ -674,22 +668,14 @@ async fn send_sensor_data_to_frontend(
   pos:Vec<u16>,
   data:f64,
 )-> Result<(), &'static str>{
-
-  // let result = read_multiple_registers_robot(256, 3).await;
-
+  
   // 获取当前孔位配置信息
 
 
-  let mut reciever = String::from("sensor-send-data-1");
+
   match pos.last() {
-    Some(&3) => {sendlog2frontend("[robot] [error] [传感器错误触发3]".to_string());}
-    Some(&4) => {
-        sendlog2frontend("[robot] [error] [传感器错误触发4]".to_string());
-    }
     Some(&1) => {
-
-      // 更新前端的当前位
-
+      // 访问当前状态，更新新孔位
       let mut task_state = GLOBAL_TASK_STATE.write().await;
       task_state.current_face = pos[0];
       task_state.current_hole = pos[1];
@@ -698,42 +684,55 @@ async fn send_sensor_data_to_frontend(
       let face = task_state.current_face;
       let hole = task_state.current_hole;
       let artifact = task_state.current_artifact.clone();
+      // 更新前端孔位信息
       let current_stage = CurrentStage{
           face,         // u16 类型
           hole,         // u16 类型
           artifact: artifact.clone(),  // 假设 artifact 仍然是 String 类型
       };
-
-      if -40.0<data && data<40.0 {
-        task_state.update_action1(pos[0],pos[1],data);
-        }
-      sendlog2frontend("[robot] [info] [传感器触发-1左侧]".to_string());
-      drop(task_state);
       app_handle.emit("current_stage", current_stage)
-        .map_err(|_| "发送到前端失败")?;
+                .map_err(|_| "发送到前端失败")?;
+      // 只更新有效数据
+      if -50.0<data && data<50.0 {
+        task_state.update_action1(pos[0],pos[1],data);
+      }
+      drop(task_state);
+      // 前端刷新
+      if -50.0<data && data<50.0 {
+        let reciever = String::from("sensor-send-data-1");
+        let formatted_data = format!("{:.*}", 4, data);
+        app_handle.emit(&reciever, formatted_data).unwrap();
+        sendlog2frontend("[robot] [info] [传感器触发-1左侧]".to_string());
+      }else{
+        let reciever = String::from("sensor-send-data-1");
+        app_handle.emit(&reciever, "通孔").unwrap();
+        sendlog2frontend("[robot] [info] [传感器触发-1无效数据]".to_string());
+      }
+
     }
     Some(&2) => {
       let mut task_state = GLOBAL_TASK_STATE.write().await;
-      if -40.0<data && data<40.0 {
+      if -50.0<data && data<50.0 {
         task_state.update_action2(pos[0],pos[1],data);
-        }
-        drop(task_state);
-      sendlog2frontend("[robot] [info] [传感器触发-2右侧]".to_string());
-      reciever = "sensor-send-data-2".to_string();
+      }
+      drop(task_state);
+
+      if -50.0<data && data<50.0 {
+        let reciever = String::from("sensor-send-data-2");
+        let formatted_data = format!("{:.*}", 5, data);
+        app_handle.emit(&reciever, formatted_data).unwrap();
+
+      }else{
+        let reciever = String::from("sensor-send-data-2");
+        app_handle.emit(&reciever, "通孔").unwrap();
+      }
     }
     _ => {
-        println!("无效的机器人位置数据: {:?}", pos);
+      sendlog2frontend("[robot] [info] [无效或错误的机器人位置数据-传感器]".to_string());
+        // println!("无效或错误的机器人位置数据: {:?}", pos);
     }
   }
 
-  if data > 100.0 || data < -100.0 {
-    //  获取当前位置信息
-    app_handle.emit(&reciever, "通孔").unwrap();
-  } else {
-      // 保证 data 总是保留 5 位有效数字
-      let formatted_data = format!("{:.*}", 5, data);
-      app_handle.emit(&reciever, formatted_data).unwrap();
-  }
   Ok(())
 }
 
@@ -783,19 +782,25 @@ async fn send_image_to_fastapi(
   let hole = task_state_tmp.current_hole;
   let artifact = task_state_tmp.current_artifact.clone();
   drop(task_state_tmp);
-  
+
+  // 保存原图路径
+  let date_part = artifact.split('_')
+                          .take(3)  // 取前3个部分，分别是年份、月份、日期
+                          .collect::<Vec<&str>>()
+                          .join("_");  // 使用 "_" 拼接起来
+
+  let artifact_part = artifact.clone();
+  let pp = vec![date_part, artifact_part,face.to_string(),hole.to_string()]; // 使用 Vec<String>
+
   // 获取当前孔位配置信息
 
-
-  // bayerGB到RGB转换
-  // let result = pos;
   let width = frame_info.nWidth as i32;
   let height = frame_info.nHeight as i32;
   let mut mat = unsafe {
     Mat::new_rows_cols(height, width, CV_8U)
-    .map_err(|_| "Mat 创建失败")?
+                    .map_err(|_| "Mat 创建失败")?
   };
-        
+
   // 获取 Mat 数据指针
   let mat_ptr = mat.data_mut();
   if mat_ptr.is_null() {
@@ -804,133 +809,125 @@ async fn send_image_to_fastapi(
 
   // 复制 buffer 数据到 Mat
   unsafe {
-      std::ptr::copy_nonoverlapping(image_data.as_ptr(), mat_ptr, image_data.len());
+    std::ptr::copy_nonoverlapping(image_data.as_ptr(), mat_ptr, image_data.len());
   }
 
   // 创建一个空 Mat 用于存放 RGB 图像数据
   let mut rgb_mat = Mat::new_rows_cols_with_default(
-    height,
-    width,
-    CV_8UC3,
-    Scalar::all(0.0),
-  ).map_err(|_| "RGB Mat 创建失败")?;
+                          height,
+                          width,
+                          CV_8UC3,
+                          Scalar::all(0.0),
+                        ).map_err(|_| "RGB Mat 创建失败")?;
         
   // 将 Bayer 格式转换为 RGB
-  imgproc::cvt_color(&mat, &mut rgb_mat, imgproc::COLOR_BayerGB2RGB, 0,AlgorithmHint::ALGO_HINT_DEFAULT)
-    .map_err(|_| "Bayer 到 RGB 转换失败")?;
+  imgproc::cvt_color(&mat, 
+                     &mut rgb_mat, 
+                     imgproc::COLOR_BayerGB2RGB, 
+                     0,
+                     AlgorithmHint::ALGO_HINT_DEFAULT)
+            .map_err(|_| "Bayer 到 RGB 转换失败")?;
 
   let mut jpeg_data: Vec<u8> = Vec::new();
   let mut opencv_vector = Vector::new();
   opencv_vector.extend(jpeg_data.iter().cloned());
-  imgcodecs::imencode(".jpg", &rgb_mat, &mut opencv_vector, &opencv::core::Vector::new())
-      .map_err(|_| "JPEG 编码失败")?;
-
-  // 保存原图
-  let mut paths: Vec<String> = Vec::new();
-  let date_part = artifact.split('_')
-                        .take(3)  // 取前3个部分，分别是年份、月份、日期
-                        .collect::<Vec<&str>>()
-                        .join("_");  // 使用 "_" 拼接起来
-
-  let artifact_part = artifact.clone();
-  let pp = vec![date_part, artifact_part,face.to_string(),hole.to_string()]; // 使用 Vec<String>
+  imgcodecs::imencode(".jpg", 
+                      &rgb_mat, 
+                      &mut opencv_vector, 
+                      &opencv::core::Vector::new())
+                  .map_err(|_| "JPEG 编码失败")?;
 
   match pos.last() {
-    Some(&1) => {}
-    Some(&2) => {}
+
     Some(&3) => {
       let flie_name = "3_orig.jpg";
       let pp_refs: Vec<&str> = pp.iter().map(|s| s.as_str()).collect(); // 转换为 Vec<&str>
       let full_path = generate_file_path(&pp_refs, flie_name);
       save_image(&opencv_vector, &full_path)?;
+
+      let client = get_client().await;
+      let part = Part::bytes(opencv_vector.to_vec())
+                        .file_name("image.jpg")
+                        .mime_str("image/jpeg")
+                        .map_err(|_| "构造 Part 失败")?;
+      let form = Form::new().part("file", part);
+      
+    
+      let mut fastapi_request = String::from("http://localhost:8000/detect_diameter_with_draw/");
+      let mut reciever = String::from("image-send-image-1");
+
+      let response = client
+          .post(&fastapi_request)
+          .timeout(Duration::from_secs(1))
+          .multipart(form)
+          .send()
+          .await
+          .map_err(|_| "发送请求失败")?;
+      
+      // 5. 解析响应
+      let response_json = response
+          .json::<serde_json::Value>()
+          .await
+          .map_err(|_| "解析 JSON 失败")?;
+
+      let results = response_json.get("results").unwrap_or(&serde_json::json!({})).clone();
+      let image_base64 = response_json
+          .get("image_base64")
+          .and_then(|v| v.as_str())
+          .unwrap_or("")
+          .to_string();
+
+      let flie_name = "3_det.jpg";
+      let pp_refs: Vec<&str> = pp.iter().map(|s| s.as_str()).collect(); // 转换为 Vec<&str>
+      let full_path = generate_file_path(&pp_refs, flie_name);
+      save_image_base64(&image_base64, &full_path)?;
+      app_handle.emit(&reciever, image_base64)
+                .map_err(|_| "发送图像到前端失败")?;
+
     }
     Some(&4) => {
       let flie_name = "4_orig.jpg";
       let pp_refs: Vec<&str> = pp.iter().map(|s| s.as_str()).collect(); // 转换为 Vec<&str>
       let full_path = generate_file_path(&pp_refs, flie_name);
       save_image(&opencv_vector, &full_path)?;
-    }
-    _ => {}
-  }
-  let client = get_client().await;
-  let part = Part::bytes(opencv_vector.to_vec())
-      .file_name("image.jpg")
-      .mime_str("image/jpeg")
-      .map_err(|_| "构造 Part 失败")?;
-  let form = Form::new().part("file", part);
-  
 
-  let mut fastapi_request = String::from("http://localhost:8000/detect_luowen_with_draw/");
-  let mut reciever = String::from("image-send-image-1");
-  // let result = read_multiple_registers_robot(256, 3).await;
-  let mut finished = false;
+      let client = get_client().await;
+      let part = Part::bytes(opencv_vector.to_vec())
+                            .file_name("image.jpg")
+                            .mime_str("image/jpeg")
+                            .map_err(|_| "构造 Part 失败")?;
+      let form = Form::new().part("file", part);
+    
+      let mut fastapi_request = String::from("http://localhost:8000/detect_luowen_with_draw/");
+      let mut reciever = String::from("image-send-image-2");
 
-  match pos.last() {
-    Some(&1) => {sendlog2frontend("[robot] [log] [相机触发-1]".to_string());}
-    Some(&2) => {sendlog2frontend("[robot] [log] [相机触发-2]".to_string());}
-    Some(&3) => {
-      sendlog2frontend("[robot] [log] [相机触发3 -左侧]".to_string());
-      reciever = "image-send-image-1".to_string();
-      fastapi_request = "http://localhost:8000/detect_diameter_with_draw/".to_string();
-    }
-    Some(&4) => {
-      sendlog2frontend("[robot] [log] [相机触发4 -右侧]".to_string());
-      reciever = "image-send-image-2".to_string();
-      fastapi_request = "http://localhost:8000/detect_luowen_with_draw/".to_string();
-      finished = true;
-    }
-    _ => {
-        println!("无效的机器人位置数据: {:?}", pos);
-    }
-  }
+      let response = client
+          .post(&fastapi_request)
+          .timeout(Duration::from_secs(1))
+          .multipart(form)
+          .send()
+          .await
+          .map_err(|_| "发送请求失败")?;
+      
+      // 5. 解析响应
+      let response_json = response
+          .json::<serde_json::Value>()
+          .await
+          .map_err(|_| "解析 JSON 失败")?;
 
-  let response = client
-      .post(&fastapi_request)
-      .timeout(Duration::from_secs(1))
-      .multipart(form)
-      .send()
-      .await
-      .map_err(|_| "发送请求失败")?;
-  
-  // 5. 解析响应
-  let response_json = response
-      .json::<serde_json::Value>()
-      .await
-      .map_err(|_| "解析 JSON 失败")?;
+      let results = response_json.get("results").unwrap_or(&serde_json::json!({})).clone();
+      let image_base64 = response_json
+          .get("image_base64")
+          .and_then(|v| v.as_str())
+          .unwrap_or("")
+          .to_string();
 
-  let results = response_json.get("results").unwrap_or(&serde_json::json!({})).clone();
-  let image_base64 = response_json
-      .get("image_base64")
-      .and_then(|v| v.as_str())
-      .unwrap_or("")
-      .to_string();
-
-  println!("收到 FastAPI 返回的数据: {:?}", results);
-
-  // 6. 发送结果到前端
-  //  获取当前位置信息
-match pos.last() {
-    Some(&1) => {}
-    Some(&2) => {}
-    Some(&3) => {
-      let flie_name = "3_det.jpg";
-      let pp_refs: Vec<&str> = pp.iter().map(|s| s.as_str()).collect(); // 转换为 Vec<&str>
-      let full_path = generate_file_path(&pp_refs, flie_name);
-      save_image_base64(&image_base64, &full_path)?;
-      println!("发送3");
-      app_handle.emit(&reciever, image_base64)
-                .map_err(|_| "发送图像到前端失败")?;
-    }
-    Some(&4) => {
       let flie_name = "4_det.jpg";
       let pp_refs: Vec<&str> = pp.iter().map(|s| s.as_str()).collect(); // 转换为 Vec<&str>
       let full_path = generate_file_path(&pp_refs, flie_name);
       save_image_base64(&image_base64, &full_path)?;
-      println!("发送4");
       app_handle.emit(&reciever, image_base64)
                 .map_err(|_| "发送到前端失败")?;
-      // 返回一个结果到前端
-      // let final_result = true;
 
       let final_result_data = FinalResultData {
         face,         // u16 类型
@@ -941,13 +938,13 @@ match pos.last() {
 
       app_handle.emit("hole_final_result", final_result_data)
                   .map_err(|_| "发送到前端失败")?;
-      }
-    _ => {
-      println!("无效的机器人位置数据: {:?}", pos);
     }
+    _ => {
+      sendlog2frontend("[robot] [info] [无效或错误的机器人位置数据-相机]".to_string());
+        // println!("无效或错误的机器人位置数据: {:?}", pos);
+    }
+
   }
-  // app_handle.emit(&reciever, image_base64)
-  //     .map_err(|_| "发送到前端失败")?;
 
   Ok(())
 }
@@ -1144,7 +1141,6 @@ async fn monitor_robot() -> Result<(), String> {
                       2 => {
                         write_register_plc(7202,0).await;
                       }
-                      
                       _ => {
                         // 
                       }
@@ -1153,19 +1149,16 @@ async fn monitor_robot() -> Result<(), String> {
                   }
                   Err(err) => {
                     // let log = "[plc] [error] [无法读取工件指令信息]";
-                    // sendlog2frontend(log.to_string());
                     }
                 }
             }
             if value & 4 != 0 {
                 // "[robot] [log] [机器人伺服上电完成<<<--]";
-
             }
             if value & 8 != 0 {
               let  log = "[robot] [error] [机器人报警故障-->>>]";
               sendlog2frontend(log.to_string());
               // 机器人故障发送给plc停止
-              // send_reset_command_finished_to_plc().await;
               send_robot_err_to_plc().await;
             }
             if value & 16 != 0 {
@@ -1179,11 +1172,9 @@ async fn monitor_robot() -> Result<(), String> {
                       4 => {
                         write_register_plc(7202,0).await;
                       }
-                      
                       _ => {
                           // 
                       }
-        
                     }
                   }
                   Err(err) => {
@@ -1199,7 +1190,6 @@ async fn monitor_robot() -> Result<(), String> {
           }
           Err(err) => {
             // let log = "[robot] [error] [无法读取工件指令信息]";
-            // sendlog2frontend(log.to_string());
             }
         }
       }
