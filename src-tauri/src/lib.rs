@@ -145,6 +145,7 @@ pub struct TaskState {
   pub current_artifact_type: String, //当前型号
   pub current_face: u16, // 当前正在检测的面编号
   pub current_hole: u16, // 当前正在检测的孔编号
+  pub artifact_id: Option<u32>,
   pub holes: HashMap<(u16, u16), HoleState>, // (face_id, hole_id) -> HoleState
 }
 
@@ -187,6 +188,7 @@ impl TaskState {
       current_artifact_type: artifact_type,
       current_face: 1,  // 默认值
       current_hole: 1,  // 默认值
+      artifact_id: None,
       holes: HashMap::new(), // 空的 HashMap
        }
   }
@@ -944,6 +946,15 @@ async fn send_image_to_fastapi(
 
       app_handle.emit("hole_final_result", final_result_data)
                   .map_err(|_| "发送到前端失败")?;
+
+
+
+      // 孔位结果插入数据库
+
+
+      // 
+
+
     }
     _ => {
       sendlog2frontend("[robot] [info] [无效或错误的机器人位置数据-相机]".to_string());
@@ -986,12 +997,6 @@ async fn get_client() -> Arc<Client> {
         .clone()
 }
 
-// ███████╗██╗   ██╗██████╗ ██████╗ ███████╗ █████╗ ██╗     
-// ██╔════╝██║   ██║██╔══██╗██╔══██╗██╔════╝██╔══██╗██║     
-// ███████╗██║   ██║██████╔╝██████╔╝█████╗  ███████║██║     
-// ╚════██║██║   ██║██╔══██╗██╔══██╗██╔══╝  ██╔══██║██║     
-// ███████║╚██████╔╝██║  ██║██║  ██║███████╗██║  ██║███████╗
-// ╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝                                                  
 
 // ██████╗  ██████╗ ██████╗  ██████╗ ████████╗
 // ██╔══██╗██╔═══██╗██╔══██╗██╔═══██╗╚══██╔══╝
@@ -1091,6 +1096,14 @@ async fn monitor_robot() -> Result<(), String> {
 
                 let log = "[plc] [log] [工件退出<<<--]";
                 sendlog2frontend(log.to_string());
+                // 更新数据库中产品结果
+
+
+
+
+
+
+
                 // 清除结果存储
                 let mut task_state = GLOBAL_TASK_STATE.write().await;
                 task_state.clear().await;
