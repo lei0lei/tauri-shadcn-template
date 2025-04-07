@@ -204,15 +204,6 @@ pub fn spawn_and_monitor_surrealdb_sidecar(app_handle: tauri::AppHandle) -> Resu
         }
     }
 
-
-    // if let Some(surrealdb_state) = app_handle.try_state::<Arc<Mutex<Option<Arc<Mutex<Child>>>>>>() {
-    //     let child_process = surrealdb_state.lock().unwrap();
-    //     if child_process.is_some() {
-    //         // A sidecar is already running, do not spawn a new one
-    //         println!("[tauri] surrealdb is already running. Skipping spawn.");
-    //         return Ok(()); // Exit early since sidecar is already running
-    //     }
-    // }
     // Spawn sidecar
     let dbserver = if cfg!(target_os = "windows") {
         // 虚拟环境目录
@@ -220,7 +211,7 @@ pub fn spawn_and_monitor_surrealdb_sidecar(app_handle: tauri::AppHandle) -> Resu
     } else {
         "surreal" // Linux/macOS
     };
-    println!("line 184");
+
     // Path to your Python script
     // 启动fastapi
     let mut sidecar_command = TokioCommand::new(dbserver)
@@ -232,12 +223,33 @@ pub fn spawn_and_monitor_surrealdb_sidecar(app_handle: tauri::AppHandle) -> Resu
         .arg("12345678")
         .arg("--bind")
         .arg("127.0.0.1:8011")
+        .arg("rocksdb://D:/database")
         .stdout(Stdio::piped()) // 捕获标准输出
         .stderr(Stdio::piped()) // 捕获错误输出
         .creation_flags(CREATE_NO_WINDOW)  // 👈 添加这一行隐藏窗口
         .spawn()
         .map_err(|e| e.to_string())?;
-    println!("line 199");
+
+    
+    
+    // 👇 SurrealDB 启动成功后再运行 import 命令
+    let mut import_proc = TokioCommand::new("surreal")
+        .arg("import")
+        .arg("--conn").arg("http://127.0.0.1:8011")
+        .arg("--user").arg("lei0lei")
+        .arg("--pass").arg("12345678")
+        .arg("--ns").arg("rs")
+        .arg("--db").arg("artifact")
+        .arg("D:/github/tauri-shadcn-template/src-tauri/src/database/surrealdb_schema.surql")
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .creation_flags(CREATE_NO_WINDOW)  // 👈 添加这一行隐藏窗口
+        .spawn()
+        .map_err(|e| format!("执行导入失败: {}", e))?;
+
+    // 等待 import 命令完成
+    // import_proc.wait().await.map_err(|e| format!("等待导入失败: {}", e))?;
+
     let sidecar_command = Arc::new(Mutex::new(sidecar_command));
     // Store the child process in the app state
 
@@ -247,13 +259,7 @@ pub fn spawn_and_monitor_surrealdb_sidecar(app_handle: tauri::AppHandle) -> Resu
     }else {
         return Err("Failed to access app state".to_string());
     }
-    // if let Some(surrealdb_state) = app_handle.try_state::<Arc<Mutex<Option<Arc<Mutex<Child>>>>>>() {
-    //     println!("State acquired successfully");
-    //     *surrealdb_state.lock().unwrap() = Some(sidecar_command.clone());
-    // } else {
-    //     return Err("Failed to access app state".to_string());
-    // }
-    // Clone the app_handle here to move it into async block
+
     let app_handle = app_handle.clone();
     
     // Spawn an async task to handle sidecar communication

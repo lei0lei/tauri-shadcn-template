@@ -31,9 +31,7 @@ DEFINE INDEX artifact_id ON Artifact_library FIELDS artifact_id UNIQUE;
 DEFINE TABLE Hole_library TYPE NORMAL SCHEMAFULL PERMISSIONS NONE;
 
 DEFINE FIELD action1 ON Hole_library TYPE array<float> PERMISSIONS FULL;
-DEFINE FIELD action1[*] ON Hole_library TYPE float PERMISSIONS FULL;
 DEFINE FIELD action2 ON Hole_library TYPE array<float> PERMISSIONS FULL;
-DEFINE FIELD action2[*] ON Hole_library TYPE float PERMISSIONS FULL;
 DEFINE FIELD action3 ON Hole_library TYPE object PERMISSIONS FULL;
 DEFINE FIELD action4 ON Hole_library TYPE object PERMISSIONS FULL;
 DEFINE FIELD artifact_id ON Hole_library TYPE int PERMISSIONS FULL;

@@ -16,7 +16,7 @@ use tauri::{State, WindowEvent};
 mod sidecar;
 use std::collections::HashMap;
 use once_cell::sync::Lazy;
-
+use chrono::{DateTime, Utc};
 mod plc;
 use plc::modbusTCP;
 use plc::modbusTCP::{PLC_TX, 
@@ -2124,6 +2124,29 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
   println!("[tauri] Creating fastapi sidecar...");
   sidecar::sidecar::spawn_and_monitor_fastapi_sidecar(app_handle.clone()).ok();
   println!("[tauri] Fastapi Sidecar spawned and monitoring started.");
+
+  // test surreal database
+  // tauri::async_runtime::spawn(async {
+    // 启动硬件
+  //   let (resp_tx, resp_rx) = oneshot::channel(); 
+  //   let tx = database::surrealdb::SURREALDB_TX.lock().await.clone().unwrap_or_else(|| {
+  //     panic!("GLOBAL_TX is not initialized. Ensure that start_global_task() has been called.");
+  //   });
+  //   let log_record = database::surrealdb::LogRecord::new(
+  //     1, 
+  //     "Artifact1".to_string(), 
+  //     2, 
+  //     "This is a log message.".to_string(), 
+  //     3, 
+  //     Utc::now()
+  // );
+  //   tx.send(database::surrealdb::SurrealdbRequest::InsertLog(log_record,resp_tx)).await.map_err(|_| "启动机器人程序失败".to_string());
+    
+  // });
+
+
+
+
 
   Ok(())
 }
