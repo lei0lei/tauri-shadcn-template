@@ -9,7 +9,13 @@ use tokio::process::Command as TokioCommand; // 使用 tokio 版本的 Command
 use tokio::task;
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 use std::os::windows::process::CommandExt; // 启用 Windows 专用扩展
+use tokio::process::Child;
 
+
+pub struct SidecarStates {
+    pub fastapi: Arc<Mutex<Option<Arc<Mutex<Child>>>>>,
+    pub surrealdb: Arc<Mutex<Option<Arc<Mutex<Child>>>>>,
+}
 
 // ███████╗ █████╗ ███████╗████████╗ █████╗ ██████╗ ██╗
 // ██╔════╝██╔══██╗██╔════╝╚══██╔══╝██╔══██╗██╔══██╗██║
@@ -22,14 +28,23 @@ use std::os::windows::process::CommandExt; // 启用 Windows 专用扩展
 // 启动fastapi
 pub fn spawn_and_monitor_fastapi_sidecar(app_handle: tauri::AppHandle) -> Result<(), String> {
     // Check if a sidecar process already exists
-    if let Some(fastapi_state) = app_handle.try_state::<Arc<Mutex<Option<Arc<Mutex<tokio::process::Child>>>>>>() {
-        let child_process = fastapi_state.lock().unwrap();
-        if child_process.is_some() {
+    if let Some(states) = app_handle.try_state::<Arc<SidecarStates>>() {
+        let fastapi_state = states.fastapi.lock().unwrap();
+        if fastapi_state.is_some() {
             // A sidecar is already running, do not spawn a new one
             println!("[tauri] Sidecar is already running. Skipping spawn.");
             return Ok(()); // Exit early since sidecar is already running
         }
     }
+
+    // if let Some(fastapi_state) = app_handle.try_state::<Arc<Mutex<Option<Arc<Mutex<tokio::process::Child>>>>>>() {
+    //     let child_process = fastapi_state.lock().unwrap();
+    //     if child_process.is_some() {
+    //         // A sidecar is already running, do not spawn a new one
+    //         println!("[tauri] Sidecar is already running. Skipping spawn.");
+    //         return Ok(()); // Exit early since sidecar is already running
+    //     }
+    // }
     // Spawn sidecar
     let python_interpreter = if cfg!(target_os = "windows") {
         // 虚拟环境目录
@@ -52,12 +67,25 @@ pub fn spawn_and_monitor_fastapi_sidecar(app_handle: tauri::AppHandle) -> Result
  
     let sidecar_command = Arc::new(Mutex::new(sidecar_command));
     // Store the child process in the app state
-    if let Some(fastapi_state) = app_handle.try_state::<Arc<Mutex<Option<Arc<Mutex<tokio::process::Child>>>>>>() {
-        println!("State acquired successfully");
-        *fastapi_state.lock().unwrap() = Some(sidecar_command.clone());
-    } else {
+
+    // if let Some(states) = app_handle.try_state::<Arc<SidecarStates>>() {
+    //     println!("State acquired successfully");
+    //     let fastapi_state = states.fastapi.lock().unwrap();
+    //     *fastapi_state.lock().unwrap() = Some(sidecar_command.clone());
+    if let Some(states) = app_handle.try_state::<Arc<SidecarStates>>() {
+        let mut fastapi_state = states.fastapi.lock().unwrap();
+        *fastapi_state = Some(sidecar_command.clone());
+    }else {
         return Err("Failed to access app state".to_string());
     }
+
+
+    // if let Some(fastapi_state) = app_handle.try_state::<Arc<Mutex<Option<Arc<Mutex<tokio::process::Child>>>>>>() {
+    //     println!("State acquired successfully");
+    //     *fastapi_state.lock().unwrap() = Some(sidecar_command.clone());
+    // } else {
+    //     return Err("Failed to access app state".to_string());
+    // }
     // Clone the app_handle here to move it into async block
     let app_handle = app_handle.clone();
     
@@ -118,6 +146,7 @@ pub fn spawn_and_monitor_fastapi_sidecar(app_handle: tauri::AppHandle) -> Result
 pub fn shutdown_fastapi_sidecar(app_handle: tauri::AppHandle) -> Result<String, String> {
     println!("[tauri] Received command to shutdown sidecar.");
     // Access the sidecar process state
+
     if let Some(fastapi_state) = app_handle.try_state::<Arc<Mutex<Option<CommandChild>>>>() {
         let mut child_process = fastapi_state
             .lock()
@@ -166,14 +195,24 @@ pub fn start_fastapi_sidecar(app_handle: tauri::AppHandle) -> Result<String, Str
 
 pub fn spawn_and_monitor_surrealdb_sidecar(app_handle: tauri::AppHandle) -> Result<(), String> {
     // Check if a sidecar process already exists
-    if let Some(surrealdb_state) = app_handle.try_state::<Arc<Mutex<Option<Arc<Mutex<tokio::process::Child>>>>>>() {
-        let child_process = surrealdb_state.lock().unwrap();
-        if child_process.is_some() {
+    if let Some(states) = app_handle.try_state::<Arc<SidecarStates>>() {
+        let surreal_state = states.surrealdb.lock().unwrap();
+        if surreal_state.is_some() {
             // A sidecar is already running, do not spawn a new one
-            println!("[tauri] surrealdb is already running. Skipping spawn.");
+            println!("[tauri] Sidecar is already running. Skipping spawn.");
             return Ok(()); // Exit early since sidecar is already running
         }
     }
+
+
+    // if let Some(surrealdb_state) = app_handle.try_state::<Arc<Mutex<Option<Arc<Mutex<Child>>>>>>() {
+    //     let child_process = surrealdb_state.lock().unwrap();
+    //     if child_process.is_some() {
+    //         // A sidecar is already running, do not spawn a new one
+    //         println!("[tauri] surrealdb is already running. Skipping spawn.");
+    //         return Ok(()); // Exit early since sidecar is already running
+    //     }
+    // }
     // Spawn sidecar
     let dbserver = if cfg!(target_os = "windows") {
         // 虚拟环境目录
@@ -201,12 +240,19 @@ pub fn spawn_and_monitor_surrealdb_sidecar(app_handle: tauri::AppHandle) -> Resu
     println!("line 199");
     let sidecar_command = Arc::new(Mutex::new(sidecar_command));
     // Store the child process in the app state
-    if let Some(surrealdb_state) = app_handle.try_state::<Arc<Mutex<Option<Arc<Mutex<tokio::process::Child>>>>>>() {
-        println!("State acquired successfully");
-        *surrealdb_state.lock().unwrap() = Some(sidecar_command.clone());
-    } else {
+
+    if let Some(states) = app_handle.try_state::<Arc<SidecarStates>>() {
+        let mut surreal_state = states.surrealdb.lock().unwrap();
+        *surreal_state = Some(sidecar_command.clone());
+    }else {
         return Err("Failed to access app state".to_string());
     }
+    // if let Some(surrealdb_state) = app_handle.try_state::<Arc<Mutex<Option<Arc<Mutex<Child>>>>>>() {
+    //     println!("State acquired successfully");
+    //     *surrealdb_state.lock().unwrap() = Some(sidecar_command.clone());
+    // } else {
+    //     return Err("Failed to access app state".to_string());
+    // }
     // Clone the app_handle here to move it into async block
     let app_handle = app_handle.clone();
     

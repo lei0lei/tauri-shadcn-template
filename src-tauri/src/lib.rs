@@ -1981,10 +1981,17 @@ pub fn sendlog2frontend(log:String)-> Result<(), String>{
 //    ╚═╝   ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝          
 
 fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
-  let fastapi_state = Arc::new(std::sync::Mutex::new(None::<Arc<std::sync::Mutex<Child>>>));
-  app.manage(fastapi_state.clone());
-  let surrealdb_state = Arc::new(std::sync::Mutex::new(None::<Arc<std::sync::Mutex<Child>>>));
-  app.manage(surrealdb_state.clone());
+
+  let sidecar_states = sidecar::sidecar::SidecarStates {
+    fastapi: Arc::new(std::sync::Mutex::new(None::<Arc<std::sync::Mutex<Child>>>)),
+    surrealdb: Arc::new(std::sync::Mutex::new(None::<Arc<std::sync::Mutex<Child>>>)),
+};
+  app.manage(Arc::new(sidecar_states));
+
+  // let fastapi_state = Arc::new(std::sync::Mutex::new(None::<Arc<std::sync::Mutex<Child>>>));
+  // app.manage(fastapi_state.clone());
+  // let surrealdb_state = Arc::new(std::sync::Mutex::new(None::<Arc<std::sync::Mutex<Child>>>));
+  // app.manage(surrealdb_state.clone());
 
 
   // 加载全局配置文件
