@@ -36,6 +36,14 @@ use plc::modbusTCP::{PLC_TX,
                     read_multiple_registers_robot
                   };
 
+mod database;
+use database::surrealdb::{
+  SURREALDB_TX,
+  start_database_connect,
+  start_database_connection,
+
+};
+
 use sensors::cf3000::{
   rs_CF_RegisterEventCallback,
   rs_CF_StartSample,
@@ -2011,6 +2019,7 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
   
   sidecar::sidecar::spawn_and_monitor_surrealdb_sidecar(app_handle.clone()).ok();
 
+  start_database_connection();
   // 启动plc modbus tcp异步通道
   start_plc_connection();
   // 启动机器人 modbus tcp异步通道
