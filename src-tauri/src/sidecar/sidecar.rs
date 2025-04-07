@@ -186,6 +186,7 @@ pub fn spawn_and_monitor_surrealdb_sidecar(app_handle: tauri::AppHandle) -> Resu
     // 启动fastapi
     let mut sidecar_command = TokioCommand::new(dbserver)
         .arg("start")
+        // .arg("file://D:/database/mydb.db")
         .arg("--user")
         .arg("lei0lei")  // 只指定 uvicorn 模块
         .arg("--pass") // 将 FastAPI 应用传给 uvicorn

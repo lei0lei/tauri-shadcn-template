@@ -3,6 +3,8 @@
 
 use std::sync::Arc;
 use tokio::{sync::mpsc, time::Duration, sync::Mutex};
+use surrealdb::{Surreal, engine::remote::ws::Client, opt::auth::Root};
+
 
 // ███████╗██╗   ██╗██████╗ ██████╗ ███████╗ █████╗ ██╗     
 // ██╔════╝██║   ██║██╔══██╗██╔══██╗██╔════╝██╔══██╗██║     
@@ -42,27 +44,44 @@ pub enum SurrealdbRequest{
     // 更新产品检测结果
     UpdateArtifactResult(oneshot::Sender<Result<u16, String>>),
 
+    // 获取零件id
+    GetNewArtifactId(oneshot::Sender<Result<u16, String>>),
+
+    STOP(oneshot::Sender<Result<(), String>>),
+
 }
 
 fn get_database_ip_port(){
 
-
+  Some("ws://127.0.0.1:8011".to_string())
 }
 
-pub async fn start_database_task(){
-
-
-
-
+pub async fn start_database_task(addr: String, mut rx: mpsc::Receiver<SurrealdbRequest>){
 
 
 }
 
 
+pub async fn start_database_connect(addr:String)-> Result<bool, String>{
+  let (tx, rx) = mpsc::channel::<ModbusRequest>(32);
+  let tx = Arc::new(Mutex::new(Some(tx))); // 用 Mutex 包装 tx
+  *SURREALDB_TX.lock().await = Some(tx.lock().await.clone().unwrap());
+  tokio::spawn(start_database_task(addr.clone(), rx));
+  Ok(true) 
+}
 
+pub fn start_database_connection(){
+  tauri::async_runtime::spawn(async {
 
-pub async fn start_database_connection(){
+    println!("database: 创建数据库连接...");
+    if let Some(addr) = get_database_ip_port() {
+      let _ = start_database_connect(addr).await;
+      println!("database:数据库连接创建完毕");
+    } else {
+      println!("PLC ip_port 格式错误: {}", plc_addr);
+    }
 
+  })
 
 }
 
