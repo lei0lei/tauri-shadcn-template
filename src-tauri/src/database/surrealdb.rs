@@ -160,7 +160,72 @@ pub struct HoleRecord{
   luowen_orig_path: String,
   luowen_result: Option<bool>,
   luowen_result_path: String,
-  update_time: DateTime<Utc>,
+  update_time: Datetime,
+  standard_hole_type:String,
+  have_luowen: bool,
+  depth_min:f32,
+  depth_max:f32,
+  diameter_min: f32,
+  diameter_max:f32,
+  thru_hole: bool,
+}
+
+impl HoleRecord {
+  pub fn new(
+    action1: Vec<f32>,
+    action2: Vec<f32>,
+    action3: serde_json::Value,
+    action4: serde_json::Value,
+    artifact_id: i64,
+    artifact_name: String,
+    depth: f32,
+    depth_result: Option<bool>,
+    diameter: f32,
+    diameter_orig_path: String,
+    diameter_result_path: String,
+    dimeter_result: f32,
+    face_id: i32,
+    hole_id: i32,
+    luowen_orig_path: String,
+    luowen_result: Option<bool>,
+    luowen_result_path: String,
+    update_time: DateTime<Utc>,
+    standard_hole_type:String,
+    have_luowen: bool,
+    depth_min:f32,
+    depth_max:f32,
+    diameter_min: f32,
+    diameter_max:f32,
+    thru_hole: bool,
+  ) -> Self {
+    HoleRecord {
+      action1,
+      action2,
+      action3,
+      action4,
+      artifact_id,
+      artifact_name,
+      depth,
+      depth_result,
+      diameter,
+      diameter_orig_path,
+      diameter_result_path,
+      dimeter_result,
+      face_id,
+      hole_id,
+      luowen_orig_path,
+      luowen_result,
+      luowen_result_path,
+      update_time: update_time.into(),
+      standard_hole_type,
+      have_luowen,
+      depth_min,
+      depth_max,
+      diameter_min,
+      diameter_max,
+      thru_hole,
+    }
+  }
 }
 
 
@@ -173,7 +238,7 @@ pub enum SurrealdbRequest{
     InsertRunLog(RunLogRecord, oneshot::Sender<Result<u16, String>>),
 
     // 写入某个hole结果
-    InsertHole(HoleRecord, oneshot::Sender<Result<u16, String>>),
+    InsertHole( HoleRecord, oneshot::Sender<Result<u16, String>>),
 
     // 写入某个型号
     InsertArtifact(String,String, oneshot::Sender<Result<i64, String>>),

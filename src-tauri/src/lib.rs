@@ -35,7 +35,7 @@ use plc::modbusTCP::{PLC_TX,
                     stop_robot_connection,
                     read_multiple_registers_robot
                   };
-
+use serde_json::json;
 mod database;
 use database::surrealdb::{
   SURREALDB_TX,
@@ -274,14 +274,23 @@ impl TaskState {
     self.current_face = 1;
     self.current_hole = 1;
   }
+
+// 
+  pub async fn get_final_result(&self){
+
+
+  }
 }
+
+
+
 // 获取螺纹检测结果
-pub fn generate_detection_result(result: &Yolov8Result) -> bool {
+pub fn generate_detection_result(result: &Yolov8Result,have_luowen:bool) -> bool {
   result.detections.iter().any(|d| d.class_id == 0)
 }
 
 // 获取深度结果
-pub fn generate_depth_result(action1: &[f64], action2: &[f64], min_val: f64, max_val: f64) -> bool {
+pub fn generate_depth_result(action1: &[f64], action2: &[f64], min_val: f64, max_val: f64, thru:bool) -> bool {
   if action1.is_empty() || action2.is_empty() {
     return false; // 避免空数组计算平均值导致错误
   }
@@ -1966,6 +1975,68 @@ pub async fn insert_artifact_database(artifact_name:String,artifact_type:String)
   }
 }
 
+pub async fn insert_hole_database(record:database::surrealdb::HoleRecord){
+  let (resp_tx, resp_rx) = oneshot::channel();
+
+
+  let tx = match database::surrealdb::SURREALDB_TX.lock()
+                  .await
+                  .clone() {
+                    Some(tx) => tx,
+                    None => {
+                        eprintln!("SURREALDB_TX 未初始化");
+                        return;
+                    }
+                };
+
+  let dummy_record = database::surrealdb::HoleRecord::new(
+        vec![1.0, 2.0, 3.0],                 // action1
+        vec![4.0, 5.0, 6.0],                 // action2
+        json!({"key": "value"}),            // action3
+        json!({"key": "value"}),                   // action4
+        1001,                                // artifact_id
+        "Artifact A".to_string(),           // artifact_name
+        12.5,                                // depth
+        Some(true),                          // depth_result
+        6.8,                                 // diameter
+        "/path/to/orig.png".to_string(),    // diameter_orig_path
+        "/path/to/result.png".to_string(),  // diameter_result_path
+        6.9,                                 // dimeter_result
+        3,                                   // face_id
+        42,                                  // hole_id
+        "/path/to/luowen.png".to_string(),   // luowen_orig_path
+        Some(false),                         // luowen_result
+        "/path/to/luowen_result.png".to_string(), // luowen_result_path
+        Utc::now(),                          // update_time
+        "标准孔型A".to_string(),              // standard_hole_type
+        true,                                // have_luowen
+        11.0,                                // depth_min
+        14.0,                                // depth_max
+        6.5,                                 // diameter_min
+        7.0,                                 // diameter_max
+        false,                               // thru_hole
+    );
+  // 发送请求给数据库
+  if tx.send(database::surrealdb::SurrealdbRequest::InsertHole(dummy_record, resp_tx))
+                  .await
+                  .is_err() {
+                      eprintln!("发送数据库请求失败");
+                      return; // 如果请求发送失败，返回 -1
+                      }
+  // 等待响应
+  match resp_rx.await {
+    Ok(Ok(result)) => {
+        println!("插入成功，返回值: {}", result);
+    }
+    Ok(Err(e)) => {
+        eprintln!("插入失败，错误: {}", e);
+    }
+    Err(_) => {
+        eprintln!("响应接收失败");
+    }
+  }
+}
+
 // 更新产品结果
 pub async fn update_artifact(record_id:i32, result:bool){
 
@@ -2313,14 +2384,14 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
   rs_CF_StartSample(device_handler,cmd).await;
   let log = format!("[sensor] [info] [启动传感器数据采集]");
   sendlog2frontend(log.to_string());
-
+  // insert_hole_database().await;
   });
 
   println!("前端窗口已加载，启动后台fastapi任务");
   println!("[tauri] Creating fastapi sidecar...");
   sidecar::sidecar::spawn_and_monitor_fastapi_sidecar(app_handle.clone()).ok();
   println!("[tauri] Fastapi Sidecar spawned and monitoring started.");
-
+  // insert_hole_database().await;
   // insert_log_database();
   Ok(())
 }

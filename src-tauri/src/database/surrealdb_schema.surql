@@ -47,6 +47,13 @@ DEFINE FIELD luowen_orig_path ON Hole_library TYPE string PERMISSIONS FULL;
 DEFINE FIELD luowen_result ON Hole_library TYPE option<bool> PERMISSIONS FULL;
 DEFINE FIELD luowen_result_path ON Hole_library TYPE string PERMISSIONS FULL;
 DEFINE FIELD update_time ON Hole_library TYPE datetime PERMISSIONS FULL;
+DEFINE FIELD standard_hole_type ON Hole_library TYPE string PERMISSIONS FULL;
+DEFINE FIELD have_luowen ON Hole_library TYPE bool PERMISSIONS FULL;
+DEFINE FIELD depth_min ON Hole_library TYPE float PERMISSIONS FULL;
+DEFINE FIELD depth_max ON Hole_library TYPE float PERMISSIONS FULL;
+DEFINE FIELD diameter_min ON Hole_library TYPE float PERMISSIONS FULL;
+DEFINE FIELD diameter_max ON Hole_library TYPE float PERMISSIONS FULL;
+DEFINE FIELD thru_hole ON Hole_library TYPE bool PERMISSIONS FULL;
 
 DEFINE INDEX artifact_id ON Hole_library FIELDS artifact_id;
 
