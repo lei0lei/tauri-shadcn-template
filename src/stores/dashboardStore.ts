@@ -101,16 +101,30 @@ export const useDashboardStore = create<DashboardState>((set) => ({
         { surface: "F", status: "NULL", holes: [null,null,null,null,] }
       ],
       "EH12": [
-        { surface: "A", status: "NULL", holes: [false, true] },
-        { surface: "B", status: "NULL", holes: [true, false, true] },
-        { surface: "C", status: "NULL", holes: [false, false, false] },
-        { surface: "D", status: "NULL", holes: [true] },
-        { surface: "E", status: "NULL", holes: [] },
-        { surface: "F", status: "NULL", holes: [null, true] }
+        { surface: "A", status: "NULL", holes: [null,null,null,null] },
+        { surface: "B", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null,null,null,null] },
+        { surface: "C", status: "NULL", holes: [null,null,null,null,null,null] },
+        { surface: "D", status: "NULL", holes: [null,null,null,null,null,null,null,null,null] },
+        { surface: "E", status: "NULL", holes: [null,null,null,null] },
       ],
-      "EK30": [ /* 其他型号的配置... */ ],
-      "EK40": [ /* 其他型号的配置... */ ],
-      "EY28": [ /* 其他型号的配置... */ ],
+      "EK30": [ 
+        { surface: "A", status: "NULL", holes: [null,null,null,null] },
+        { surface: "B", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null] },
+        { surface: "C", status: "NULL", holes: [null] },
+        { surface: "D", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null,null,null,null] },
+        { surface: "E", status: "NULL", holes: [null,null,null,null,null] },],
+      "EK40": [ 
+        { surface: "A", status: "NULL", holes: [null,null] },
+        { surface: "B", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null,null,null,null,null] },
+        { surface: "C", status: "NULL", holes: [null,null,null,null] },
+        { surface: "D", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null,null,null,null] },
+        { surface: "E", status: "NULL", holes: [null,null,null,null,null] }, ],
+      "EY28": [ 
+        { surface: "A", status: "NULL", holes: [null,null,null] },
+        { surface: "B", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null] },
+        { surface: "C", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null] },
+        { surface: "D", status: "NULL", holes: [null,null,null,null,null,null,null,null,null] },
+        { surface: "E", status: "NULL", holes: [null,null,null,null,null,null,null,null] }, ],
       "TEST": [
         { surface: "A", status: "NULL", holes: [] },
         { surface: "B", status: "NULL", holes: [] },

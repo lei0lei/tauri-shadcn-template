@@ -13,7 +13,8 @@ use chrono::{DateTime, Utc};
 use tokio_modbus::prelude::*;
 use surrealdb::sql::{Datetime};
 use tokio::sync::oneshot;
-
+use surrealdb::sql::Value;
+use surrealdb::sql::Number;
 
 // ███████╗██╗   ██╗██████╗ ██████╗ ███████╗ █████╗ ██╗     
 // ██╔════╝██║   ██║██╔══██╗██╔══██╗██╔════╝██╔══██╗██║     
@@ -26,9 +27,9 @@ lazy_static! {
     pub static ref SURREALDB_TX: Arc<Mutex<Option<mpsc::Sender<SurrealdbRequest>>>> = Arc::new(Mutex::new(None));
   }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize,Clone)]
 pub struct LogRecord{
-  artifact_id: i32,
+  artifact_id: i64,
   artifact_name: String,
   level: i32,
   message: String,
@@ -39,7 +40,7 @@ pub struct LogRecord{
 impl LogRecord {
   // new 方法，允许通过它来创建一个新的 LogRecord 实例
   pub fn new(
-    artifact_id: i32,
+    artifact_id: i64,
     artifact_name: String,
     level: i32,
     message: String,
@@ -57,7 +58,7 @@ impl LogRecord {
   }
 
   // 你可以添加一些 getter 方法来访问字段，但仍然保持字段本身私有
-  pub fn artifact_id(&self) -> i32 {
+  pub fn artifact_id(&self) -> i64 {
       self.artifact_id
   }
 
@@ -93,11 +94,51 @@ pub struct RunLogRecord{
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ArtifactRecord{
-  artifact_id: i32,
+  artifact_id: i64,
   artifact_name: String,
-  artifact_type: i32,
+  artifact_type: String,
   result: Option<bool>,
-  update_time: DateTime<Utc>,
+  update_time: Datetime,
+}
+
+impl ArtifactRecord {
+  // new 方法，允许通过它来创建一个新的 LogRecord 实例
+  pub fn new(
+    artifact_id: i64,
+    artifact_name: String,
+    artifact_type: String,
+    result: Option<bool>,
+    update_time: DateTime<Utc>,
+  ) -> Self {
+    ArtifactRecord {
+        artifact_id,
+        artifact_name,
+        artifact_type,
+        result,
+        update_time: update_time.into(),  // 将 DateTime 转换为字符串
+    }
+  }
+
+  // 你可以添加一些 getter 方法来访问字段，但仍然保持字段本身私有
+  pub fn artifact_id(&self) -> i64 {
+      self.artifact_id
+  }
+
+  pub fn artifact_name(&self) -> &str {
+      &self.artifact_name
+  }
+
+  pub fn artifact_type(&self) -> &str {
+    &self.artifact_type
+  }
+
+  pub fn result(&self) -> Option<bool> {
+      self.result
+  }
+
+  pub fn update_time(&self) -> &Datetime {
+      &self.update_time
+  }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -106,7 +147,7 @@ pub struct HoleRecord{
   action2: Vec<f32>,
   action3: serde_json::Value,
   action4: serde_json::Value,
-  artifact_id: i32,
+  artifact_id: i64,
   artifact_name: String,
   depth: f32,
   depth_result: Option<bool>,
@@ -135,7 +176,10 @@ pub enum SurrealdbRequest{
     InsertHole(HoleRecord, oneshot::Sender<Result<u16, String>>),
 
     // 写入某个型号
-    InsertArtifact(ArtifactRecord, oneshot::Sender<Result<u16, String>>),
+    InsertArtifact(String,String, oneshot::Sender<Result<i64, String>>),
+    // 更新产品检测结果
+    UpdateArtifactResult(i64, bool, oneshot::Sender<Result<u16, String>>),
+
     // log查询
     SearchLog(oneshot::Sender<Result<u16, String>>),
 
@@ -151,8 +195,6 @@ pub enum SurrealdbRequest{
     // 所有零件查询
     SearchAllArtifact(oneshot::Sender<Result<u16, String>>),
 
-    // 更新产品检测结果
-    UpdateArtifactResult(oneshot::Sender<Result<u16, String>>),
 
     // 获取零件id
     GetNewArtifactId(oneshot::Sender<Result<u16, String>>),
@@ -199,22 +241,6 @@ pub async fn start_database_task(addr: String, mut rx: mpsc::Receiver<SurrealdbR
           3, 
           Utc::now()
       );
-      let result: Result<Option<LogRecord>, surrealdb::Error> = db
-      .create("Log") // 创建一个 "Log" 表的记录
-      .content(log_record) // 使用 LogRecord 内容
-      .await;
-
-  match result {
-      Ok(Some(record)) => {
-          println!("Log inserted successfully: {:?}", record);
-      }
-      Ok(None) => {
-          println!("Log creation failed: No result returned");
-      }
-      Err(e) => {
-          println!("Error inserting log: {}", e);
-      }
-  }
 
   println!("数据库连接成功");
   while let Some(request) = rx.recv().await {
@@ -232,10 +258,51 @@ pub async fn start_database_task(addr: String, mut rx: mpsc::Receiver<SurrealdbR
             let result: Result<Option<HoleRecord>, surrealdb::Error> = db.create("Hole_library").content(record).await;
             let _ = resp_tx.send(result.map(|_| 1).map_err(|e| e.to_string()));
         }
-        SurrealdbRequest::InsertArtifact(record, resp_tx) => {
-            let result: Result<Option<ArtifactRecord>, surrealdb::Error> = db.create("Artifact_library").content(record).await;
-            let _ = resp_tx.send(result.map(|_| 1).map_err(|e| e.to_string()));
-        }
+        SurrealdbRequest::InsertArtifact(artifact_name,artifact_type, resp_tx) => {
+
+
+            let query = "SELECT artifact_id FROM Artifact_library ORDER BY artifact_id DESC LIMIT 1;";
+            let result = db.query(query).await;
+            let mut response = match result {
+                Ok(res) => res,
+                Err(e) => {
+                    eprintln!("Query failed: {}", e);
+                    return;  // 查询失败时直接返回
+                }
+            };
+            // dbg!(result);
+            
+            let max_id: Option<i64> = match response.take((0, "artifact_id")) {
+              Ok(id) => id,
+              Err(e) => {
+                  eprintln!("Failed to extract artifact_id: {}", e);
+                  return;  // 提取字段失败时直接返回
+              }
+            };
+
+            let new_id = match max_id {
+              Some(id) => id + 1,  // 解包 Option 并执行加法
+              None => 0,            // 如果 max_id 为 None，设置默认值为 1
+            };
+
+            let record = ArtifactRecord::new(
+              new_id as i64,
+              artifact_name,
+              artifact_type,
+              None,
+              Utc::now(),
+            );
+
+            let create_result:Result<Option<ArtifactRecord>, surrealdb::Error> = db.create("Artifact_library").content(record).await;
+
+
+            if let Err(e) = create_result {
+              let _ = resp_tx.send(Err(format!("插入失败: {}", e)));
+              continue;
+            }
+        
+            let _ = resp_tx.send(Ok(new_id as i64));
+            }
         _ => {}
     }
   }

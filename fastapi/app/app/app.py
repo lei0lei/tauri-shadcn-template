@@ -68,11 +68,12 @@ async def lifespan(app: FastAPI):
     yolo_seg_model = YOLO(seg_model_str).to(device)
     print("✅ YOLOv8 seg模型加载完成")
     dummy_img = np.zeros((640, 640, 3), dtype=np.uint8)  # 创建黑色图片
-    yolo_model(dummy_img)
-    yolo_seg_model(dummy_img)
+    _ = yolo_model.predict(dummy_img, verbose=False)
+    _ =yolo_seg_model.predict(dummy_img, verbose=False)
     print("🔥 预热完成，YOLOv8 已准备就绪")
     yield  # 运行 FastAPI
     # del yolo_model
+    # del yolo_seg_model
     # print("🛑 YOLOv8 模型已释放")
     
 app = FastAPI(lifespan=lifespan)

@@ -7,21 +7,18 @@ OPTION IMPORT;
 -- ------------------------------
 -- TABLE: Artifact_library
 -- ------------------------------
+-- CREATE counter:Artifact_library SET value = 0;
+
 
 DEFINE TABLE Artifact_library TYPE NORMAL SCHEMAFULL PERMISSIONS NONE;
 
 DEFINE FIELD artifact_id ON Artifact_library TYPE int PERMISSIONS FULL;
 DEFINE FIELD artifact_name ON Artifact_library TYPE string PERMISSIONS FULL;
-DEFINE FIELD artifact_type ON Artifact_library TYPE int PERMISSIONS FULL;
+DEFINE FIELD artifact_type ON Artifact_library TYPE string PERMISSIONS FULL;
 DEFINE FIELD result ON Artifact_library TYPE option<bool> PERMISSIONS FULL;
 DEFINE FIELD update_time ON Artifact_library TYPE datetime PERMISSIONS FULL;
 
 DEFINE INDEX artifact_id ON Artifact_library FIELDS artifact_id UNIQUE;
-
-
--- ------------------------------
--- TABLE DATA: Artifact_library
--- ------------------------------
 
 
 -- ------------------------------
@@ -31,7 +28,9 @@ DEFINE INDEX artifact_id ON Artifact_library FIELDS artifact_id UNIQUE;
 DEFINE TABLE Hole_library TYPE NORMAL SCHEMAFULL PERMISSIONS NONE;
 
 DEFINE FIELD action1 ON Hole_library TYPE array<float> PERMISSIONS FULL;
+DEFINE FIELD action1[*] ON Hole_library TYPE float PERMISSIONS FULL;
 DEFINE FIELD action2 ON Hole_library TYPE array<float> PERMISSIONS FULL;
+DEFINE FIELD action2[*] ON Hole_library TYPE float PERMISSIONS FULL;
 DEFINE FIELD action3 ON Hole_library TYPE object PERMISSIONS FULL;
 DEFINE FIELD action4 ON Hole_library TYPE object PERMISSIONS FULL;
 DEFINE FIELD artifact_id ON Hole_library TYPE int PERMISSIONS FULL;
@@ -53,15 +52,10 @@ DEFINE INDEX artifact_id ON Hole_library FIELDS artifact_id;
 
 
 -- ------------------------------
--- TABLE DATA: Hole_library
--- ------------------------------
-
-
--- ------------------------------
 -- TABLE: Log
 -- ------------------------------
 
-DEFINE TABLE Log TYPE NORMAL SCHEMAFULL PERMISSIONS NONE;
+DEFINE TABLE Log TYPE ANY SCHEMALESS PERMISSIONS NONE;
 
 DEFINE FIELD artifact_id ON Log TYPE int PERMISSIONS FULL;
 DEFINE FIELD artifact_name ON Log TYPE string PERMISSIONS FULL;
@@ -71,11 +65,6 @@ DEFINE FIELD role ON Log TYPE int PERMISSIONS FULL;
 DEFINE FIELD update_time ON Log TYPE datetime PERMISSIONS FULL;
 
 DEFINE INDEX artifact_id ON Log FIELDS artifact_id;
-
-
--- ------------------------------
--- TABLE DATA: Log
--- ------------------------------
 
 
 -- ------------------------------
@@ -89,10 +78,5 @@ DEFINE FIELD message ON Run_log TYPE string PERMISSIONS FULL;
 DEFINE FIELD role ON Run_log TYPE int PERMISSIONS FULL;
 DEFINE FIELD update_time ON Run_log TYPE datetime PERMISSIONS FULL;
 
-
-
--- ------------------------------
--- TABLE DATA: Run_log
--- ------------------------------
 
 

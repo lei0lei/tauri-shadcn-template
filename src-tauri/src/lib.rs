@@ -153,7 +153,8 @@ pub struct TaskState {
   pub current_artifact_type: String, //当前型号
   pub current_face: u16, // 当前正在检测的面编号
   pub current_hole: u16, // 当前正在检测的孔编号
-  pub artifact_id: Option<u32>,
+  pub artifact_id: Option<i64>,
+  pub result: Option<bool>,
   pub holes: HashMap<(u16, u16), HoleState>, // (face_id, hole_id) -> HoleState
 }
 
@@ -165,7 +166,12 @@ pub struct HoleState {
   pub action1: Vec<f64>, // 动作1的数据
   pub action2: Vec<f64>, // 动作2的数据
   pub action3: Option<Yolov8Result>, // 动作3的检测结果
+  pub action3_orig_path: Option<String>,
+  pub action3_result_path: Option<String>,
   pub action4: Option<HoleDiameter>, // 动作4的检测结果，如圆心、直径等
+  pub action4_orig_path: Option<String>,
+  pub action4_result_path: Option<String>,
+
 }
 
 #[derive(Clone)]
@@ -197,6 +203,7 @@ impl TaskState {
       current_face: 1,  // 默认值
       current_hole: 1,  // 默认值
       artifact_id: None,
+      result:None,
       holes: HashMap::new(), // 空的 HashMap
        }
   }
@@ -209,7 +216,11 @@ impl TaskState {
         action1: Vec::new(),
         action2: Vec::new(),
         action3: None,
+        action3_orig_path:None,
+        action3_result_path:None,
         action4: None,
+        action4_orig_path:None,
+        action4_result_path:None,
     });
   }
   // 动作1的深度数据
@@ -225,21 +236,38 @@ impl TaskState {
       }
   }
   // 动作3的检测结果
-  pub async fn update_action3(&mut self, face_id: u16, hole_id: u16, detection: Yolov8Result) {
+  pub async fn update_action3(&mut self, face_id: u16, hole_id: u16, detection: Yolov8Result,orig_path:&str, result_path:&str) {
       if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
           hole.action3 = Some(detection);
       }
   }
+
   // 动作4的检测结果
-  pub async fn update_action4(&mut self, face_id: u16, hole_id: u16, diameter: HoleDiameter) {
+  pub async fn update_action4(&mut self, face_id: u16, hole_id: u16, diameter: HoleDiameter,orig_path:&str, result_path:&str) {
       if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
           hole.action4 = Some(diameter);
       }
   }
+
   // 
   pub async fn get_hole_state(&self, face_id: u16, hole_id: u16) -> Option<HoleState> {
     self.holes.get(&(face_id, hole_id)).cloned()
   }
+
+  // 汇总某个孔位的所有结果，孔位OK/NG逻辑位于此处
+  // pub async fn get_hole_result_record(&self,face_id: u16, hole_id: u16) ->database::surrealdb::HoleRecord{
+
+
+  //   // 获取深度结果
+
+  //   // 获取直径结果
+
+  //   // 获取螺纹结果
+
+
+
+  // }
+
   // 清楚孔位数据
   pub async fn clear(&mut self) {
     self.holes.clear();
@@ -437,25 +465,25 @@ pub async fn start_global_task(mut rx: mpsc::Receiver<GeneralRequest>,app_handle
             alarm_reset().await;
             // 等待200ms
             thread::sleep(Duration::from_millis(200));
-            let log = "[robot] [log] [机器人报警复位<<<--]";
+            let log = "[robot] [info] [机器人报警复位<<<--]";
             sendlog2frontend(log.to_string());
             send_continue_command_finished_to_plc().await;
             // 机器人上电
             on_battery().await;
-            let log = "[robot] [log] [机器人上电<<<--]";
+            let log = "[robot] [info] [机器人上电<<<--]";
             sendlog2frontend(log.to_string());
             // 等待200ms
             thread::sleep(Duration::from_millis(1000));
             // 机器人主程序选择
             write_register_robot(4, 3).await;
             select_robot_program().await;
-            let log = "[robot] [log] [机器人主程序选择]";
+            let log = "[robot] [info] [机器人主程序选择]";
             sendlog2frontend(log.to_string());
             // 等待200ms
             thread::sleep(Duration::from_millis(200));
             // 启动机器人程序
             let result = start_robot_program().await;
-            let log = "[robot] [log] [机器人主程序启动<<<--]";
+            let log = "[robot] [info] [机器人主程序启动<<<--]";
             sendlog2frontend(log.to_string());
             thread::sleep(Duration::from_millis(200));
             write_register_robot(3, 0).await;
@@ -856,8 +884,8 @@ async fn send_image_to_fastapi(
 
       let flie_name = "3_orig.jpg";
       let pp_refs: Vec<&str> = pp.iter().map(|s| s.as_str()).collect(); // 转换为 Vec<&str>
-      let full_path = generate_file_path(&pp_refs, flie_name);
-      save_image(&opencv_vector, &full_path)?;
+      let full_path_orig = generate_file_path(&pp_refs, flie_name);
+      save_image(&opencv_vector, &full_path_orig)?;
 
       let client = get_client().await;
       let part = Part::bytes(opencv_vector.to_vec())
@@ -893,8 +921,14 @@ async fn send_image_to_fastapi(
 
       let flie_name = "3_det.jpg";
       let pp_refs: Vec<&str> = pp.iter().map(|s| s.as_str()).collect(); // 转换为 Vec<&str>
-      let full_path = generate_file_path(&pp_refs, flie_name);
-      save_image_base64(&image_base64, &full_path)?;
+      let full_path_result = generate_file_path(&pp_refs, flie_name);
+      save_image_base64(&image_base64, &full_path_result)?;
+
+      // 存储结果到taskstate
+
+
+
+
       app_handle.emit(&reciever, image_base64)
                 .map_err(|_| "发送图像到前端失败")?;
 
@@ -904,8 +938,8 @@ async fn send_image_to_fastapi(
 
       let flie_name = "4_orig.jpg";
       let pp_refs: Vec<&str> = pp.iter().map(|s| s.as_str()).collect(); // 转换为 Vec<&str>
-      let full_path = generate_file_path(&pp_refs, flie_name);
-      save_image(&opencv_vector, &full_path)?;
+      let full_path_orig = generate_file_path(&pp_refs, flie_name);
+      save_image(&opencv_vector, &full_path_orig)?;
 
       let client = get_client().await;
       let part = Part::bytes(opencv_vector.to_vec())
@@ -940,8 +974,8 @@ async fn send_image_to_fastapi(
 
       let flie_name = "4_det.jpg";
       let pp_refs: Vec<&str> = pp.iter().map(|s| s.as_str()).collect(); // 转换为 Vec<&str>
-      let full_path = generate_file_path(&pp_refs, flie_name);
-      save_image_base64(&image_base64, &full_path)?;
+      let full_path_result = generate_file_path(&pp_refs, flie_name);
+      save_image_base64(&image_base64, &full_path_result)?;
       app_handle.emit(&reciever, image_base64)
                 .map_err(|_| "发送到前端失败")?;
 
@@ -956,9 +990,11 @@ async fn send_image_to_fastapi(
                   .map_err(|_| "发送到前端失败")?;
 
 
+      // 结果吸入taskstate
+
 
       // 孔位结果插入数据库
-
+      
 
       // 
 
@@ -1066,7 +1102,7 @@ async fn write_register_frontend_robot(reg_address: u16, value: u16) -> Result<S
 
 // 机器人监控信号
 async fn monitor_robot() -> Result<(), String> {
-  let log = "[robot] [log] [开启机器人监控]";
+  let log = "[robot] [info] [开启机器人监控]";
   sendlog2frontend(log.to_string());
   end_robot_process().await;
   let mut ticker = tokio::time::interval(tokio::time::Duration::from_millis(500));
@@ -1095,14 +1131,14 @@ async fn monitor_robot() -> Result<(), String> {
             Ok(value) => {
 
               if value != 0 {
-                let log = "[robot] [log] [工件检测结束-->>>]";
+                let log = "[robot] [info] [工件检测结束-->>>]";
                 sendlog2frontend(log.to_string());
                 // 向plc发送结束信号
                 write_register_plc(7201, 0).await;
                 send_robot_finished_to_plc().await;
                 end_robot_process().await;
 
-                let log = "[plc] [log] [工件退出<<<--]";
+                let log = "[plc] [info] [工件退出<<<--]";
                 sendlog2frontend(log.to_string());
                 // 更新数据库中产品结果
 
@@ -1158,7 +1194,7 @@ async fn monitor_robot() -> Result<(), String> {
               }
             }
             if value & 2 != 0 {
-                let log = "[plc] [log] [机器人暂停中<<<--]";
+                let log = "[plc] [info] [机器人暂停中<<<--]";
                 sendlog2frontend(log.to_string());
                 send_pause_command_finished_to_plc().await;
                 write_register_robot(4, 3).await;
@@ -1489,7 +1525,7 @@ async fn robot_run_finished() -> Result<(), String> {
 
 // 启动plc监控过程的异步任务
 async fn monitor_plc() -> Result<(), String> {
-  let log = "[plc] [log] [开启PLC监控]";
+  let log = "[plc] [info] [开启PLC监控]";
   sendlog2frontend(log.to_string());
   let mut ticker = tokio::time::interval(tokio::time::Duration::from_millis(500));
 
@@ -1527,7 +1563,7 @@ async fn monitor_plc() -> Result<(), String> {
                         // 如果不同，调用 set_current_type 更新类型
 
                         set_current_type(plc_type_str); // 调用异步函数更新型号
-                        let log = "[plc] [log] [修改机器人型号-->>>]";
+                        let log = "[plc] [info] [修改机器人型号-->>>]";
                         sendlog2frontend(log.to_string());
                         // 写入类型到机器人
 
@@ -1539,7 +1575,7 @@ async fn monitor_plc() -> Result<(), String> {
                               // 将型号写入机器人
                               match write_current_type_to_robot(&robot_type).await {
                                   Ok(_) => {
-                                      let log = "[robot] [log] [写入机器人型号<<<--]";
+                                      let log = "[robot] [info] [写入机器人型号<<<--]";
                                       sendlog2frontend(log.to_string());
                                       // 继续执行，不需要返回 Err
                                   }
@@ -1605,6 +1641,16 @@ async fn monitor_plc() -> Result<(), String> {
                 let mut task_state = GLOBAL_TASK_STATE.write().await;
                 task_state.current_artifact = Local::now().format("%Y_%m_%d_%H_%M_%S_%3f").to_string();
                 task_state.current_artifact_type = current_type.clone().expect("current_type should not be None");
+                // 调用insert_artifact_database
+                let artifact_id = insert_artifact_database(task_state.current_artifact.clone(), task_state.current_artifact_type.clone()).await;
+                // 更新task_state.artifact_id
+                if artifact_id != -1 {
+                  task_state.artifact_id = Some(artifact_id); // 使用 Some 包装 id
+                  println!("Artifact 插入成功，ID: {}", artifact_id);
+                } else {
+                    println!("Artifact 插入失败");
+                }
+                
                 drop(task_state);
                 // 发送到位信号到机器人
                 start_robot_process().await;
@@ -1627,27 +1673,27 @@ async fn monitor_plc() -> Result<(), String> {
             match value {
               2 => {
                   // 如果 value 是 2，给机器人暂停信号
-                  let log = "[plc] [log] [机器人暂停-->>>]";
+                  let log = "[plc] [info] [机器人暂停-->>>]";
                   sendlog2frontend(log.to_string());
                   pause_robot().await;
-                  let log = "[robot] [log] [机器人暂停<<<--]";
+                  let log = "[robot] [info] [机器人暂停<<<--]";
                   sendlog2frontend(log.to_string());
                   // 在这里执行针对 value == 2 的操作
               }
               3 => {
                   // 如果 value 是 3，给机器人继续信号
                   write_register_robot(4, 3).await;
-                  let log = "[plc] [log] [机器人继续-->>>]";
+                  let log = "[plc] [info] [机器人继续-->>>]";
                   sendlog2frontend(log.to_string());
                   start_robot_program().await;
-                  let log = "[robot] [log] [机器人继续<<<--]";
+                  let log = "[robot] [info] [机器人继续<<<--]";
                   sendlog2frontend(log.to_string());
                   // 在这里执行针对 value == 3 的操作
               }
               4 => {
                   // 如果 value 是 4，给机器人复位信号
                   write_register_robot(4, 3).await;
-                  let log = "[plc] [log] [机器人复位-->>>]";
+                  let log = "[plc] [info] [机器人复位-->>>]";
                   sendlog2frontend(log.to_string());
                   // alarm_reset().await;
                   
@@ -1659,10 +1705,10 @@ async fn monitor_plc() -> Result<(), String> {
                       });
                       tx.send(GeneralRequest::StartRobotProgram(resp_tx)).await.map_err(|_| "启动机器人程序失败".to_string());
                     });
-                    let log = "[robot] [log] [机器人复位<<<--]";
+                    let log = "[robot] [info] [机器人复位<<<--]";
                     sendlog2frontend(log.to_string());
 
-                  let log = "[robot] [log] [机器人复位<<<--]";
+                  let log = "[robot] [info] [机器人复位<<<--]";
                   sendlog2frontend(log.to_string());
                   // 等待200ms
                   thread::sleep(Duration::from_millis(200));
@@ -1872,6 +1918,156 @@ async fn write_current_type_to_plc(robot_type: &str) -> Result<(), String>{
 
 // =========================================================================================
 
+// ███████╗██╗   ██╗██████╗ ██████╗ ███████╗ █████╗ ██╗     
+// ██╔════╝██║   ██║██╔══██╗██╔══██╗██╔════╝██╔══██╗██║     
+// ███████╗██║   ██║██████╔╝██████╔╝█████╗  ███████║██║     
+// ╚════██║██║   ██║██╔══██╗██╔══██╗██╔══╝  ██╔══██║██║     
+// ███████║╚██████╔╝██║  ██║██║  ██║███████╗██║  ██║███████╗
+// ╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝     
+
+// 插入产品型号
+pub async fn insert_artifact_database(artifact_name:String,artifact_type:String)->i64{
+    let (resp_tx, resp_rx) = oneshot::channel();
+
+
+    let tx = match database::surrealdb::SURREALDB_TX.lock()
+                                                    .await
+                                                    .clone() {
+                                                      Some(tx) => tx,
+                                                      None => {
+                                                          eprintln!("SURREALDB_TX 未初始化");
+                                                          return -1;
+                                                      }
+                                                  };
+    // 发送请求给数据库
+    if tx.send(database::surrealdb::SurrealdbRequest::InsertArtifact(artifact_name, artifact_type, resp_tx))
+    .await
+    .is_err() {
+        eprintln!("发送数据库请求失败");
+        return -1; // 如果请求发送失败，返回 -1
+    }
+
+
+    match resp_rx.await {
+      Ok(Ok(id)) => {
+          // 返回插入的 id，不需要更新 GLOBAL_TASK_STATE
+          id as i64 // 直接返回 id
+      }
+      Ok(Err(e)) => {
+          // 如果数据库返回错误
+          eprintln!("数据库插入失败: {}", e);
+          -1 // 插入失败，返回 -1
+      }
+      Err(_) => {
+          // 如果响应丢失
+          eprintln!("响应丢失");
+          -1 // 响应丢失，返回 -1
+      }
+  }
+}
+
+// 更新产品结果
+pub async fn update_artifact(record_id:i32, result:bool){
+
+  // 发送请求给数据库
+
+  // 更新recordid对应的结果
+
+
+}
+
+
+
+
+// 查询所有产品
+
+// 查询特定产品
+
+// 插入孔结果
+
+
+// 插入Log
+pub fn insert_log_database(log:&str, artifact_id:i64, artifact_name:&str){
+  let log = log.to_string();
+  let artifact_name = artifact_name.to_string();
+
+  tauri::async_runtime::spawn(async move{
+
+    // 解析log
+    // 正则提取三个字段
+    let re = regex::Regex::new(r"\[(.*?)\] \[(.*?)\] \[(.*?)\]").unwrap();
+    let caps = match re.captures(&log) {
+        Some(c) => c,
+        None => {
+            eprintln!("日志格式不正确: {}", log);
+            return;
+        }
+    };
+
+    // 解析 role
+    let role = match &caps[1] {
+        "software" => 1,
+        "plc" => 2,
+        "robot" => 3,
+        _ => {
+            eprintln!("未知 role: {}", &caps[1]);
+            return;
+        }
+    };
+
+    // 解析 level
+    let level = match &caps[2] {
+        "info" => 1,
+        "warning" => 2,
+        "error" => 3,
+        _ => {
+            eprintln!("未知 level: {}", &caps[2]);
+            return;
+        }
+    };
+
+    let message = caps[3].to_string();
+
+
+    let log_record = database::surrealdb::LogRecord::new(
+      artifact_id as i64,
+      artifact_name, 
+      level, 
+      message, 
+      role, 
+      Utc::now()
+    );
+    let (resp_tx, resp_rx) = oneshot::channel();
+    let tx = database::surrealdb::SURREALDB_TX.lock()
+                                              .await
+                                              .clone()
+                                              .expect("GLOBAL_TX is not initialized");
+    if tx.send(database::surrealdb::SurrealdbRequest::InsertLog(log_record.clone(), resp_tx))
+      .await
+      .is_err()
+      {
+        eprintln!("发送数据库请求失败");
+        return;
+      }
+
+    if resp_rx.await.is_err() {
+        eprintln!("发送数据库请求失败");
+    }
+  });
+}
+
+// 插入Run_log
+
+// 查询Log
+
+// 条件查询Log
+
+
+// 查询Run_log
+
+// 条件查询Run_log
+
+
 // =========================================== 整体逻辑 ====================================
 // 启动或终止后端程序，暂时没用
 #[tauri::command(rename_all = "snake_case")]
@@ -2051,7 +2247,7 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
     match create_handle().await{
       Ok(results) => {
         if let Some(first_element) = results.get(0) {
-          let log = format!("[camera] [log] [相机句柄: {}]", first_element);
+          let log = format!("[camera] [info] [相机句柄: {}]", first_element);
           sendlog2frontend(log.to_string());
         } else {
             println!("Vec 为空");
@@ -2068,7 +2264,7 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
     match open_device(MvAccessMode::Exclusive, 0).await {
       Ok(code) => {
         println!("设备打开成功，返回码: {}", code);
-        let log = format!("[camera] [log] [打开相机成功: {}]", code);
+        let log = format!("[camera] [info] [打开相机成功: {}]", code);
         sendlog2frontend(log.to_string());
       }
       Err(e) => {
@@ -2109,13 +2305,13 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
   let ip = "192.168.0.101";
   let mut device_handler: sensors::cf3000_bindings::DeviceHandle_t = -1;
   rs_CF_GE_OpenDevice(ip,&mut device_handler).await;
-  let log = format!("[sensor] [log] [传感器: {}]", device_handler);
+  let log = format!("[sensor] [info] [传感器: {}]", device_handler);
   sendlog2frontend(log.to_string());
 
 
   let cmd:bool = true;
   rs_CF_StartSample(device_handler,cmd).await;
-  let log = format!("[sensor] [log] [启动传感器数据采集]");
+  let log = format!("[sensor] [info] [启动传感器数据采集]");
   sendlog2frontend(log.to_string());
 
   });
@@ -2125,29 +2321,7 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
   sidecar::sidecar::spawn_and_monitor_fastapi_sidecar(app_handle.clone()).ok();
   println!("[tauri] Fastapi Sidecar spawned and monitoring started.");
 
-  // test surreal database
-  // tauri::async_runtime::spawn(async {
-    // 启动硬件
-  //   let (resp_tx, resp_rx) = oneshot::channel(); 
-  //   let tx = database::surrealdb::SURREALDB_TX.lock().await.clone().unwrap_or_else(|| {
-  //     panic!("GLOBAL_TX is not initialized. Ensure that start_global_task() has been called.");
-  //   });
-  //   let log_record = database::surrealdb::LogRecord::new(
-  //     1, 
-  //     "Artifact1".to_string(), 
-  //     2, 
-  //     "This is a log message.".to_string(), 
-  //     3, 
-  //     Utc::now()
-  // );
-  //   tx.send(database::surrealdb::SurrealdbRequest::InsertLog(log_record,resp_tx)).await.map_err(|_| "启动机器人程序失败".to_string());
-    
-  // });
-
-
-
-
-
+  // insert_log_database();
   Ok(())
 }
 

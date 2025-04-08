@@ -240,7 +240,7 @@ pub fn spawn_and_monitor_surrealdb_sidecar(app_handle: tauri::AppHandle) -> Resu
         .arg("--pass").arg("12345678")
         .arg("--ns").arg("rs")
         .arg("--db").arg("artifact")
-        .arg("D:/github/tauri-shadcn-template/src-tauri/src/database/surrealdb_schema.surql")
+        .arg("D:/code/tauri-shadcn-template/src-tauri/src/database/surrealdb_schema.surql")
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .creation_flags(CREATE_NO_WINDOW)  // 👈 添加这一行隐藏窗口
