@@ -159,27 +159,28 @@ pub struct TaskState {
 }
 
 // 每个孔的状态
-#[derive(Clone)]
+#[derive(Clone,Debug)]
 pub struct HoleState {
   pub face_id: u16,   //面编号
   pub hole_id: u16,   // 孔编号
   pub action1: Vec<f64>, // 动作1的数据
   pub action2: Vec<f64>, // 动作2的数据
-  pub action3: Option<Yolov8Result>, // 动作3的检测结果
+  pub action3: Option<HoleDiameter>, // 动作3的检测结果
   pub action3_orig_path: Option<String>,
   pub action3_result_path: Option<String>,
-  pub action4: Option<HoleDiameter>, // 动作4的检测结果，如圆心、直径等
+  pub action4: Option<Yolov8Result>, // 动作4的检测结果，如圆心、直径等
   pub action4_orig_path: Option<String>,
   pub action4_result_path: Option<String>,
+  pub result: Option<bool>,
 
 }
 
-#[derive(Clone)]
-pub struct Yolov8Result {
-  pub detections: Vec<Detection>,
-}
+// #[derive(Clone,Serialize,Debug)]
+// pub struct Yolov8Result {
+//   pub detections: Vec<Detection>,
+// }
 
-#[derive(Clone)]
+#[derive(Clone,Serialize,Debug)]
 pub struct HoleDiameter {
   pub nei_center: (f64,f64),
   pub nei_diameter: f64,
@@ -188,8 +189,8 @@ pub struct HoleDiameter {
 }
 
 // 检测结果
-#[derive(Clone)]
-pub struct Detection {
+#[derive(Clone,Serialize,Debug)]
+pub struct Yolov8Result {
   pub class_id: u32,
   pub confidence: f64,
   pub bbox: (f64, f64, f64, f64), // x, y, x, y
@@ -221,31 +222,41 @@ impl TaskState {
         action4: None,
         action4_orig_path:None,
         action4_result_path:None,
+        result:None,
     });
   }
   // 动作1的深度数据
   pub async fn update_action1(&mut self, face_id: u16, hole_id: u16, data: f64) {
-    if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
-        hole.action1.push(data);
-    }
+    if data>-50.0 && data<50.0{
+      if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
+            hole.action1.push(data as f64);
+          }
+      }
+    
   }
   // 动作2的深度数据
   pub async fn update_action2(&mut self, face_id: u16, hole_id: u16, data: f64) {
+    if data>-50.0 && data<50.0{
       if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
-        hole.action2.push(data);
+        hole.action2.push(data as f64);
       }
+    }
   }
-  // 动作3的检测结果
-  pub async fn update_action3(&mut self, face_id: u16, hole_id: u16, detection: Yolov8Result,orig_path:&str, result_path:&str) {
+  // 动作4的检测结果
+  pub async fn update_action4(&mut self, face_id: u16, hole_id: u16, detection: Yolov8Result,orig_path:String, result_path:String) {
       if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
-          hole.action3 = Some(detection);
+          hole.action4 = Some(detection);
+          hole.action4_orig_path = Some(orig_path.to_string());
+          hole.action4_result_path = Some(result_path.to_string());
       }
   }
 
-  // 动作4的检测结果
-  pub async fn update_action4(&mut self, face_id: u16, hole_id: u16, diameter: HoleDiameter,orig_path:&str, result_path:&str) {
+  // 动作3的检测结果
+  pub async fn update_action3(&mut self, face_id: u16, hole_id: u16, diameter: HoleDiameter,orig_path:String, result_path:String) {
       if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
-          hole.action4 = Some(diameter);
+          hole.action3 = Some(diameter);
+          hole.action3_orig_path = Some(orig_path.to_string());
+          hole.action3_result_path = Some(result_path.to_string());
       }
   }
 
@@ -254,40 +265,136 @@ impl TaskState {
     self.holes.get(&(face_id, hole_id)).cloned()
   }
 
-  // 汇总某个孔位的所有结果，孔位OK/NG逻辑位于此处
-  // pub async fn get_hole_result_record(&self,face_id: u16, hole_id: u16) ->database::surrealdb::HoleRecord{
+  // TODO 汇总某个孔位的所有结果，孔位OK/NG逻辑位于此处,并且返回record用来插入数据库
+  pub async fn get_hole_result_record(&self,face_id: u16, hole_id: u16) ->database::surrealdb::HoleRecord{
+    let artifact_id: i64 = match self.artifact_id {
+      Some(val) => val,
+      None => 0, // 自定义默认值
+    };
+
+    let hole_state = self.get_hole_state(face_id, hole_id).await;
+
+    if let Some(hole) = hole_state {
+
+      let action1 = hole.action1.clone();
+      let action2 = hole.action2.clone();
+      let action4 = hole.action4.clone().map_or( Yolov8Result {
+                                                          class_id: 9999,
+                                                          confidence: 0.0,
+                                                          bbox: (0.0, 0.0, 0.0, 0.0),
+                                                      }, |v| v);
+      let action3_orig_path = hole.action3_orig_path.as_ref().unwrap_or(&"wrong-path".to_string()).to_string();
+      let action3_result_path = hole.action3_result_path.as_ref().unwrap_or(&"wrong-path".to_string()).to_string();
+      let action3 = hole.action3.clone().map_or(HoleDiameter {
+                                                                nei_center: (0.0, 0.0),    // 默认值
+                                                                nei_diameter: 0.0,         // 默认值
+                                                                wai_center: (0.0, 0.0),    // 默认值
+                                                                wai_diameter: 0.0,         // 默认值
+                                                              }, |v| v);
+
+      let action3_json = serde_json::to_value(&action3).unwrap_or(json!(null));
+      let action4_json = serde_json::to_value(&action4).unwrap_or(json!(null));
+
+      let action4_orig_path = hole.action4_orig_path.as_ref().unwrap_or(&"wrong-path".to_string()).to_string();
+      let action4_result_path = hole.action4_result_path.as_ref().unwrap_or(&"wrong-path".to_string()).to_string();
+
+      // 获取配方信息
+
+      // 获取深度结果
+
+      // 获取直径结果
+
+      // 获取螺纹结果
+
+      // 更新结果
 
 
-  //   // 获取深度结果
+      let dummy_record = database::surrealdb::HoleRecord::new(
+        action1,                             // action1
+        action2,                             // action2
+        action3_json,                        // action3
+        action4_json,                             // action4
+        artifact_id as i64,                  // artifact_id
+        self.current_artifact.clone(),       // artifact_name
+        12.5,                                // depth
+        Some(true),                          // depth_result
+        6.8,                                 // diameter
+        action3_orig_path,                   // diameter_orig_path
+        action3_result_path,                 // diameter_result_path
+        Some(true),                          // dimeter_result
+        face_id as i32,                      // face_id
+        hole_id as i32,                      // hole_id
+        action4_orig_path,                   // luowen_orig_path
+        Some(false),                         // luowen_result
+        action4_result_path,                 // luowen_result_path
+        Utc::now(),                          // update_time
+        self.current_artifact_type.clone(),  // standard_hole_type
+        true,                                // have_luowen
+        11.0,                                // depth_min
+        14.0,                                // depth_max
+        6.5,                                 // diameter_min
+        7.0,                                 // diameter_max
+        false,                               // thru_hole
+        Some(true),                          // 最终结果
+        true,                                // luowen
+      );
+      return dummy_record;
+    }else{
+      database::surrealdb::HoleRecord::new(
+        vec![1.0],                           // action1
+        vec![1.0],                           // action2
+        json!({"key": "value"}), 
+        json!({"key": "value"}),             // action4
+        artifact_id as i64,                  // artifact_id
+        "1".to_string(),                     // artifact_name
+        12.5,                                // depth
+        Some(true),                          // depth_result
+        6.8,                                 // diameter
+        "1".to_string(),                     // diameter_orig_path
+        "1".to_string(),                     // diameter_result_path
+        Some(true),                          // dimeter_result
+        1,                                   // face_id
+        1,                                   // hole_id
+        "1".to_string(),                     // luowen_orig_path
+        Some(false),                         // luowen_result
+        "1".to_string(),                     // luowen_result_path
+        Utc::now(),                          // update_time
+        "1".to_string(),                     // standard_hole_type
+        true,                                // have_luowen
+        11.0,                                // depth_min
+        14.0,                                // depth_max
+        6.5,                                 // diameter_min
+        7.0,                                 // diameter_max
+        false,                               // thru_hole
+        Some(true),                          //最终结果
+        true,                                //螺纹
+      )
+    }
+  }
 
-  //   // 获取直径结果
-
-  //   // 获取螺纹结果
-
-
-
-  // }
-
-  // 清楚孔位数据
+  // 清除孔位数据
   pub async fn clear(&mut self) {
     self.holes.clear();
     self.current_face = 1;
     self.current_hole = 1;
   }
 
-// 
+  // 统计所有孔位检测结果
   pub async fn get_final_result(&self){
 
 
   }
 }
 
-
+// 读取配方中配置文件
+pub async fn get_hole_config(artifact_type:String, face:u16, hole:u16){
+  
+}
 
 // 获取螺纹检测结果
-pub fn generate_detection_result(result: &Yolov8Result,have_luowen:bool) -> bool {
-  result.detections.iter().any(|d| d.class_id == 0)
-}
+// pub fn generate_detection_result(result: &Yolov8Result,have_luowen:bool) -> bool {
+//   result.detections.iter().any(|d| d.class_id == 0)
+// }
 
 // 获取深度结果
 pub fn generate_depth_result(action1: &[f64], action2: &[f64], min_val: f64, max_val: f64, thru:bool) -> bool {
@@ -462,6 +569,8 @@ pub enum GeneralRequest {
   SendJsonToFrontend(String, oneshot::Sender<Result<(), String>>),
   // 向前端发送当前型号
   SendCurrentTypeToFrontend(oneshot::Sender<Result<(), String>>),
+  // 清空前端结果显示
+  SendFinishedToFrontend(bool,oneshot::Sender<Result<(), String>>),
 }
 
 pub async fn start_global_task(mut rx: mpsc::Receiver<GeneralRequest>,app_handle: tauri::AppHandle) -> Result<(), String> {
@@ -606,6 +715,11 @@ pub async fn start_global_task(mut rx: mpsc::Receiver<GeneralRequest>,app_handle
         send_current_type_to_frontend(app_handle.clone()).await;
         let _ = resp_tx.send(Ok(()));
       }
+      GeneralRequest::SendFinishedToFrontend(finished,resp_tx)=>{
+        send_finished_to_frontend(app_handle.clone(),finished).await;
+        let _ = resp_tx.send(Ok(()));
+      }
+
     }
   }
   Ok(()) // 任务完成
@@ -627,7 +741,6 @@ async fn save_json(json_data: String, path: String) -> Result<(), String> {
 async fn send_log_to_frontend(app_handle:tauri::AppHandle, log_message: String) {
   // 通过 Tauri 事件系统向前端发送日志信息
   app_handle.emit("log_received", log_message.clone()).unwrap();
-  println!("发送日志到前端: {}", log_message);
 }
 
 async fn send_image_to_frontend(
@@ -716,21 +829,27 @@ async fn send_sensor_data_to_frontend(
   pos:Vec<u16>,
   data:f64,
 )-> Result<(), &'static str>{
-  
-  // 获取当前孔位配置信息
-
-
 
   match pos.last() {
     Some(&1) => {
+
+      sendlog2frontend("[robot] [info] [传感器触发-1----]".to_string());
       // 访问当前状态，更新新孔位
       let mut task_state = GLOBAL_TASK_STATE.write().await;
       task_state.current_face = pos[0];
       task_state.current_hole = pos[1];
-      task_state.add_hole(pos[0], pos[1]);
+      task_state.add_hole(pos[0], pos[1]).await;
+
 
       let face = task_state.current_face;
       let hole = task_state.current_hole;
+
+      let hole_state = task_state.get_hole_state(face, hole).await;
+
+    // 打印返回的 Option 类型的 hole
+      println!("Hole state: {:?}", hole_state);
+
+
       let artifact = task_state.current_artifact.clone();
       // 更新前端孔位信息
       let current_stage = CurrentStage{
@@ -742,7 +861,7 @@ async fn send_sensor_data_to_frontend(
                 .map_err(|_| "发送到前端失败")?;
       // 只更新有效数据
       if -50.0<data && data<50.0 {
-        task_state.update_action1(pos[0],pos[1],data);
+        task_state.update_action1(pos[0],pos[1],data).await;
       }
       drop(task_state);
       // 前端刷新
@@ -759,9 +878,10 @@ async fn send_sensor_data_to_frontend(
 
     }
     Some(&2) => {
+      sendlog2frontend("[robot] [info] [传感器触发-2----]".to_string());
       let mut task_state = GLOBAL_TASK_STATE.write().await;
       if -50.0<data && data<50.0 {
-        task_state.update_action2(pos[0],pos[1],data);
+        task_state.update_action2(pos[0],pos[1],data).await;
       }
       drop(task_state);
 
@@ -817,6 +937,8 @@ pub fn save_image_base64(encoded_data: &str, full_path: &PathBuf) -> Result<(), 
   println!("图片已保存: {:?}", full_path);
   Ok(())
 }
+
+
 
 
 async fn send_image_to_fastapi(
@@ -889,6 +1011,7 @@ async fn send_image_to_fastapi(
   match pos.last() {
 
     Some(&3) => {
+
       sendlog2frontend("[robot] [info] [相机触发-3]".to_string());
 
       let flie_name = "3_orig.jpg";
@@ -932,17 +1055,34 @@ async fn send_image_to_fastapi(
       let pp_refs: Vec<&str> = pp.iter().map(|s| s.as_str()).collect(); // 转换为 Vec<&str>
       let full_path_result = generate_file_path(&pp_refs, flie_name);
       save_image_base64(&image_base64, &full_path_result)?;
+      // TODO 换成直径检测结果
+      let result = construct_action3(&results).await;
+      let result = result.unwrap_or(HoleDiameter {
+        nei_center: (0.0, 0.0),
+        nei_diameter: 0.0,
+        wai_center: (0.0, 0.0),
+        wai_diameter: 0.0,
+    });
+    // 
 
-      // 存储结果到taskstate
-
-
-
+      // 存储路径到taskstate
+      let full_path_orig_str = full_path_orig.to_string_lossy().to_string();
+      let full_path_result_str = full_path_result.to_string_lossy().to_string();
+      {
+        let mut task_state = GLOBAL_TASK_STATE.write().await;
+        task_state.update_action3(face, 
+                                  hole, 
+                                  result,
+                                  full_path_orig_str,
+                                  full_path_result_str).await;
+      }
 
       app_handle.emit(&reciever, image_base64)
                 .map_err(|_| "发送图像到前端失败")?;
 
     }
     Some(&4) => {
+
       sendlog2frontend("[robot] [info] [相机触发-4]".to_string());
 
       let flie_name = "4_orig.jpg";
@@ -985,8 +1125,32 @@ async fn send_image_to_fastapi(
       let pp_refs: Vec<&str> = pp.iter().map(|s| s.as_str()).collect(); // 转换为 Vec<&str>
       let full_path_result = generate_file_path(&pp_refs, flie_name);
       save_image_base64(&image_base64, &full_path_result)?;
+
+      let result = construct_action4(&results).await;
+      let result = result.unwrap_or(Yolov8Result {
+        class_id: 9999,
+        confidence: 0.0,
+        bbox: (0.0, 0.0, 0.0, 0.0),
+    });
+
+      let full_path_orig_str = full_path_orig.to_string_lossy().to_string();
+      let full_path_result_str = full_path_result.to_string_lossy().to_string();
+      {
+        let mut task_state = GLOBAL_TASK_STATE.write().await;
+        task_state.update_action4(face, 
+                                  hole, 
+                                  result,
+                                  full_path_orig_str,
+                                  full_path_result_str).await;
+      }
       app_handle.emit(&reciever, image_base64)
                 .map_err(|_| "发送到前端失败")?;
+
+
+      // TODO：构造record孔位结果插入数据库
+      let task_state_tmp = GLOBAL_TASK_STATE.write().await;
+      let record =task_state_tmp.get_hole_result_record(task_state_tmp.current_face,task_state_tmp.current_hole).await;
+      insert_hole_database(record).await;
 
       let final_result_data = FinalResultData {
         face,         // u16 类型
@@ -997,16 +1161,6 @@ async fn send_image_to_fastapi(
 
       app_handle.emit("hole_final_result", final_result_data)
                   .map_err(|_| "发送到前端失败")?;
-
-
-      // 结果吸入taskstate
-
-
-      // 孔位结果插入数据库
-      
-
-      // 
-
 
     }
     _ => {
@@ -1034,6 +1188,14 @@ async fn send_current_type_to_frontend(
   app_handle.emit("current-type", current_type).unwrap();
 }
 
+async fn send_finished_to_frontend(
+  app_handle:tauri::AppHandle,
+  finished:bool
+){
+  // 产品处理完成
+  app_handle.emit("current-finished", finished).unwrap()
+}
+
 // ███████╗ █████╗ ███████╗████████╗ █████╗ ██████╗ ██╗
 // ██╔════╝██╔══██╗██╔════╝╚══██╔══╝██╔══██╗██╔══██╗██║
 // █████╗  ███████║███████╗   ██║   ███████║██████╔╝██║
@@ -1050,6 +1212,56 @@ async fn get_client() -> Arc<Client> {
         .clone()
 }
 
+// fastapi json解析
+pub async fn extract_action3_from_results(results: &serde_json::Value) -> Option<HoleDiameter> {
+  // 提取 "diameter-nei" 和 "diameter-wai" 的数据
+  let nei = results.get("diameter-nei")?.as_object()?;
+  let wai = results.get("diameter-wai")?.as_object()?;
+
+  // 从 "diameter-nei" 提取 center 和 diameter
+  let nei_center_x = nei.get("center_x")?.as_f64()?;
+  let nei_center_y = nei.get("center_y")?.as_f64()?;
+  let nei_diameter = nei.get("diameter")?.as_f64()?;
+
+  // 从 "diameter-wai" 提取 center 和 diameter
+  let wai_center_x = wai.get("center_x")?.as_f64()?;
+  let wai_center_y = wai.get("center_y")?.as_f64()?;
+  let wai_diameter = wai.get("diameter")?.as_f64()?;
+
+  // 创建 HoleDiameter
+  Some(HoleDiameter {
+      nei_center: (nei_center_x, nei_center_y),
+      nei_diameter,
+      wai_center: (wai_center_x, wai_center_y),
+      wai_diameter,
+  })
+}
+pub async fn construct_action3(results: &serde_json::Value) -> Option<HoleDiameter> {
+  // 使用上述方法提取数据并返回 HoleDiameter
+  extract_action3_from_results(results).await
+}
+
+pub async fn parse_yolov8_results(results: &serde_json::Value) -> Option<Yolov8Result> {
+
+  let item = results; // 只取第一个元素
+
+  let x1 = item["x1"].as_f64()?;
+  let y1 = item["y1"].as_f64()?;
+  let x2 = item["x2"].as_f64()?;
+  let y2 = item["y2"].as_f64()?;
+  let confidence = item["confidence"].as_f64()?;
+  let class_id = item["class_id"].as_u64()? as u32;
+
+  Some(Yolov8Result {
+      class_id,
+      confidence,
+      bbox: (x1, y1, x2, y2),
+  })
+}
+
+pub async fn construct_action4(results: &serde_json::Value) -> Option<Yolov8Result> {
+  parse_yolov8_results(results).await
+}
 
 // ██████╗  ██████╗ ██████╗  ██████╗ ████████╗
 // ██╔══██╗██╔═══██╗██╔══██╗██╔═══██╗╚══██╔══╝
@@ -1057,17 +1269,6 @@ async fn get_client() -> Arc<Client> {
 // ██╔══██╗██║   ██║██╔══██╗██║   ██║   ██║   
 // ██║  ██║╚██████╔╝██████╔╝╚██████╔╝   ██║   
 // ╚═╝  ╚═╝ ╚═════╝ ╚═════╝  ╚═════╝    ╚═╝                                           
-
-// 机器人上电流程状态
-// #[derive(Debug, PartialEq,Copy, Clone)]
-// pub enum ResetState{
-//   ON,
-//   OFF,
-// }
-
-// lazy_static::lazy_static! {
-//   pub static ref ON_ROBOT_RESET: Arc<Mutex<ResetState>> = Arc::new(Mutex::new(ResetState::OFF));
-// }
 
 #[tauri::command]
 async fn start_robot_connect_frontend(robot_addr: String) -> Result<bool, String> {
@@ -1149,11 +1350,11 @@ async fn monitor_robot() -> Result<(), String> {
 
                 let log = "[plc] [info] [工件退出<<<--]";
                 sendlog2frontend(log.to_string());
-                // 更新数据库中产品结果
+                // 更新数据库中产品结果,汇总所有孔位结果信息
 
 
 
-
+                // 清空前端结果显示
 
 
 
@@ -1646,6 +1847,31 @@ async fn monitor_plc() -> Result<(), String> {
                       return Err("无法获取当前型号".to_string()); // 明确返回错误
                   }
                 }
+
+                // 到位后清空上一次的前端结果
+
+                tokio::spawn(async move { 
+                  let (resp_tx, resp_rx) = oneshot::channel();
+                  let tx = GLOBAL_TX.lock().await.clone().unwrap_or_else(|| {
+                      panic!("GLOBAL_TX is not initialized. Ensure that start_plc_connect() has been called.");
+                  });
+                  // 在异步任务中处理发送日志
+              
+                  tx.send(GeneralRequest::SendFinishedToFrontend(true, resp_tx))
+                      .await
+                      .map_err(|_| "发送请求失败".to_string());
+              
+                  // 处理接收响应
+                  match resp_rx.await {
+                      Ok(_) => {
+                      }
+                      Err(e) => {
+                          println!("日志发送失败 {}！",e);
+                      }
+                  }
+                });
+
+
                 // 创建保存状态
                 let mut task_state = GLOBAL_TASK_STATE.write().await;
                 task_state.current_artifact = Local::now().format("%Y_%m_%d_%H_%M_%S_%3f").to_string();
@@ -1936,6 +2162,7 @@ async fn write_current_type_to_plc(robot_type: &str) -> Result<(), String>{
 
 // 插入产品型号
 pub async fn insert_artifact_database(artifact_name:String,artifact_type:String)->i64{
+
     let (resp_tx, resp_rx) = oneshot::channel();
 
 
@@ -1976,65 +2203,40 @@ pub async fn insert_artifact_database(artifact_name:String,artifact_type:String)
 }
 
 pub async fn insert_hole_database(record:database::surrealdb::HoleRecord){
-  let (resp_tx, resp_rx) = oneshot::channel();
+  tauri::async_runtime::spawn(async move{
+    let (resp_tx, resp_rx) = oneshot::channel();
 
 
-  let tx = match database::surrealdb::SURREALDB_TX.lock()
-                  .await
-                  .clone() {
-                    Some(tx) => tx,
-                    None => {
-                        eprintln!("SURREALDB_TX 未初始化");
-                        return;
-                    }
-                };
-
-  let dummy_record = database::surrealdb::HoleRecord::new(
-        vec![1.0, 2.0, 3.0],                 // action1
-        vec![4.0, 5.0, 6.0],                 // action2
-        json!({"key": "value"}),            // action3
-        json!({"key": "value"}),                   // action4
-        1001,                                // artifact_id
-        "Artifact A".to_string(),           // artifact_name
-        12.5,                                // depth
-        Some(true),                          // depth_result
-        6.8,                                 // diameter
-        "/path/to/orig.png".to_string(),    // diameter_orig_path
-        "/path/to/result.png".to_string(),  // diameter_result_path
-        6.9,                                 // dimeter_result
-        3,                                   // face_id
-        42,                                  // hole_id
-        "/path/to/luowen.png".to_string(),   // luowen_orig_path
-        Some(false),                         // luowen_result
-        "/path/to/luowen_result.png".to_string(), // luowen_result_path
-        Utc::now(),                          // update_time
-        "标准孔型A".to_string(),              // standard_hole_type
-        true,                                // have_luowen
-        11.0,                                // depth_min
-        14.0,                                // depth_max
-        6.5,                                 // diameter_min
-        7.0,                                 // diameter_max
-        false,                               // thru_hole
-    );
-  // 发送请求给数据库
-  if tx.send(database::surrealdb::SurrealdbRequest::InsertHole(dummy_record, resp_tx))
-                  .await
-                  .is_err() {
-                      eprintln!("发送数据库请求失败");
-                      return; // 如果请求发送失败，返回 -1
+    let tx = match database::surrealdb::SURREALDB_TX.lock()
+                    .await
+                    .clone() {
+                      Some(tx) => tx,
+                      None => {
+                          eprintln!("SURREALDB_TX 未初始化");
+                          return;
                       }
-  // 等待响应
-  match resp_rx.await {
-    Ok(Ok(result)) => {
-        println!("插入成功，返回值: {}", result);
+                  };
+
+    // 发送请求给数据库
+    if tx.send(database::surrealdb::SurrealdbRequest::InsertHole(record, resp_tx))
+                    .await
+                    .is_err() {
+                        eprintln!("发送数据库请求失败");
+                        return; // 如果请求发送失败，返回 -1
+                        }
+    // 等待响应
+    match resp_rx.await {
+      Ok(Ok(result)) => {
+          println!("插入成功，返回值: {}", result);
+      }
+      Ok(Err(e)) => {
+          eprintln!("插入失败，错误: {}", e);
+      }
+      Err(_) => {
+          eprintln!("响应接收失败");
+      }
     }
-    Ok(Err(e)) => {
-        eprintln!("插入失败，错误: {}", e);
-    }
-    Err(_) => {
-        eprintln!("响应接收失败");
-    }
-  }
+  });
 }
 
 // 更新产品结果

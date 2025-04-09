@@ -20,6 +20,50 @@ interface LogShow {
     hardware: string|null;
   }
 
+const holesPreset: Record<string, SurfaceData[]> = {
+  "EH09": [
+    { surface: "A", status: "NULL", holes: [null, null] },
+    { surface: "B", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,] },
+    { surface: "C", status: "NULL", holes: [null, null, null,null,null,] },
+    { surface: "D", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null,null,null,] },
+    { surface: "E", status: "NULL", holes: [null,null,null,null,null,null,] },
+    { surface: "F", status: "NULL", holes: [null,null,null,null,] }
+  ],
+  "EH12": [
+    { surface: "A", status: "NULL", holes: [null,null,null,null] },
+    { surface: "B", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null,null,null,null] },
+    { surface: "C", status: "NULL", holes: [null,null,null,null,null,null] },
+    { surface: "D", status: "NULL", holes: [null,null,null,null,null,null,null,null,null] },
+    { surface: "E", status: "NULL", holes: [null,null,null,null] },
+  ],
+  "EK30": [ 
+    { surface: "A", status: "NULL", holes: [null,null,null,null] },
+    { surface: "B", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null] },
+    { surface: "C", status: "NULL", holes: [null] },
+    { surface: "D", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null,null,null,null] },
+    { surface: "E", status: "NULL", holes: [null,null,null,null,null] },],
+  "EK40": [ 
+    { surface: "A", status: "NULL", holes: [null,null] },
+    { surface: "B", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null,null,null,null,null] },
+    { surface: "C", status: "NULL", holes: [null,null,null,null] },
+    { surface: "D", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null,null,null,null] },
+    { surface: "E", status: "NULL", holes: [null,null,null,null,null] }, ],
+  "EY28": [ 
+    { surface: "A", status: "NULL", holes: [null,null,null] },
+    { surface: "B", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null] },
+    { surface: "C", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null] },
+    { surface: "D", status: "NULL", holes: [null,null,null,null,null,null,null,null,null] },
+    { surface: "E", status: "NULL", holes: [null,null,null,null,null,null,null,null] }, ],
+  "TEST": [
+    { surface: "A", status: "NULL", holes: [] },
+    { surface: "B", status: "NULL", holes: [] },
+    { surface: "C", status: "NULL", holes: [] },
+    { surface: "D", status: "NULL", holes: [] },
+    { surface: "E", status: "NULL", holes: [] },
+    { surface: "F", status: "NULL", holes: [] }
+  ],
+};
+
 interface DashboardState {
     isRunning: boolean;
     artifactType: string;
@@ -41,7 +85,7 @@ interface DashboardState {
     // setStatics:(statics: string)=>void;
     setArtifact:(result: string)=>void;
     // setSystemstate:(state: SystemState)=>void;
-
+    
     setLogs: (log: string) => void;
     addLogComponentValueEntry: (log: LogShow) => void;
     addImage_1: (image: string) => void;
@@ -52,6 +96,7 @@ interface DashboardState {
     clearImage_2: () => void;
     clearInfo_1: () => void;
     clearInfo_2: () => void;
+    clearResult:() => void;
     setCurrentHole:(hole: string, face:string)=>void;
     updateResultComponent: (
       surface: string,                      // 要更新的 surface 名称
@@ -64,7 +109,7 @@ interface DashboardState {
     ) => void;
   }
 
-export const useDashboardStore = create<DashboardState>((set) => ({
+export const useDashboardStore = create<DashboardState>((set,get) => ({
   isRunning:false,  
   artifactType:"---",
   statics:"---",
@@ -91,51 +136,11 @@ export const useDashboardStore = create<DashboardState>((set) => ({
     set({ artifactType: atype });
 
     // 根据不同型号设置 holes
-    const holesPreset: Record<string, SurfaceData[]> = {
-      "EH09": [
-        { surface: "A", status: "NULL", holes: [null, null] },
-        { surface: "B", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,] },
-        { surface: "C", status: "NULL", holes: [null, null, null,null,null,] },
-        { surface: "D", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null,null,null,] },
-        { surface: "E", status: "NULL", holes: [null,null,null,null,null,null,] },
-        { surface: "F", status: "NULL", holes: [null,null,null,null,] }
-      ],
-      "EH12": [
-        { surface: "A", status: "NULL", holes: [null,null,null,null] },
-        { surface: "B", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null,null,null,null] },
-        { surface: "C", status: "NULL", holes: [null,null,null,null,null,null] },
-        { surface: "D", status: "NULL", holes: [null,null,null,null,null,null,null,null,null] },
-        { surface: "E", status: "NULL", holes: [null,null,null,null] },
-      ],
-      "EK30": [ 
-        { surface: "A", status: "NULL", holes: [null,null,null,null] },
-        { surface: "B", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null] },
-        { surface: "C", status: "NULL", holes: [null] },
-        { surface: "D", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null,null,null,null] },
-        { surface: "E", status: "NULL", holes: [null,null,null,null,null] },],
-      "EK40": [ 
-        { surface: "A", status: "NULL", holes: [null,null] },
-        { surface: "B", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null,null,null,null,null] },
-        { surface: "C", status: "NULL", holes: [null,null,null,null] },
-        { surface: "D", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null,null,null,null] },
-        { surface: "E", status: "NULL", holes: [null,null,null,null,null] }, ],
-      "EY28": [ 
-        { surface: "A", status: "NULL", holes: [null,null,null] },
-        { surface: "B", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null] },
-        { surface: "C", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null] },
-        { surface: "D", status: "NULL", holes: [null,null,null,null,null,null,null,null,null] },
-        { surface: "E", status: "NULL", holes: [null,null,null,null,null,null,null,null] }, ],
-      "TEST": [
-        { surface: "A", status: "NULL", holes: [] },
-        { surface: "B", status: "NULL", holes: [] },
-        { surface: "C", status: "NULL", holes: [] },
-        { surface: "D", status: "NULL", holes: [] },
-        { surface: "E", status: "NULL", holes: [] },
-        { surface: "F", status: "NULL", holes: [] }
-      ],
-    };
-
     set({ resultComponentValue: holesPreset[atype] || [] });
+  },
+  clearResult:()=>{
+    const state = get();
+    set({ resultComponentValue: holesPreset[state.artifactType] || [] });
   },
   setIsRunning: (state: boolean) => set({ isRunning: state }),
   setLogs: (log) => set((state) => ({ logs: state.logs + `\n${log}` })),

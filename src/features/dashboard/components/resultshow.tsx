@@ -18,6 +18,10 @@ export default function ResultShow() {
   const resultComponentValue = useDashboardStore((state) => state.resultComponentValue);
   // const updateResultComponent = useDashboardStore((state) => state.updateResultComponent);
   const updateResultComponent = useDashboardStore((state) => state.updateResultComponent);
+  const clearResult = useDashboardStore((state) => state.clearResult);
+
+
+
   useEffect(() => {
     // 监听后端发送的 hole_final_result 事件
     const handleHoleFinalResult = (event: { payload: { face: number, hole: number, artifact: string, final_result: boolean } }) => {
@@ -43,6 +47,27 @@ export default function ResultShow() {
       unlisten.then((unlistenFn) => unlistenFn());
     };
   }, [updateResultComponent]); // 依赖于 updateResultComponent
+
+  useEffect(() => {
+    // 监听后端发送的 log_received 事件
+    const handleFinishedReceived = (event: { payload: boolean }) => {
+      const finished = event.payload;
+      if (finished){
+        clearResult();
+      }
+    };
+
+    // 监听 "log_received" 事件
+    const unlisten = listen("current-finished", handleFinishedReceived);
+
+    // 清理监听器
+    return () => {
+      unlisten.then((unlistenFn) => unlistenFn());
+    };
+  }, [clearResult]);
+
+
+
 
   return (
     <div className="space-y-1 flex-grow">

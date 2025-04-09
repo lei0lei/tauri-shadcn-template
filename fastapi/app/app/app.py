@@ -111,21 +111,25 @@ async def root():
 
 def parse_yolo_results(results):
     """手动解析 YOLOv8 目标检测结果为 JSON 格式"""
-    detections = []
-    for box, conf, cls in zip(results[0].boxes.xyxy.cpu().numpy(),
-                              results[0].boxes.conf.cpu().numpy(),
-                              results[0].boxes.cls.cpu().numpy()):
-        detection = {
-            "x1": float(box[0]),  # 左上角 X 坐标
-            "y1": float(box[1]),  # 左上角 Y 坐标
-            "x2": float(box[2]),  # 右下角 X 坐标
-            "y2": float(box[3]),  # 右下角 Y 坐标
-            "confidence": float(conf),  # 置信度
-            "class_id": int(cls),  # 类别 ID
-        }
-        detections.append(detection)
+    if len(results.boxes) == 0:
+        return None  # 无检测结果
 
-    return json.dumps(detections, indent=4)  # 转换为 JSON 字符串
+    boxes = results.boxes.xyxy.cpu().numpy()
+    confs = results.boxes.conf.cpu().numpy()
+    clss = results.boxes.cls.cpu().numpy()
+
+    max_idx = confs.argmax()
+
+    detection = {
+        "x1": float(boxes[max_idx][0]),
+        "y1": float(boxes[max_idx][1]),
+        "x2": float(boxes[max_idx][2]),
+        "y2": float(boxes[max_idx][3]),
+        "confidence": float(confs[max_idx]),
+        "class_id": int(clss[max_idx]),
+    }
+
+    return detection  # 或 json.dumps(detection, indent=4) 如果你需要字符串
 
 
 @app.post("/detect_diameter")
