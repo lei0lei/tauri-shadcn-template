@@ -1,4 +1,13 @@
 import { create } from "zustand";
+import Surreal from 'surrealdb';
+
+
+// interface DbConfig {
+//   url: string;
+//   namespace: string;
+//   database: string;
+// }
+
 interface LogShow {
     sender: string;
     level: string;
@@ -65,6 +74,8 @@ const holesPreset: Record<string, SurfaceData[]> = {
 };
 
 interface DashboardState {
+    dbInstance: Surreal | null;
+    setDbInstance: (db: Surreal) => void;
     isRunning: boolean;
     artifactType: string;
     statics: string;
@@ -110,6 +121,8 @@ interface DashboardState {
   }
 
 export const useDashboardStore = create<DashboardState>((set,get) => ({
+  dbInstance: null,
+  setDbInstance: (db) => set({ dbInstance: db }),
   isRunning:false,  
   artifactType:"---",
   statics:"---",
@@ -133,6 +146,7 @@ export const useDashboardStore = create<DashboardState>((set,get) => ({
       { surface: "F", status: "NULL", holes: [] }
     ],
   setArtifactType: (atype: string) => {
+    console.log('lien 137 set state');
     set({ artifactType: atype });
 
     // 根据不同型号设置 holes

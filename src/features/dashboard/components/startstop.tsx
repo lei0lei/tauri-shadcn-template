@@ -1,12 +1,13 @@
 import { invoke } from '@tauri-apps/api/core';
 import { Button } from "@/components/ui/button";
-import { useDashboardStore } from "@/stores/dashboardStore";
+// import { useDashboardStore } from "@/stores/dashboardStore";
 
+import  { useState } from "react";
 
 function StartStopButton({ className }: { className?: string }) {
-  const isRunning = useDashboardStore((state) => state.isRunning);
-  const setIsRunning = useDashboardStore((state) => state.setIsRunning);
-
+  // const isRunning = useDashboardStore((state) => state.isRunning);
+  // const setIsRunning = useDashboardStore((state) => state.setIsRunning);
+  const [isRunning, setIsRunning] = useState(false);
   // 处理按钮点击
     // const callRustCommand = async () => {
   //   try {

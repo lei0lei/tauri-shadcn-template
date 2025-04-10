@@ -10,21 +10,18 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 import { Tabs, TabsContent} from '@/components/ui/tabs'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
-// import { TopNav } from '@/components/layout/top-nav'
-// import { ProfileDropdown } from '@/components/profile-dropdown'
-// import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { Overview } from './components/overview'
 import  LogWindow  from './components/stateandlogs'
 import ResultShow from './components/resultshow'
-// import { invoke } from '@tauri-apps/api/core';
-// import React, { useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { useEffect } from "react";
 import StartStopButton from './components/startstop'
 import { Separator } from '@radix-ui/react-separator'
 import { useDashboardStore } from "@/stores/dashboardStore";
 import { IconCheck, IconX, IconCamera, IconParkingCircleFilled, IconAsset, IconServer, IconCircle, IconDeviceFloppy } from "@tabler/icons-react";
+// import Surreal from 'surrealdb';
+
 
 const iconMap : Record<string, React.ComponentType>= {
   "相机": IconCamera,
@@ -38,6 +35,26 @@ const iconMap : Record<string, React.ComponentType>= {
 import { invoke } from '@tauri-apps/api/core';
 
 export default function Dashboard() {
+  // const dbInstance = useDashboardStore((state) => state.dbInstance);
+  // const setDbInstance = useDashboardStore((state) => state.setDbInstance);
+
+  // useEffect(() => {
+  //   if (!dbInstance) {
+  //     // 只有在 dbInstance 不存在时才创建新的实例
+  //     const initializeDb = async () => {
+  //       const db = new Surreal({
+  //         url: "http://localhost:8000",
+  //         ns: "test", // 设置你的命名空间
+  //         db: "testdb", // 设置数据库名称
+  //       });
+
+  //       await db.connect();
+  //       setDbInstance(db); // 将数据库实例存储在 Zustand 中
+  //     };
+
+  //     initializeDb();
+  //   }
+  // }, [dbInstance, setDbInstance]);
 
   // @ts-ignore
   const { logs, setLogs, artifactType,setArtifactType,statics,artifact,setArtifact} = useDashboardStore();
@@ -76,13 +93,18 @@ export default function Dashboard() {
     };
   }, [setArtifactType]);
 
+
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        const result = await invoke("selected_artifact_type"); // 调用后端命令
-        console.log("后端返回的数据:", result);
-      } catch (error) {
-        console.error("调用后端命令失败:", error);
+      if (artifactType === '---') { // 只有在 artifactType 为 '---' 时执行
+        try {
+          const result = await invoke("selected_artifact_type"); // 调用后端命令
+          console.log("后端返回的数据:", result);
+        } catch (error) {
+          console.error("调用后端命令失败:", error);
+        }
+      } else {
+        console.log("artifactType 已设置，不执行 invoke");
       }
     };
 

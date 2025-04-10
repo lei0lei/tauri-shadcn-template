@@ -258,7 +258,7 @@ async def detect_luowen_with_draw(
     # 使用 YOLOv8 进行推理
     try:
 
-        results = yolo_model(image,conf=0.5)[0]
+        results = yolo_model(image,conf=0.3)[0]
         detections = sv.Detections.from_ultralytics(results)
         
         # 解析检测结果
