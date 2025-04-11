@@ -2,9 +2,9 @@ import { Badge } from "@/components/ui/badge"; // 引入Shadcn的Button和Badge�
 import { useDashboardStore } from "@/stores/dashboardStore"; // 导入 zustand store
 import { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription, DialogClose } from "@/components/ui/dialog"; // 引入Shadcn的Dialog组件
+import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog"; // 引入Shadcn的Dialog组件
 // import { invoke } from '@tauri-apps/api/core';
-
+import { Separator } from "@/components/ui/separator"
 
 import { useState } from "react";
 
@@ -18,22 +18,61 @@ const faceMapping: { [key: number]: string } = {
   // 如果有更多的 face 数值，可以继续添加
 };
 
-
+const faceReverseMapping: { [key: string]: number } = {
+  "A": 1,
+  "B": 2,
+  "C": 3,
+  "D": 4,
+  "E": 5,
+  "F": 6,
+};
 export default function ResultShow() {
   const resultComponentValue = useDashboardStore((state) => state.resultComponentValue);
   const updateResultComponent = useDashboardStore((state) => state.updateResultComponent);
   const clearResult = useDashboardStore((state) => state.clearResult);
   const [isDialogOpen, setDialogOpen] = useState(false);
   const [dialogData, setDialogData] = useState<any>(null); // 用于存储从 Tauri 获取的数据
+  const artifact = useDashboardStore((state) => state.artifact);
+  const dbInstance = useDashboardStore((state) => state.dbInstance);
+
 
   const handleBadgeClick = async (surface: string, holeIndex: number) => {
     try {
+      if (!dbInstance) {
+        console.error("数据库实例未初始化");
+        setDialogData("数据库未连接");
+        setDialogOpen(true);
+        return;
+      }
+
       // 调用 Tauri 后端命令，传递 surface 和 holeIndex 参数
       const dialogData = 'test';
       console.log(surface);
       console.log(holeIndex);
       setDialogData(dialogData); // 更新 Dialog 中的数据
       setDialogOpen(true);  // 打开 Dialog
+
+      const faceId = faceReverseMapping[surface];
+
+      const query = `
+      SELECT * FROM Hole_library
+      WHERE artifact_name = $artifact
+      AND face_id = $faceId
+      AND hole_id = $holeId
+      `;
+
+      const surreal_result = await dbInstance.query(query, {
+        artifact,
+        faceId,
+        holeId: holeIndex,
+      });
+      const result = surreal_result as any[][]; // 强制断言为二维数组
+      const data = result?.[0]?.[0];
+      console.log("queryResult:", data);
+
+      setDialogData(data); // data 是你从数据库拿到的记录对象
+      setDialogOpen(true);
+
     } catch (error) {
       console.error("调用 Tauri 后端命令失败:", error);
     }
@@ -141,18 +180,45 @@ export default function ResultShow() {
         <DialogContent>
           <DialogTitle>孔详细信息</DialogTitle>
           <DialogDescription>
-            {dialogData ? (
-              <div>
-                <p>面: {dialogData.surface}</p>
-                <p>孔索引: {dialogData.holeIndex}</p>
-                <p>状态: {dialogData.status}</p>
-                {/* 根据 Tauri 返回的数据，渲染更多内容 */}
+          {dialogData ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div><strong>面</strong>: {dialogData.face_id}</div>
+                <div><strong>孔索引</strong>: {dialogData.hole_id}</div>
+                <div><strong>深度</strong>: {dialogData.depth}</div>
+                <div><strong>孔类型</strong>: {dialogData.standard_hole_type}</div>
+                <div><strong>直径</strong>: {dialogData.diameter}（{dialogData.diameter_min} ~ {dialogData.diameter_max}）</div>
               </div>
-            ) : (
-              <p>加载中...</p>
-            )}
+
+              <Separator />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <strong>螺纹检测</strong>:{" "}
+                  <Badge variant={dialogData.luowen_result ? "default" : "destructive"}>
+                    {dialogData.luowen_result ? "通过" : "不通过"}
+                  </Badge>
+                </div>
+                <div>
+                  <strong>孔整体检测</strong>:{" "}
+                  <Badge variant={dialogData.hole_result ? "default" : "destructive"}>
+                    {dialogData.hole_result ? "通过" : "不通过"}
+                  </Badge>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <div><strong>内圆直径</strong>: {dialogData.action3?.nei_diameter}</div>
+                <div><strong>外圆直径</strong>: {dialogData.action3?.wai_diameter}</div>
+                <div><strong>识别置信度</strong>: {dialogData.action4?.confidence}</div>
+              </div>
+            </div>
+          ) : (
+            <div>加载中...</div>
+          )}
           </DialogDescription>
-          <DialogClose>关闭</DialogClose>
         </DialogContent>
       </Dialog>
 

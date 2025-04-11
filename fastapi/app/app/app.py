@@ -56,27 +56,28 @@ model_path = {
 class ImageMetadata(BaseModel):
     some_field: str  # 示例字段
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """应用启动时加载 YOLOv8，关闭时释放"""
+yolo_model = None
+yolo_seg_model = None
+
+    
+app = FastAPI()
+@app.on_event("startup")
+async def startup():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     det_model_str = model_path["luowen_detect"]
     seg_model_str = model_path["diameter_segment"]
-    global yolo_model,yolo_seg_model
+    global yolo_model, yolo_seg_model
     yolo_model = YOLO(det_model_str).to(device)
     print("✅ YOLOv8 det模型加载完成")
     yolo_seg_model = YOLO(seg_model_str).to(device)
     print("✅ YOLOv8 seg模型加载完成")
-    dummy_img = np.zeros((640, 640, 3), dtype=np.uint8)  # 创建黑色图片
-    _ = yolo_model.predict(dummy_img, verbose=False)
-    _ =yolo_seg_model.predict(dummy_img, verbose=False)
+    dummy_img = np.zeros((2448, 2048, 3), dtype=np.uint8)  # 创建黑色图片
+    results = yolo_model('D:\\data\\2025_04_10\\2025_04_10_17_16_27_128\\3\\1\\3_orig.jpg')[0]
+    results = yolo_seg_model('D:\\data\\2025_04_10\\2025_04_10_17_16_27_128\\3\\1\\4_orig.jpg')[0]
+    torch.cuda.synchronize()
     print("🔥 预热完成，YOLOv8 已准备就绪")
-    yield  # 运行 FastAPI
-    # del yolo_model
-    # del yolo_seg_model
-    # print("🛑 YOLOv8 模型已释放")
-    
-app = FastAPI(lifespan=lifespan)
+
+
 
 
 
@@ -157,12 +158,14 @@ def get_largest_mask_info(masks):
     
     return None
 
-
+import time
 @app.post("/detect_diameter_with_draw/")
 async def detect_diameter_with_draw(
     file: UploadFile = File(...),
 ):
 # 读取图片数据
+    print('启动算法')
+    t1 =  time.time()
     contents = await file.read()
     image = np.frombuffer(contents, np.uint8)
     image = cv2.imdecode(image, cv2.IMREAD_COLOR)
@@ -234,7 +237,9 @@ async def detect_diameter_with_draw(
         img_base64 = base64.b64encode(buffer).decode("utf-8")
         detection_json = {}
         img_bytes = io.BytesIO(buffer)
-        
+    print('line 242')
+    print(time.time()-t1)
+    detection_json['algo_time'] = time.time()-t1
     return {"results": detection_json, "image_base64": img_base64}
     # print(detection_json)
     # 直接返回图片文件
@@ -249,7 +254,8 @@ async def detect_luowen_with_draw(
     file: UploadFile = File(...),
 ):
     """处理图片，返回检测结果和绘制后的 Base64 图片"""
-
+    print('启动算法')
+    t1 =  time.time()
     # 读取图片数据
     contents = await file.read()
     image = np.frombuffer(contents, np.uint8)
@@ -280,7 +286,8 @@ async def detect_luowen_with_draw(
         img_base64 = base64.b64encode(buffer).decode("utf-8")
         detection_json = {}
         img_bytes = io.BytesIO(buffer)
-        
+    print('line 242')
+    print(time.time()-t1)
     return {"results": detection_json, "image_base64": img_base64}
 
     # 直接返回图片文件

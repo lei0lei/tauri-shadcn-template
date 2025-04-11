@@ -59,6 +59,8 @@ pub fn spawn_and_monitor_fastapi_sidecar(app_handle: tauri::AppHandle) -> Result
         .arg("-m")
         .arg("uvicorn")  // 只指定 uvicorn 模块
         .arg("app.app:app") // 将 FastAPI 应用传给 uvicorn
+        .arg("--lifespan")
+        .arg("on")
         .stdout(Stdio::piped()) // 捕获标准输出
         .stderr(Stdio::piped()) // 捕获错误输出
         .creation_flags(CREATE_NO_WINDOW)  // 👈 添加这一行隐藏窗口
@@ -124,14 +126,27 @@ pub fn spawn_and_monitor_fastapi_sidecar(app_handle: tauri::AppHandle) -> Result
                 let app_handle = app_handle.clone(); // Clone the Arc here
                 async move {
                     let mut line = String::new();
-                    while stderr_reader.read_line(&mut line).await.unwrap() > 0 {
-                        eprintln!("Sidecar stdout: {}", line);
-
-                        // Emit the line to the frontend (directly without locking)
-                        app_handle
-                            .emit("sidecar-stdout", line.clone())
-                            .expect("Failed to emit sidecar stderr event");
-                        line.clear();
+                    loop {
+                        match stderr_reader.read_line(&mut line).await {
+                            Ok(0) => {
+                                // 如果返回 0，表示流结束，跳出循环
+                                break;
+                            }
+                            Ok(_) => {
+                                eprintln!("Sidecar stdout: {}", line);
+            
+                                // Emit the line to the frontend (directly without locking)
+                                if let Err(e) = app_handle.emit("sidecar-stdout", line.clone()) {
+                                    eprintln!("Failed to emit sidecar stderr event: {}", e);
+                                }
+                                line.clear();
+                            }
+                            Err(e) => {
+                                // 处理读取错误
+                                eprintln!("Error reading stderr: {}", e);
+                                break;  // 可以选择退出循环或进行其他错误处理
+                            }
+                        }
                     }
                 }
             });

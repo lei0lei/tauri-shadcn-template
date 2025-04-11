@@ -266,7 +266,7 @@ impl TaskState {
   }
 
   // TODO 汇总某个孔位的所有结果，孔位OK/NG逻辑位于此处,并且返回record用来插入数据库
-  pub async fn get_hole_result_record(&self,face_id: u16, hole_id: u16) ->database::surrealdb::HoleRecord{
+  pub async fn get_hole_result_record(&self,face_id: u16, hole_id: u16, hole_config: &HoleConfig) ->database::surrealdb::HoleRecord{
     let artifact_id: i64 = match self.artifact_id {
       Some(val) => val,
       None => 0, // 自定义默认值
@@ -298,14 +298,12 @@ impl TaskState {
       let action4_orig_path = hole.action4_orig_path.as_ref().unwrap_or(&"wrong-path".to_string()).to_string();
       let action4_result_path = hole.action4_result_path.as_ref().unwrap_or(&"wrong-path".to_string()).to_string();
 
-      // 获取配方信息
-
       // 获取深度结果
-
+      let (depth, depth_result) = generate_depth_result(&action1, &action2, &hole_config);
       // 获取直径结果
 
       // 获取螺纹结果
-
+      let(luowen, luowen_result) = generate_detection_result(&action4, &hole_config);
       // 更新结果
 
 
@@ -313,30 +311,30 @@ impl TaskState {
         action1,                             // action1
         action2,                             // action2
         action3_json,                        // action3
-        action4_json,                             // action4
+        action4_json,                        // action4
         artifact_id as i64,                  // artifact_id
         self.current_artifact.clone(),       // artifact_name
-        12.5,                                // depth
-        Some(true),                          // depth_result
-        6.8,                                 // diameter
+        depth,                               // depth TODO
+        Some(depth_result),                  // depth_result TODO
+        6.8,                                 // diameter TODO
         action3_orig_path,                   // diameter_orig_path
         action3_result_path,                 // diameter_result_path
-        Some(true),                          // dimeter_result
+        Some(true),                          // dimeter_result TODO
         face_id as i32,                      // face_id
         hole_id as i32,                      // hole_id
         action4_orig_path,                   // luowen_orig_path
-        Some(false),                         // luowen_result
+        Some(luowen_result),                         // luowen_result TODO
         action4_result_path,                 // luowen_result_path
         Utc::now(),                          // update_time
-        self.current_artifact_type.clone(),  // standard_hole_type
-        true,                                // have_luowen
-        11.0,                                // depth_min
-        14.0,                                // depth_max
-        6.5,                                 // diameter_min
-        7.0,                                 // diameter_max
-        false,                               // thru_hole
-        Some(true),                          // 最终结果
-        true,                                // luowen
+        hole_config.screw_hole.clone(),  // standard_hole_type
+        hole_config.luowen,                                     // have_luowen
+        hole_config.depth_min,                                  // depth_min
+        hole_config.depth_max,                                  // depth_max
+        hole_config.diameter_min,                               // diameter_min
+        hole_config.diameter_max,                               // diameter_max
+        hole_config.thru_hole,                                  // thru_hole
+        Some(true),                          // 最终结果 TODO
+        luowen,                                // luowen  TODO
       );
       return dummy_record;
     }else{
@@ -381,38 +379,101 @@ impl TaskState {
 
   // 统计所有孔位检测结果
   pub async fn get_final_result(&self){
-
+    // 遍历所有孔位给出检测结果
 
   }
 }
 
-// 读取配方中配置文件
-pub async fn get_hole_config(artifact_type:String, face:u16, hole:u16){
-  
+#[derive(Clone,Serialize,Debug)]
+pub struct HoleConfig{
+  artifct_type:String,
+  face_id:u16,
+  hole_id:u16,
+  screw_hole:String,
+  thru_hole: bool,
+  luowen:bool,
+  diameter_min:f64,
+  diameter_max:f64,
+  depth_min:f64,
+  depth_max:f64,
+  enable_diameter:bool,
+  enable_depth:bool,
+  enable_luowen:bool,
+}
+
+impl HoleConfig {
+  pub fn new(artifact_type: String, face_id: u16, hole_id: u16) -> Option<Self> {
+      let config_guard = crate::config::config::CONFIG.read().ok()?;
+        
+    // 获取 config 配置，解开 Option 类型
+      let config = config_guard.as_ref()?;
+      let recipes = &config.recipes;
+
+      let face_char = match face_id {
+        1 => "A",
+        2 => "B",
+        3 => "C",
+        4 => "D",
+        5 => "E",
+        6 => "F",
+        _ => {
+            println!("face_id 不合法: {}", face_id);
+            return None;
+        }
+      };
+
+      let key_prefix = format!("type.{}.{}.{}", artifact_type, face_char, hole_id);
+      let get = |k: &str| recipes.get_value(&format!("{}.{}", key_prefix, k));
+
+      Some(HoleConfig {
+          artifct_type: artifact_type.clone(),
+          face_id,
+          hole_id,
+          screw_hole: get("screw_hole")?.as_str()?.to_string(),
+          thru_hole: get("thru_hole")?.as_bool()?,
+          luowen: get("luowen")?.as_bool()?,
+          diameter_min: get("diameter_min")?.as_float()?,
+          diameter_max: get("diameter_max")?.as_float()?,
+          depth_min: get("depth_min")?.as_float()?,
+          depth_max: get("depth_max")?.as_float()?,
+          enable_diameter: get("enable_diameter")?.as_bool()?,
+          enable_depth: get("enable_depth")?.as_bool()?,
+          enable_luowen: get("enable_luowen")?.as_bool()?,
+      })
+  }
 }
 
 // 获取螺纹检测结果
-// pub fn generate_detection_result(result: &Yolov8Result,have_luowen:bool) -> bool {
-//   result.detections.iter().any(|d| d.class_id == 0)
-// }
+pub fn generate_detection_result(result: &Yolov8Result,hole_config: &HoleConfig) -> (bool, bool) {
+  let has_luowen = result.class_id == 0;
+  let config_expect = hole_config.luowen;
+  let match_config = has_luowen == config_expect;
+  (has_luowen, match_config)
+}
 
 // 获取深度结果
-pub fn generate_depth_result(action1: &[f64], action2: &[f64], min_val: f64, max_val: f64, thru:bool) -> bool {
+pub fn generate_depth_result(action1: &[f64], action2: &[f64], hole_config: &HoleConfig) -> (f64, bool) {
   if action1.is_empty() || action2.is_empty() {
-    return false; // 避免空数组计算平均值导致错误
+    if hole_config.thru_hole {
+      return return (88888.0, true); // 避免空数组计算平均值导致错误
+    }else{
+      return return (88888.0, false);
+    }
   }
 
   let avg1 = action1.iter().sum::<f64>() / action1.len() as f64;
   let avg2 = action2.iter().sum::<f64>() / action2.len() as f64;
   let diff = (avg1 - avg2).abs();
   // 判断 diff 是否在 [min_val, max_val] 区间内
-  (min_val..=max_val).contains(&diff)
+  let is_ok = (hole_config.depth_min..=hole_config.depth_max).contains(&diff);
+  (diff, is_ok)
+
 }
 
 // 获取直径结果
-pub fn generate_diameter_result(diameter: &HoleDiameter, min_val: f64, max_val: f64) -> bool {
-  (min_val..=max_val).contains(&diameter.nei_diameter) && (min_val..=max_val).contains(&diameter.wai_diameter)
-}
+// pub fn generate_diameter_result(diameter: &HoleDiameter, hole_config: &HoleConfig) -> bool {
+  
+// }
 
 // ██████╗  █████╗ ████████╗██╗  ██╗
 // ██╔══██╗██╔══██╗╚══██╔══╝██║  ██║
@@ -938,7 +999,43 @@ pub fn save_image_base64(encoded_data: &str, full_path: &PathBuf) -> Result<(), 
   Ok(())
 }
 
+async fn send_null_image_to_fastapi()-> Result<(), &'static str>{
 
+    let width = 2448;
+    let height = 2048;
+
+    // 创建一个空的图像矩阵，使用默认值填充
+    let mut mat = unsafe {
+      Mat::new_rows_cols(height, width, CV_8UC3)
+          .map_err(|_| "Mat 创建失败")?
+  };
+    let mut jpeg_data: Vector<u8> = Vector::new();
+    imgcodecs::imencode(".jpg", &mat, &mut jpeg_data, &opencv::core::Vector::new())
+        .map_err(|_| "JPEG 编码失败")?;
+
+    let client = get_client().await;
+    let part = Part::bytes(jpeg_data.to_vec())
+        .file_name("empty_image.jpg")
+        .mime_str("image/jpeg")
+        .map_err(|_| "构造 Part 失败")?;
+    let form = Form::new().part("file", part);
+    let fastapi_url = "http://localhost:8000/detect_diameter_with_draw/";
+
+    let response = client
+      .post(fastapi_url)
+      .timeout(Duration::from_secs(1))
+      .multipart(form)
+      .send()
+      .await
+      .map_err(|_| "发送请求失败")?;
+
+    if response.status().is_success() {
+        Ok(())
+    } else {
+        Err("FastAPI 响应失败")
+    }
+
+}
 
 
 async fn send_image_to_fastapi(
@@ -952,6 +1049,8 @@ async fn send_image_to_fastapi(
   let face = task_state_tmp.current_face;
   let hole = task_state_tmp.current_hole;
   let artifact = task_state_tmp.current_artifact.clone();
+  let artifact_type = task_state_tmp.current_artifact_type.clone();
+
   drop(task_state_tmp);
 
   // 保存原图路径
@@ -963,7 +1062,6 @@ async fn send_image_to_fastapi(
   let artifact_part = artifact.clone();
   let pp = vec![date_part, artifact_part,face.to_string(),hole.to_string()]; // 使用 Vec<String>
 
-  // 获取当前孔位配置信息
 
   let width = frame_info.nWidth as i32;
   let height = frame_info.nHeight as i32;
@@ -1146,21 +1244,27 @@ async fn send_image_to_fastapi(
       app_handle.emit(&reciever, image_base64)
                 .map_err(|_| "发送到前端失败")?;
 
+      // 获取当前孔位配置信息
+      if let Some(hole_config) = HoleConfig::new(artifact_type.to_string(), face, hole) {
+        
+        // TODO：构造record孔位结果插入数据库
+        let task_state_tmp = GLOBAL_TASK_STATE.write().await;
+        let record =task_state_tmp.get_hole_result_record(task_state_tmp.current_face,task_state_tmp.current_hole,&hole_config).await;
+        
+        // 取出record中的判定结果
+        insert_hole_database(record).await;
 
-      // TODO：构造record孔位结果插入数据库
-      let task_state_tmp = GLOBAL_TASK_STATE.write().await;
-      let record =task_state_tmp.get_hole_result_record(task_state_tmp.current_face,task_state_tmp.current_hole).await;
-      insert_hole_database(record).await;
+        let final_result_data = FinalResultData {
+          face,         // u16 类型
+          hole,         // u16 类型
+          // artifact: artifact.clone(),  // 假设 artifact 仍然是 String 类型
+          final_result: true,
+        };
 
-      let final_result_data = FinalResultData {
-        face,         // u16 类型
-        hole,         // u16 类型
-        // artifact: artifact.clone(),  // 假设 artifact 仍然是 String 类型
-        final_result: true,
-      };
+        app_handle.emit("hole_final_result", final_result_data)
+                    .map_err(|_| "发送到前端失败")?;
 
-      app_handle.emit("hole_final_result", final_result_data)
-                  .map_err(|_| "发送到前端失败")?;
+      }
 
     }
     _ => {
@@ -1826,7 +1930,7 @@ async fn monitor_plc() -> Result<(), String> {
           match get_start_robot_from_plc_started().await{
             Ok(value) => {
               if value != 0 {
-
+                // send_null_image_to_fastapi().await;
                 match current_type.clone() {
                   Some(robot_type) => {
 
@@ -2500,7 +2604,10 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
 
   // 启动相机
   init_mvs_sdk();
-
+  println!("前端窗口已加载，启动后台fastapi任务");
+  println!("[tauri] Creating fastapi sidecar...");
+  sidecar::sidecar::spawn_and_monitor_fastapi_sidecar(app_handle.clone()).ok();
+  println!("[tauri] Fastapi Sidecar spawned and monitoring started.");
   // 启动机器人异步通道
   tauri::async_runtime::spawn(async {
     // 启动硬件
@@ -2587,14 +2694,15 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
   let log = format!("[sensor] [info] [启动传感器数据采集]");
   sendlog2frontend(log.to_string());
   // insert_hole_database().await;
+
+
   });
 
-  println!("前端窗口已加载，启动后台fastapi任务");
-  println!("[tauri] Creating fastapi sidecar...");
-  sidecar::sidecar::spawn_and_monitor_fastapi_sidecar(app_handle.clone()).ok();
-  println!("[tauri] Fastapi Sidecar spawned and monitoring started.");
   // insert_hole_database().await;
   // insert_log_database();
+  // 发送一个假请求给fastapi
+
+
   Ok(())
 }
 

@@ -66,6 +66,7 @@ pub async fn start_plc_task(plc_addr: SocketAddr, mut rx: mpsc::Receiver<ModbusR
                 match request {
                     // 读取保持寄存器
                     ModbusRequest::ReadRegister(reg, resp_tx) => {
+                        // println!("line 69");
                         let result = ctx.read_holding_registers(reg, 1).await
                             .map_err(|e| e.to_string())  // 处理 tokio_modbus::Error
                             .and_then(|inner_result| inner_result.map_err(|e| e.to_string()))  // 处理 ExceptionCode
@@ -165,10 +166,16 @@ pub async fn start_plc_task(plc_addr: SocketAddr, mut rx: mpsc::Receiver<ModbusR
 pub async fn read_register_plc(reg_address: u16) -> Result<u16, String> {
     let (resp_tx, resp_rx) = oneshot::channel();  // 创建响应通道
     // 获取全局的 tx
-    let tx = PLC_TX.lock().await.clone().unwrap_or_else(|| {
-      panic!("PLC_TX is not initialized. Ensure that start_plc_connect() has been called.");
-    });
-    tx.send(ModbusRequest::ReadRegister(reg_address, resp_tx)).await.map_err(|_| "发送请求失败".to_string())?;
+    let Some(tx) = PLC_TX.lock().await.clone() else {
+        return Err("PLC_TX 未初始化，请先调用 start_plc_connection()".to_string());
+    };
+    if let Err(_) = tx.send(ModbusRequest::ReadRegister(reg_address, resp_tx)).await {
+        println!("发送请求失败，尝试重启PLC连接...");
+        // stop_plc_connection().await;
+        // *PLC_TX.lock().await = None;
+        // start_plc_connection();
+        return Err("发送请求失败，已尝试重启PLC连接".to_string());
+    }
   
     match resp_rx.await {
         Ok(Ok(value)) => Ok(value),  // 返回读取的寄存器值
@@ -180,9 +187,18 @@ pub async fn read_register_plc(reg_address: u16) -> Result<u16, String> {
 // 写入plc寄存器
 pub async fn write_register_plc(reg_address: u16, value: u16)-> Result<(), String>{
     let (resp_tx, resp_rx) = oneshot::channel();
-    let tx = PLC_TX.lock().await.clone().unwrap();
-    // 注意此处没有对消息发送出错的处理
-    tx.send(ModbusRequest::WriteRegister(reg_address, value, resp_tx)).await.map_err(|_| "发送请求失败".to_string())?;
+    let Some(tx) = PLC_TX.lock().await.clone() else {
+        return Err("PLC_TX 未初始化，请先调用 start_plc_connection()".to_string());
+    };
+    
+    // 尝试发送消息
+    if let Err(_) = tx.send(ModbusRequest::WriteRegister(reg_address, value, resp_tx)).await {
+        println!("发送写入请求失败，尝试重启PLC连接...");
+        // stop_plc_connection().await;
+        // *PLC_TX.lock().await = None;
+        // start_plc_connection();
+        return Err("发送写入请求失败，已尝试重启PLC连接".to_string());
+    }
     match resp_rx.await {
         Ok(Ok(())) => Ok(()),
         Ok(Err(e)) => Err(e.to_string()),
@@ -225,7 +241,7 @@ pub async fn start_plc_connect(plc_addr: std::net::SocketAddr) -> Result<bool, S
   
     // 启动异步任务
     tokio::spawn(start_plc_task(plc_addr.clone(), rx));
-  
+    println!("line 228");
     Ok(true) // 成功返回 true
   }
 
@@ -262,16 +278,16 @@ pub fn start_plc_connection(){
         if let Some(plc_addr) = get_plc_ip_port() {
         // 将读取到的 ip_port 转换为 SocketAddr 类型
         
-        if let Ok(socket_addr) = plc_addr.parse::<SocketAddr>() {
-            // 启动 PLC 连接
-            let _ = start_plc_connect(socket_addr).await;
-            println!("plc:modbus tcp连接创建完毕");
+            if let Ok(socket_addr) = plc_addr.parse::<SocketAddr>() {
+                // 启动 PLC 连接
+                let _ = start_plc_connect(socket_addr).await;
+                println!("plc:modbus tcp连接创建完毕");
+            } else {
+                println!("PLC ip_port 格式错误: {}", plc_addr);
+            }
         } else {
-            println!("PLC ip_port 格式错误: {}", plc_addr);
+            println!("PLC ip_port not found.");
         }
-    } else {
-        println!("PLC ip_port not found.");
-    }
     });
 }
   

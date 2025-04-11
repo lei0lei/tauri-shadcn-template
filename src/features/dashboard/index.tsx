@@ -45,6 +45,7 @@ export default function Dashboard() {
           // 初始化数据库并将实例存储到 Zustand
           const db = await getDb();
           setDbInstance(db); // 将实例保存到 Zustand store
+          console.log("数据库连接成功");
         } catch (err) {
           console.error("数据库连接失败:", err);
         }

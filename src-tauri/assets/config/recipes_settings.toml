@@ -11,21 +11,28 @@ run_sequence = ['A','B','C','D','E','F']
 [type.TEST.A]
 run_sequence = [1,2]
 [type.TEST.A.1]
-thru_home = true
+thru_hole = true
 screw_hole = 'M8-1.25'
 diameter_min = 6.7
 diameter_max = 6.9
 depth_min = 16.5
 depth_max = 17.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
 [type.TEST.A.2]
-thru_home = true
+thru_hole = true
 screw_hole = 'M8-1.25'
 diameter_min = 6.7
 diameter_max = 6.9
 depth_min = 16.5
 depth_max = 17.5
-
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 # =====================================================================
 
 [type.EH09]
@@ -36,97 +43,140 @@ run_sequence = ['A','B','C','D','E','F']
 run_sequence = [1,2]
 
 [type.EH09.A.1]
-thru_home = true
+thru_hole = false
 screw_hole = 'M8-1.25'
 diameter_min = 6.7
 diameter_max = 6.9
 depth_min = 16.5
 depth_max = 17.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
 [type.EH09.A.2]
-thru_home = true
+thru_hole = false
 screw_hole = 'M8-1.25'
 diameter_min = 6.7
 diameter_max = 6.9
 depth_min = 16.5
 depth_max = 17.5
-
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 # +++++++++++++++++++++++++++++++EH09-B++++++++++++++++++++++++++++++++++++++++
 
 [type.EH09.B]
 run_sequence = [1,2,3,4,5,6,7,8,9]
 
 [type.EH09.B.1]
-thru_home = true
+thru_hole = true
 screw_hole = 'M8-1.25'
 diameter_min = 6.7
 diameter_max = 6.9
-depth_min = 1000
-depth_max = 2000
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
 [type.EH09.B.2]
-thru_home = true
+thru_hole = false
 screw_hole = 'M6-1'
 diameter_min = 4.9
 diameter_max = 5.1
 depth_min = 19.5
 depth_max = 20.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
 [type.EH09.B.3]
-thru_home = true
+thru_hole = false
 screw_hole = 'M6-1'
 diameter_min = 4.9
 diameter_max = 5.1
 depth_min = 19.5
 depth_max = 20.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
 [type.EH09.B.4]
-thru_home = true
+thru_hole = true
 screw_hole = 'M8-1.25'
 diameter_min = 6.7
 diameter_max = 6.9
-depth_min = 1000
-depth_max = 2000
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
 [type.EH09.B.5]
-thru_home = true
+thru_hole = false
 screw_hole = 'M6-1'
 diameter_min = 4.9
 diameter_max = 5.1
-depth_min = 13
-depth_max = 14
+depth_min = 13.0
+depth_max = 14.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
 [type.EH09.B.6]
-thru_home = true
+thru_hole = true
 screw_hole = 'M8-1.25'
 diameter_min = 6.7
 diameter_max = 6.9
-depth_min = 1000
-depth_max = 2000
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
 [type.EH09.B.7]
-thru_home = true
+thru_hole = false
 screw_hole = 'M6-1'
 diameter_min = 4.9
 diameter_max = 5.1
-depth_min = 13
-depth_max = 14
+depth_min = 13.0
+depth_max = 14.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
 [type.EH09.B.8]
-thru_home = true
+thru_hole = false
 screw_hole = 'M8-1.25'
 diameter_min = 6.7
 diameter_max = 6.9
-depth_min = 20
-depth_max = 21
+depth_min = 20.0
+depth_max = 21.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
 [type.EH09.B.9]
-thru_home = true
+thru_hole = false
 screw_hole = 'M6-1'
 diameter_min = 4.9
 diameter_max = 5.1
-depth_min = 13
-depth_max = 14
+depth_min = 13.0
+depth_max = 14.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
 # +++++++++++++++++++++++++++++++EH09-C++++++++++++++++++++++++++++++++++++++++
 
@@ -134,235 +184,340 @@ depth_max = 14
 run_sequence = [1,2,3,4,5]
 
 [type.EH09.C.1]
-thru_home = true
+thru_hole = true
 screw_hole = 'M6'
 diameter_min = 4.9
 diameter_max = 5.1
-depth_min = 1000
-depth_max = 2000
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
 [type.EH09.C.2]
-thru_home = true
+thru_hole = true
 screw_hole = 'M6'
 diameter_min = 4.9
 diameter_max = 5.1
-depth_min = 1000
-depth_max = 2000
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
 [type.EH09.C.3]
-thru_home = true
+thru_hole = false
 screw_hole = 'M6'
 diameter_min = 4.9
 diameter_max = 5.1
 depth_min = 14.5
 depth_max = 15.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
-[type.EH09.C.4]
-thru_home = true
+[type.EH09.C.5]
+thru_hole = false
 screw_hole = '-'
 diameter_min = 4.9
 diameter_max = 5.1
 depth_min = 14.5
 depth_max = 15.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
-[type.EH09.C.5]
-thru_home = true
+[type.EH09.C.4]
+thru_hole = false
 screw_hole = 'M6'
 diameter_min = 4.9
 diameter_max = 5.1
 depth_min = 14.5
 depth_max = 15.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 # +++++++++++++++++++++++++++++++EH09-D++++++++++++++++++++++++++++++++++++++++
 
 [type.EH09.D]
 run_sequence = [1,2,3,4,5,6,7,8,9,10,11,12]
 
 [type.EH09.D.1]
-thru_home = true
+thru_hole = true
 screw_hole = 'M6-1'
 diameter_min = 4.9
 diameter_max = 5.1
-depth_min = 1000
-depth_max = 2000
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
 [type.EH09.D.2]
-thru_home = true
+thru_hole = false
 screw_hole = 'M6-1'
 diameter_min = 4.9
 diameter_max = 5.1
 depth_min = 16.5
 depth_max = 17.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
 [type.EH09.D.3]
-thru_home = true
+thru_hole = false
 screw_hole = 'M6-1'
 diameter_min = 4.9
 diameter_max = 5.1
 depth_min = 16.5
 depth_max = 17.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
 [type.EH09.D.4]
-thru_home = true
+thru_hole = false
 screw_hole = 'M6-1'
 diameter_min = 4.9
 diameter_max = 5.1
 depth_min = 16.5
 depth_max = 17.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
 [type.EH09.D.5]
-thru_home = true
+thru_hole = false
 screw_hole = 'M6-1'
 diameter_min = 4.9
 diameter_max = 5.1
 depth_min = 15.5
 depth_max = 16.5
-
-
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
 [type.EH09.D.6]
-thru_home = true
+thru_hole = true
 screw_hole = 'M6-1'
 diameter_min = 4.9
 diameter_max = 5.1
-depth_min = 1000
-depth_max = 2000
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
 [type.EH09.D.7]
-thru_home = true
+thru_hole = true
 screw_hole = 'M6-1'
 diameter_min = 4.9
 diameter_max = 5.1
-depth_min = 1000
-depth_max = 2000
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
 [type.EH09.D.8]
-thru_home = true
+thru_hole = true
 screw_hole = 'M6-1'
 diameter_min = 4.9
 diameter_max = 5.1
-depth_min = 1000
-depth_max = 2000
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
 [type.EH09.D.9]
-thru_home = true
+thru_hole = true
 screw_hole = 'M5-0.8'
 diameter_min = 4.1
 diameter_max = 4.3
-depth_min = 1000
-depth_max = 2000
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
 [type.EH09.D.10]
-thru_home = true
+thru_hole = true
 screw_hole = 'M6-1'
 diameter_min = 4.9
 diameter_max = 5.1
-depth_min = 1000
-depth_max = 2000
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
 [type.EH09.D.11]
-thru_home = true
+thru_hole = true
 screw_hole = 'M6-1'
 diameter_min = 4.9
 diameter_max = 5.1
-depth_min = 1000
-depth_max = 2000
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
 [type.EH09.D.12]
-thru_home = true
+thru_hole = true
 screw_hole = 'M6-1'
 diameter_min = 4.9
 diameter_max = 5.1
-depth_min = 1000
-depth_max = 2000
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 # +++++++++++++++++++++++++++++++EH09-E++++++++++++++++++++++++++++++++++++++++
 
 [type.EH09.E]
 run_sequence = [1,2,3,4,5,6]
 
 [type.EH09.E.1]
-thru_home = true
+thru_hole = false
 screw_hole = 'M8'
 diameter_min = 6.7
 diameter_max = 6.9
-depth_min = 18
-depth_max = 19
+depth_min = 18.0
+depth_max = 19.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
 [type.EH09.E.2]
-thru_home = true
+thru_hole = false
 screw_hole = 'M6'
 diameter_min = 4.9
 diameter_max = 5.1
-depth_min = 15
-depth_max = 16
+depth_min = 15.0
+depth_max = 16.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
 [type.EH09.E.3]
-thru_home = true
+thru_hole = false
 screw_hole = 'M8'
 diameter_min = 6.7
 diameter_max = 6.9
-depth_min = 18
-depth_max = 19
+depth_min = 18.0
+depth_max = 19.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
 [type.EH09.E.4]
-thru_home = true
+thru_hole = false
 screw_hole = 'M8'
 diameter_min = 6.7
 diameter_max = 6.9
-depth_min = 18
-depth_max = 19
+depth_min = 18.0
+depth_max = 19.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
 [type.EH09.E.5]
-thru_home = true
+thru_hole = false
 screw_hole = 'M6'
 diameter_min = 4.9
 diameter_max = 5.1
-depth_min = 15
-depth_max = 16
+depth_min = 15.0
+depth_max = 16.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
 [type.EH09.E.6]
-thru_home = true
+thru_hole = false
 screw_hole = 'M8'
 diameter_min = 6.7
 diameter_max = 6.9
-depth_min = 18
-depth_max = 19
+depth_min = 18.0
+depth_max = 19.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 # +++++++++++++++++++++++++++++++EH09-F++++++++++++++++++++++++++++++++++++++++
 
 [type.EH09.F]
 run_sequence = [1,2,3,4]
 
 [type.EH09.F.1]
-thru_home = true
+thru_hole = true
 screw_hole = 'M8-1.25'
 diameter_min = 6.7
 diameter_max = 6.9
-depth_min = 1000
-depth_max = 2000
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
 [type.EH09.F.2]
-thru_home = true
+thru_hole = true
 screw_hole = 'M8-1.25'
 diameter_min = 6.7
 diameter_max = 6.9
-depth_min = 1000
-depth_max = 2000
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
 [type.EH09.F.3]
-thru_home = true
+thru_hole = true
 screw_hole = 'M8-1.25'
 diameter_min = 6.7
 diameter_max = 6.9
-depth_min = 1000
-depth_max = 2000
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
 [type.EH09.F.4]
-thru_home = true
+thru_hole = false
 screw_hole = 'M8-1.25'
 diameter_min = 6.7
 diameter_max = 6.9
 depth_min = 31.5
 depth_max = 32.5
-
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 # ==========================================================================================
 
 
