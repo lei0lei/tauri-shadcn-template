@@ -21,7 +21,7 @@ import { Separator } from '@radix-ui/react-separator'
 import { useDashboardStore } from "@/stores/dashboardStore";
 import { IconCheck, IconX, IconCamera, IconParkingCircleFilled, IconAsset, IconServer, IconCircle, IconDeviceFloppy } from "@tabler/icons-react";
 // import Surreal from 'surrealdb';
-
+import { getDb } from "@/utils/surreal"; // 引入数据库初始化函数
 
 const iconMap : Record<string, React.ComponentType>= {
   "相机": IconCamera,
@@ -35,26 +35,24 @@ const iconMap : Record<string, React.ComponentType>= {
 import { invoke } from '@tauri-apps/api/core';
 
 export default function Dashboard() {
-  // const dbInstance = useDashboardStore((state) => state.dbInstance);
-  // const setDbInstance = useDashboardStore((state) => state.setDbInstance);
+  const dbInstance = useDashboardStore((state) => state.dbInstance);
+  const setDbInstance = useDashboardStore((state) => state.setDbInstance);
 
-  // useEffect(() => {
-  //   if (!dbInstance) {
-  //     // 只有在 dbInstance 不存在时才创建新的实例
-  //     const initializeDb = async () => {
-  //       const db = new Surreal({
-  //         url: "http://localhost:8000",
-  //         ns: "test", // 设置你的命名空间
-  //         db: "testdb", // 设置数据库名称
-  //       });
+  useEffect(() => {
+    const initializeDb = async () => {
+      if (!dbInstance) {
+        try {
+          // 初始化数据库并将实例存储到 Zustand
+          const db = await getDb();
+          setDbInstance(db); // 将实例保存到 Zustand store
+        } catch (err) {
+          console.error("数据库连接失败:", err);
+        }
+      }
+    };
 
-  //       await db.connect();
-  //       setDbInstance(db); // 将数据库实例存储在 Zustand 中
-  //     };
-
-  //     initializeDb();
-  //   }
-  // }, [dbInstance, setDbInstance]);
+    initializeDb();
+  }, [dbInstance, setDbInstance]);
 
   // @ts-ignore
   const { logs, setLogs, artifactType,setArtifactType,statics,artifact,setArtifact} = useDashboardStore();

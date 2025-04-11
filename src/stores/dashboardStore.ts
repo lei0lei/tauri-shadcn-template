@@ -2,12 +2,6 @@ import { create } from "zustand";
 import Surreal from 'surrealdb';
 
 
-// interface DbConfig {
-//   url: string;
-//   namespace: string;
-//   database: string;
-// }
-
 interface LogShow {
     sender: string;
     level: string;
