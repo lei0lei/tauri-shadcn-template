@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { listen } from '@tauri-apps/api/event';
 import { useDashboardStore } from "@/stores/dashboardStore";
-
+import placeholder from "@/assets/placeholder.svg";
 
 export function Overview() {
 
@@ -125,7 +125,10 @@ export function Overview() {
                   className="w-full h-full object-cover"
                 />
             ) : (
-              <p className="text-gray-500">No Image</p>
+              <img
+                src={placeholder}
+                alt="Image"
+            />
             )}
           </TransformComponent>
         </TransformWrapper>
@@ -140,7 +143,10 @@ export function Overview() {
                   className="w-full h-full object-cover"
                 />
             ) : (
-              <p className="text-gray-500">No Image</p>
+              <img
+                src={placeholder}
+                alt="Image"
+            />
             )}
           </TransformComponent>
         </TransformWrapper>

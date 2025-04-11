@@ -2,13 +2,12 @@ import { Badge } from "@/components/ui/badge"; // 引入Shadcn的Button和Badge�
 import { useDashboardStore } from "@/stores/dashboardStore"; // 导入 zustand store
 import { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog"; // 引入Shadcn的Dialog组件
+import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog"; // 引入Shadcn的Dialog组件
 // import { invoke } from '@tauri-apps/api/core';
-import { IconCircleCheck, IconCircleX } from "@tabler/icons-react"
 import { Separator } from "@/components/ui/separator"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+
 import { useState } from "react";
-import { Label } from "@/components/ui/label"
+
 const faceMapping: { [key: number]: string } = {
   1: "A",
   2: "B",
@@ -46,6 +45,13 @@ export default function ResultShow() {
         return;
       }
 
+      // 调用 Tauri 后端命令，传递 surface 和 holeIndex 参数
+      const dialogData = 'test';
+      console.log(surface);
+      console.log(holeIndex);
+      setDialogData(dialogData); // 更新 Dialog 中的数据
+      setDialogOpen(true);  // 打开 Dialog
+
       const faceId = faceReverseMapping[surface];
 
       const query = `
@@ -56,7 +62,7 @@ export default function ResultShow() {
       `;
 
       const surreal_result = await dbInstance.query(query, {
-        artifact:'2025_04_11_18_49_28_471',
+        artifact,
         faceId,
         holeId: holeIndex,
       });
@@ -70,6 +76,18 @@ export default function ResultShow() {
     } catch (error) {
       console.error("调用 Tauri 后端命令失败:", error);
     }
+    // try {
+    //   // 调用 Tauri 后端命令，传递 surface 和 holeIndex 参数
+    //   const dialogData = await invoke("get_face_hole_result", {
+    //     surface,
+    //     holeIndex,
+    //   });
+      
+    //   setDialogData(dialogData); // 更新 Dialog 中的数据
+    //   setDialogOpen(true);  // 打开 Dialog
+    // } catch (error) {
+    //   console.error("调用 Tauri 后端命令失败:", error);
+    // }
   };
 
   useEffect(() => {
@@ -116,6 +134,9 @@ export default function ResultShow() {
     };
   }, [clearResult]);
 
+
+
+
   return (
     <div className="space-y-1 flex-grow">
       {resultComponentValue.map((surface, index) => (
@@ -147,109 +168,60 @@ export default function ResultShow() {
                     ? "bg-red-700 text-white"
                     : "bg-gray-700 text-white"
                 }`} // 根据状态颜色显示
-                onClick={() =>handleBadgeClick(surface.surface, idx + 1)}
+                onClick={() => hole !== null && handleBadgeClick(surface.surface, idx + 1)}
               />
             ))}
           </div>
         </div>
       ))}
       {/* Dialog 组件 */}
-      {dialogData && (
-      <Dialog open={isDialogOpen && dialogData !== null} onOpenChange={setDialogOpen}>
+      <Dialog open={isDialogOpen} onOpenChange={setDialogOpen}>
         <DialogTrigger />
-        <DialogContent className="max-w-xl">
-        <DialogHeader>
-          <div className="flex items-center gap-6 flex-wrap">
-            <DialogTitle className="text-2xl">孔位检测详情</DialogTitle>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1">
-              <Badge className="text-base"> 面{dialogData.face_id}</Badge>
-              </div>
-              <div className="flex items-center gap-1">
-              <Badge className="text-base"> #{dialogData.hole_id}</Badge>
-              </div>
-              <div className="flex items-center gap-2">
-                  {/* <Label className="whitespace-nowrap">型号：</Label> */}
-                  <Badge className="text-base" >{dialogData.standard_hole_type}</Badge>
-                </div>
-                <div className="flex items-center gap-2">
-                <Badge className={dialogData.hole_result ? "bg-green-700 text-white text-base" : "bg-red-700 text-white text-base"}>
-                {dialogData.hole_result ? "OK" : "NG"}
-              </Badge>
-                </div>
-            </div>
-          </div>
-        </DialogHeader>
-
+        <DialogContent>
+          <DialogTitle>孔详细信息</DialogTitle>
+          <DialogDescription>
           {dialogData ? (
-            <div className="space-y-6">
-              {/* 上方基础信息：一行内显示 */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div><strong>面</strong>: {dialogData.face_id}</div>
+                <div><strong>孔索引</strong>: {dialogData.hole_id}</div>
+                <div><strong>深度</strong>: {dialogData.depth}</div>
+                <div><strong>孔类型</strong>: {dialogData.standard_hole_type}</div>
+                <div><strong>直径</strong>: {dialogData.diameter}（{dialogData.diameter_min} ~ {dialogData.diameter_max}）</div>
+              </div>
+
               <Separator />
 
-              {/* 下方检测结果卡片（竖排） */}
-              <div className="flex flex-col gap-4">
-                {/* 深度检测 */}
-                <Card>
-                  <CardHeader className="flex-row justify-between items-center">
-                    <div className="flex items-center gap-4">
-                      <CardTitle className="text-lg">深度检测</CardTitle>
-                      <span className="text-muted-foreground text-sm">通孔：{dialogData.thru_hole ? "是" : "否"}</span>
-                    </div>
-                    {dialogData.depth_result ? (
-                      <IconCircleCheck className="text-green-700 w-11 h-11" />
-                    ) : (
-                      <IconCircleX className="text-red-700 w-11 h-11" />
-                    )}
-                  </CardHeader>
-                  <CardContent className="text-base space-y-1">
-                    <div className="flex justify-between">
-                      <span>检测值：{dialogData.depth != null ? dialogData.depth.toFixed(4) : "无数据"}</span>
-                      <span>标准：{dialogData.depth_min} - {dialogData.depth_max}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-                {/* 直径检测 */}
-                <Card>
-                  <CardHeader className="flex-row justify-between items-center">
-                    <CardTitle className="text-lg">直径检测</CardTitle>
-                    {dialogData.dimeter_result ? (
-                      <IconCircleCheck className="text-green-700 w-11 h-11" />
-                    ) : (
-                      <IconCircleX className="text-red-700 w-11 h-11" />
-                    )}
-                  </CardHeader>
-                  <CardContent className="text-base space-y-1">
-                    <div className="flex justify-between">
-                      <span>检测值：{dialogData.diameter ?? "无数据"}</span>
-                      <span>标准：{dialogData.diameter_min} - {dialogData.diameter_max}</span>
-                    </div>
-                  </CardContent>
-                </Card>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <strong>螺纹检测</strong>:{" "}
+                  <Badge variant={dialogData.luowen_result ? "default" : "destructive"}>
+                    {dialogData.luowen_result ? "通过" : "不通过"}
+                  </Badge>
+                </div>
+                <div>
+                  <strong>孔整体检测</strong>:{" "}
+                  <Badge variant={dialogData.hole_result ? "default" : "destructive"}>
+                    {dialogData.hole_result ? "通过" : "不通过"}
+                  </Badge>
+                </div>
+              </div>
 
-                <Card>
-                  <CardHeader className="flex-row justify-between items-center">
-                    <CardTitle className="text-lg">螺纹检测</CardTitle>
-                    {dialogData.luowen_result ? (
-                      <IconCircleCheck className="text-green-700 w-11 h-11" />
-                    ) : (
-                      <IconCircleX className="text-red-700 w-11 h-11" />
-                    )}
-                  </CardHeader>
-                  <CardContent className="text-base space-y-1">
-                    <div className="flex justify-between">
-                      <span>检测值：{dialogData.luowen ? "是" : "否"}</span>
-                      <span>应有螺纹：{dialogData.have_luowen ? "是" : "否"}</span>
-                    </div>
-                  </CardContent>
-                </Card>
+              <Separator />
+
+              <div className="space-y-2">
+                <div><strong>内圆直径</strong>: {dialogData.action3?.nei_diameter}</div>
+                <div><strong>外圆直径</strong>: {dialogData.action3?.wai_diameter}</div>
+                <div><strong>识别置信度</strong>: {dialogData.action4?.confidence}</div>
               </div>
             </div>
           ) : (
-            <div className="text-center py-8 text-muted-foreground">加载中...</div>
+            <div>加载中...</div>
           )}
+          </DialogDescription>
         </DialogContent>
       </Dialog>
-      )}
+
     </div>
   );
 }
