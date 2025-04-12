@@ -8,7 +8,7 @@ import { IconCircleCheck, IconCircleX } from "@tabler/icons-react"
 import { Separator } from "@/components/ui/separator"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useState } from "react";
-import { Label } from "@/components/ui/label"
+// import { Label } from "@/components/ui/label"
 const faceMapping: { [key: number]: string } = {
   1: "A",
   2: "B",
@@ -56,7 +56,7 @@ export default function ResultShow() {
       `;
 
       const surreal_result = await dbInstance.query(query, {
-        artifact:'2025_04_11_18_49_28_471',
+        artifact,
         faceId,
         holeId: holeIndex,
       });
@@ -147,7 +147,8 @@ export default function ResultShow() {
                     ? "bg-red-700 text-white"
                     : "bg-gray-700 text-white"
                 }`} // 根据状态颜色显示
-                onClick={() =>handleBadgeClick(surface.surface, idx + 1)}
+                onClick={() => hole !== null && handleBadgeClick(surface.surface, idx + 1)}
+              
               />
             ))}
           </div>

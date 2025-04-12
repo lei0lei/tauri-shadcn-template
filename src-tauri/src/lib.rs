@@ -251,6 +251,13 @@ impl TaskState {
       }
   }
 
+  pub fn update_hole_result(&mut self, face_id: u16, hole_id: u16,result: Option<bool>){
+    if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
+      hole.result = result;
+    }
+  }
+
+
   // 动作3的检测结果
   pub async fn update_action3(&mut self, face_id: u16, hole_id: u16, diameter: HoleDiameter,orig_path:String, result_path:String) {
       if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
@@ -301,11 +308,12 @@ impl TaskState {
       // 获取深度结果
       let (depth, depth_result) = generate_depth_result(&action1, &action2, &hole_config);
       // 获取直径结果
-
+      let (diameter, diameter_result) = generate_diameter_result(&action3, &hole_config);
       // 获取螺纹结果
-      let(luowen, luowen_result) = generate_detection_result(&action4, &hole_config);
-      // 更新结果
-
+      let (luowen, luowen_result) = generate_detection_result(&action4, &hole_config);
+      // 更新孔位结果
+      let hole_result = depth_result && diameter_result && luowen_result;
+      // self.update_final_result(final_result);
 
       let dummy_record = database::surrealdb::HoleRecord::new(
         action1,                             // action1
@@ -316,25 +324,25 @@ impl TaskState {
         self.current_artifact.clone(),       // artifact_name
         depth,                               // depth TODO
         Some(depth_result),                  // depth_result TODO
-        6.8,                                 // diameter TODO
+        diameter as f64,                     // diameter TODO
         action3_orig_path,                   // diameter_orig_path
         action3_result_path,                 // diameter_result_path
-        Some(true),                          // dimeter_result TODO
+        Some(diameter_result),                // dimeter_result TODO
         face_id as i32,                      // face_id
         hole_id as i32,                      // hole_id
         action4_orig_path,                   // luowen_orig_path
-        Some(luowen_result),                         // luowen_result TODO
+        Some(luowen_result),                 // luowen_result TODO
         action4_result_path,                 // luowen_result_path
         Utc::now(),                          // update_time
-        hole_config.screw_hole.clone(),  // standard_hole_type
+        hole_config.screw_hole.clone(),      // standard_hole_type
         hole_config.luowen,                                     // have_luowen
         hole_config.depth_min,                                  // depth_min
         hole_config.depth_max,                                  // depth_max
         hole_config.diameter_min,                               // diameter_min
         hole_config.diameter_max,                               // diameter_max
         hole_config.thru_hole,                                  // thru_hole
-        Some(true),                          // 最终结果 TODO
-        luowen,                                // luowen  TODO
+        Some(hole_result),                          // 最终结果 TODO
+        luowen,                                     // luowen  TODO
       );
       return dummy_record;
     }else{
@@ -378,9 +386,9 @@ impl TaskState {
   }
 
   // 统计所有孔位检测结果
-  pub async fn get_final_result(&self){
+  pub async fn update_final_result(&self)-> Option<bool>{
     // 遍历所有孔位给出检测结果
-
+    self.result
   }
 }
 
@@ -471,9 +479,11 @@ pub fn generate_depth_result(action1: &[f64], action2: &[f64], hole_config: &Hol
 }
 
 // 获取直径结果
-// pub fn generate_diameter_result(diameter: &HoleDiameter, hole_config: &HoleConfig) -> bool {
-  
-// }
+pub fn generate_diameter_result(diameter: &HoleDiameter, hole_config: &HoleConfig) -> (f64, bool) {
+  let real_diameter = diameter.nei_diameter * 0.01-0.12;
+  let is_ok = real_diameter >= hole_config.diameter_min && real_diameter <= hole_config.diameter_max;
+  (real_diameter, is_ok)
+}
 
 // ██████╗  █████╗ ████████╗██╗  ██╗
 // ██╔══██╗██╔══██╗╚══██╔══╝██║  ██║
@@ -1248,9 +1258,12 @@ async fn send_image_to_fastapi(
       if let Some(hole_config) = HoleConfig::new(artifact_type.to_string(), face, hole) {
         
         // TODO：构造record孔位结果插入数据库
-        let task_state_tmp = GLOBAL_TASK_STATE.write().await;
-        let record =task_state_tmp.get_hole_result_record(task_state_tmp.current_face,task_state_tmp.current_hole,&hole_config).await;
+        let mut task_state_tmp = GLOBAL_TASK_STATE.write().await;
+        let record =task_state_tmp.get_hole_result_record(face,hole,&hole_config).await;
         
+        // 更新孔位结果
+        task_state_tmp.update_hole_result(face,hole,record.get_hole_result());
+
         // 取出record中的判定结果
         insert_hole_database(record).await;
 
@@ -2593,6 +2606,9 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
   sidecar::sidecar::spawn_and_monitor_surrealdb_sidecar(app_handle.clone()).ok();
 
   start_database_connection();
+  // 创建一次假的modbus连接再断开
+
+
   // 启动plc modbus tcp异步通道
   start_plc_connection();
   // 启动机器人 modbus tcp异步通道
@@ -2694,7 +2710,7 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
   let log = format!("[sensor] [info] [启动传感器数据采集]");
   sendlog2frontend(log.to_string());
   // insert_hole_database().await;
-
+  send_null_image_to_fastapi().await;
 
   });
 

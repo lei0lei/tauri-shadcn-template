@@ -4,6 +4,7 @@ import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { listen } from '@tauri-apps/api/event';
 import { useDashboardStore } from "@/stores/dashboardStore";
 import placeholder from "@/assets/placeholder.svg";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function Overview() {
 
@@ -114,8 +115,8 @@ export function Overview() {
   return (
     <div className="flex flex-col justify-between w-full h-full">
       {/* 图片区域，增加上边距 mt-6，并居中 */}
-      <div className="grid grid-cols-2 gap-2 flex-grow min-h-[250px] mt-2 w-full">
-        <div className="flex justify-center items-center border rounded-lg overflow-hidden bg-gray-200">
+      <div className="grid grid-cols-2 gap-2 flex-grow min-h-[250px] max-h-[600px] mt-4 w-full">
+        <div className="flex justify-center items-center border rounded-lg overflow-hidden bg-gray-200 w-full h-full">
         <TransformWrapper>
           <TransformComponent  contentClass="w-full h-full">
           {image1 ? (
@@ -128,6 +129,7 @@ export function Overview() {
               <img
                 src={placeholder}
                 alt="Image"
+                className="w-full h-full object-contain"
             />
             )}
           </TransformComponent>
@@ -146,6 +148,7 @@ export function Overview() {
               <img
                 src={placeholder}
                 alt="Image"
+                className="w-full h-full object-contain"
             />
             )}
           </TransformComponent>
@@ -154,10 +157,26 @@ export function Overview() {
       </div>
       
       {/* 数字信息区域，增加 `mt-4` 以分隔图片区域 */}
-      <div className="grid grid-cols-2 gap-2 h-[70px] text-center mt-4 select-none">
-        <div className="flex justify-center items-center bg-gray-200 rounded-lg text-xl">{value1}</div>
-        <div className="flex justify-center items-center bg-gray-200 rounded-lg text-xl">{value2}</div>
-      </div>
+      <TooltipProvider>
+        <div className="grid grid-cols-2 gap-2 h-[100px] text-center select-none">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex justify-center items-center bg-gray-200 rounded-lg text-3xl">{value1}</div>
+              </TooltipTrigger>
+              <TooltipContent>
+              <p>基准面</p>
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex justify-center items-center bg-gray-200 rounded-lg text-3xl">{value2}</div>
+              </TooltipTrigger>
+              <TooltipContent>
+              <p>底面</p>
+              </TooltipContent>
+            </Tooltip>
+        </div>
+      </TooltipProvider>
     </div>
   )
 }

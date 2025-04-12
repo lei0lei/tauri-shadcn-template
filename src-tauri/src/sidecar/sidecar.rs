@@ -1,3 +1,5 @@
+#![allow(warnings)] 
+
 use std::sync::{Arc, Mutex};
 use tauri::{Emitter, Manager, RunEvent};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
@@ -36,15 +38,6 @@ pub fn spawn_and_monitor_fastapi_sidecar(app_handle: tauri::AppHandle) -> Result
             return Ok(()); // Exit early since sidecar is already running
         }
     }
-
-    // if let Some(fastapi_state) = app_handle.try_state::<Arc<Mutex<Option<Arc<Mutex<tokio::process::Child>>>>>>() {
-    //     let child_process = fastapi_state.lock().unwrap();
-    //     if child_process.is_some() {
-    //         // A sidecar is already running, do not spawn a new one
-    //         println!("[tauri] Sidecar is already running. Skipping spawn.");
-    //         return Ok(()); // Exit early since sidecar is already running
-    //     }
-    // }
     // Spawn sidecar
     let python_interpreter = if cfg!(target_os = "windows") {
         // 虚拟环境目录

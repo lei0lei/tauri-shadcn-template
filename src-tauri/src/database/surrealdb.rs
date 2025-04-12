@@ -232,6 +232,10 @@ impl HoleRecord {
       luowen,
     }
   }
+
+  pub fn get_hole_result(&self)->Option<bool>{
+    return self.hole_result;
+  }
 }
 
 

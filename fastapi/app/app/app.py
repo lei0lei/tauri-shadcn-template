@@ -34,6 +34,7 @@ import supervision as sv
 import base64
 from io import BytesIO
 from pydantic import BaseModel
+import asyncio
 # from cameras.local_image.image_gen import router as image_get_websocket_router
 # from cameras.hik.image_gen import router as image_hik_get_websocket_router
 # 配置 CORS
@@ -70,15 +71,13 @@ async def startup():
     yolo_model = YOLO(det_model_str).to(device)
     print("✅ YOLOv8 det模型加载完成")
     yolo_seg_model = YOLO(seg_model_str).to(device)
+    await asyncio.sleep(4)  # 等待模型稳定
     print("✅ YOLOv8 seg模型加载完成")
     dummy_img = np.zeros((2448, 2048, 3), dtype=np.uint8)  # 创建黑色图片
-    results = yolo_model('D:\\data\\2025_04_10\\2025_04_10_17_16_27_128\\3\\1\\3_orig.jpg')[0]
-    results = yolo_seg_model('D:\\data\\2025_04_10\\2025_04_10_17_16_27_128\\3\\1\\4_orig.jpg')[0]
+    results = yolo_model(dummy_img)[0]
+    results = yolo_seg_model(dummy_img)[0]
     torch.cuda.synchronize()
     print("🔥 预热完成，YOLOv8 已准备就绪")
-
-
-
 
 
 
@@ -108,6 +107,13 @@ async def root():
     return {"Algo list": "Hello World",
             "Command": "run"}
 
+@app.get("/warmup")
+async def warmup():
+    dummy_img = np.zeros((2448, 2048, 3), dtype=np.uint8)  # 创建黑色图片
+    results = yolo_model(dummy_img)[0]
+    results = yolo_seg_model(dummy_img)[0]
+    torch.cuda.synchronize()  # 等待所有 CUDA 操作完成
+    return {"msg": "模型已预热"}
 
 
 def parse_yolo_results(results):
