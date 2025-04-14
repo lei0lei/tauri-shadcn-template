@@ -371,6 +371,10 @@ lazy_static! {
     pub static ref ROBOT_TX: Arc<Mutex<Option<mpsc::Sender<ModbusRequest>>>> = Arc::new(Mutex::new(None));
 }
     
+lazy_static! {
+    static ref SENSOR_READ_QUEUE: Arc<Mutex<()>> = Arc::new(Mutex::new(()));
+}
+
 pub async fn start_robot_task(plc_addr: SocketAddr, mut rx: mpsc::Receiver<ModbusRequest>) -> Result<(), String> {
     
     match tcp::connect(plc_addr).await {
@@ -493,6 +497,7 @@ pub async fn read_register_robot(reg_address: u16) -> Result<u16, String> {
 
 // 读取多个机器人寄存器
 pub async fn read_multiple_registers_robot(start_address: u16, count: u16) -> Result<Vec<u16>, String> {
+    let _guard = SENSOR_READ_QUEUE.lock().await;
     let (resp_tx, resp_rx) = oneshot::channel();  // 创建响应通道
 
     // 获取全局的 tx

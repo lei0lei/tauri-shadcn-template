@@ -575,7 +575,7 @@ pub fn start_sensor_task(mut rx: std::sync::mpsc::Receiver<SensorsDataRequest>) 
             }
           };
           println!("cf3000位置：{:?}", pos.last());
-          println!("data: {}",data)
+          println!("data: {}",data);
           tx.send(GeneralRequest::SendSensorDataToFrontend(pos.clone(),data, resp_tx))
               .await
               .map_err(|_| "发送请求失败".to_string());
