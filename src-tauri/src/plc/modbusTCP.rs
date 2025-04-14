@@ -375,7 +375,7 @@ pub async fn start_robot_task(plc_addr: SocketAddr, mut rx: mpsc::Receiver<Modbu
     
     match tcp::connect(plc_addr).await {
         Ok(mut ctx) => {
-            println!("PLC 连接成功");
+            println!("机器人modbus 连接成功");
             while let Some(request) = rx.recv().await {
                 match request {
                     // 读取保持寄存器

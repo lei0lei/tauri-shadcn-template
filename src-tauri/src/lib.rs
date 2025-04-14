@@ -480,7 +480,7 @@ pub fn generate_depth_result(action1: &[f64], action2: &[f64], hole_config: &Hol
 
 // 获取直径结果
 pub fn generate_diameter_result(diameter: &HoleDiameter, hole_config: &HoleConfig) -> (f64, bool) {
-  let real_diameter = diameter.nei_diameter * 0.01-0.12;
+  let real_diameter = diameter.nei_diameter * 0.01-0.3;
   let is_ok = real_diameter >= hole_config.diameter_min && real_diameter <= hole_config.diameter_max;
   (real_diameter, is_ok)
 }
@@ -574,7 +574,8 @@ pub fn start_sensor_task(mut rx: std::sync::mpsc::Receiver<SensorsDataRequest>) 
                 return Err("读取寄存器失败".to_string());
             }
           };
-
+          println!("cf3000位置：{:?}", pos.last());
+          println!("data: {}",data)
           tx.send(GeneralRequest::SendSensorDataToFrontend(pos.clone(),data, resp_tx))
               .await
               .map_err(|_| "发送请求失败".to_string());
@@ -904,13 +905,15 @@ async fn send_sensor_data_to_frontend(
   match pos.last() {
     Some(&1) => {
 
-      sendlog2frontend("[robot] [info] [传感器触发-1----]".to_string());
+      // sendlog2frontend("[robot] [info] [传感器触发-1----]".to_string());
       // 访问当前状态，更新新孔位
       let mut task_state = GLOBAL_TASK_STATE.write().await;
       task_state.current_face = pos[0];
       task_state.current_hole = pos[1];
       task_state.add_hole(pos[0], pos[1]).await;
-
+      sendlog2frontend("[robot] [info] [传感器触发-1----]".to_string());
+      // let log = format!("位置：{}", pos.last);
+      // sendlog2frontend(log.to_string());
 
       let face = task_state.current_face;
       let hole = task_state.current_hole;
