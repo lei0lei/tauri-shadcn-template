@@ -59,106 +59,118 @@ lazy_static! {
 }
 
 pub async fn start_plc_task(plc_addr: SocketAddr, mut rx: mpsc::Receiver<ModbusRequest>) -> Result<(), String> {
-    match tcp::connect(plc_addr).await {
-        Ok(mut ctx) => {
-            println!("PLC 连接成功");
-            while let Some(request) = rx.recv().await {
-                match request {
-                    // 读取保持寄存器
-                    ModbusRequest::ReadRegister(reg, resp_tx) => {
-                        // println!("line 69");
-                        let result = ctx.read_holding_registers(reg, 1).await
-                            .map_err(|e| e.to_string())  // 处理 tokio_modbus::Error
-                            .and_then(|inner_result| inner_result.map_err(|e| e.to_string()))  // 处理 ExceptionCode
-                            .and_then(|vals| vals.get(0).copied().ok_or_else(|| "寄存器值为空".to_string()));  // 获取 Vec<u16> 的第一个元素
-                        let _ = resp_tx.send(result);
-                        }
-                    // 写入保持寄存器
-                    ModbusRequest::WriteRegister(reg, value, resp_tx) => {
-                        let result = ctx.write_single_register(reg, value).await
-                            .map_err(|e| e.to_string())  // 处理 tokio_modbus::Error
-                            .and_then(|inner_result| inner_result.map_err(|e| e.to_string()).or(Ok(()))); // 处理 ExceptionCode，确保最终是 Result<(), String>
-                        let _ = resp_tx.send(result);
-                    }
-                    // 读取 Coil
-                    ModbusRequest::ReadCoil(addr, resp_tx) => {
-                        let result = ctx.read_coils(addr, 1).await
-                            .map_err(|e| e.to_string())  // 处理外层 tokio_modbus::Error
-                            .and_then(|inner_result| inner_result.map_err(|e| e.to_string()))  // 处理 ExceptionCode
-                            .and_then(|vals| vals.get(0).copied().ok_or_else(|| "Coil 读取为空".to_string()));  // 安全地获取第一个元素
-                        let _ = resp_tx.send(result);
-                    }
-                    // 写入 Coil
-                    ModbusRequest::WriteCoil(addr, value, resp_tx) => {
-                        let result = ctx.write_single_coil(addr, value).await
-                            .map_err(|e| e.to_string())  // 处理 tokio_modbus::Error
-                            .and_then(|inner_result| inner_result.map_err(|e| e.to_string()).or(Ok(()))); // 处理 ExceptionCode
-                        let _ = resp_tx.send(result);
-                    }
-                    ModbusRequest::ReadMultipleRegisters(start, count, resp_tx) => {
-                        let result: Result<Vec<u16>, String> = ctx.read_holding_registers(start, count).await
-                            .map_err(|e| e.to_string())
-                            .and_then(|inner| inner.map_err(|e| e.to_string()));
-                        let _ = resp_tx.send(result);
-                    }
-                    ModbusRequest::WriteMultipleRegisters(start, values, resp_tx) => {
-                        let result: Result<(), String> = ctx.write_multiple_registers(start, &values).await
-                            .map_err(|e| e.to_string())
-                            .and_then(|inner| inner.map_err(|e| e.to_string()).map(|_| ()));
-                        let _ = resp_tx.send(result);
-                    }
-                    ModbusRequest::ReadMultipleCoils(start, count, resp_tx) => {
-                        let result: Result<Vec<bool>, String> = ctx.read_coils(start, count).await
-                            .map_err(|e| e.to_string())
-                            .and_then(|inner| inner.map_err(|e| e.to_string()));
-                        let _ = resp_tx.send(result);
-                    }
-                    ModbusRequest::WriteMultipleCoils(start, values, resp_tx) => {
-                        let result: Result<(), String> = ctx.write_multiple_coils(start, &values).await
-                            .map_err(|e| e.to_string())
-                            .and_then(|inner| inner.map_err(|e| e.to_string()).map(|_| ()));
-                        let _ = resp_tx.send(result);
-                    }
-                    ModbusRequest::MaskedWriteRegister(addr, and_mask, or_mask, resp_tx) => {
-                        let result: Result<(), String> = ctx.masked_write_register(addr, and_mask, or_mask).await
-                            .map_err(|e| e.to_string())
-                            .and_then(|inner| inner.map_err(|e| e.to_string()).map(|_| ()));
-                        let _ = resp_tx.send(result);
-                    }
-                    ModbusRequest::ReadDiscreteInputs(start, count, resp_tx) => {
-                        let result: Result<Vec<bool>, String> = ctx.read_discrete_inputs(start, count).await
-                            .map_err(|e| e.to_string())
-                            .and_then(|inner| inner.map_err(|e| e.to_string()));
-                        let _ = resp_tx.send(result);
-                    }
-                    ModbusRequest::ReadInputRegisters(start, count, resp_tx) => {
-                        let result: Result<Vec<u16>, String> = ctx.read_input_registers(start, count).await
-                            .map_err(|e| e.to_string())
-                            .and_then(|inner| inner.map_err(|e| e.to_string()));
-                        let _ = resp_tx.send(result);
-                    }
-                    ModbusRequest::ReadWriteMultipleRegisters(read_start, read_count, write_start, values, resp_tx) => {
-                        let result: Result<Vec<u16>, String> = ctx.read_write_multiple_registers(read_start, read_count, write_start, &values).await
-                            .map_err(|e| e.to_string())
-                            .and_then(|inner| inner.map_err(|e| e.to_string()));
-                        let _ = resp_tx.send(result);
-                    }
-                    // 收到停止信号停止plc连接
-                    ModbusRequest::STOP(resp_tx) => {
-                        println!("接收到 STOP 信号，终止任务");
-                        let _ = resp_tx.send(Ok(())); // 发送成功停止的信号
-                        break; // 直接跳出内层循环，结束任务
-                    }
-                }
+    // 尝试连接 3 次
+    let mut attempt = 0;
+    let mut ctx = loop {
+        match tcp::connect(plc_addr).await {
+            Ok(c) => {
+                println!("PLC 连接成功");
+                break c;
             }
-            println!("所有 `Sender` 已关闭，退出 PLC 任务 关闭plc连接");
-            Ok(()) // 任务完成，成功返回
+            Err(e) => {
+                attempt += 1;
+                println!("第 {} 次连接失败: {:?}, 重试中...", attempt, e);
+                if attempt >= 3 {
+                    return Err(format!("PLC 连接失败: {:?}, 请检查网络连接或 PLC 配置", e));
+                }
+                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            }
         }
-        Err(e) => {
-            // 连接失败时直接返回错误
-            Err(format!("PLC 连接失败: {:?}, 请检查网络连接或 PLC 配置", e))
+    };
+    
+    
+    while let Some(request) = rx.recv().await {
+        match request {
+            // 读取保持寄存器
+            ModbusRequest::ReadRegister(reg, resp_tx) => {
+                // println!("line 69");
+                let result = ctx.read_holding_registers(reg, 1).await
+                    .map_err(|e| e.to_string())  // 处理 tokio_modbus::Error
+                    .and_then(|inner_result| inner_result.map_err(|e| e.to_string()))  // 处理 ExceptionCode
+                    .and_then(|vals| vals.get(0).copied().ok_or_else(|| "寄存器值为空".to_string()));  // 获取 Vec<u16> 的第一个元素
+                let _ = resp_tx.send(result);
+                }
+            // 写入保持寄存器
+            ModbusRequest::WriteRegister(reg, value, resp_tx) => {
+                let result = ctx.write_single_register(reg, value).await
+                    .map_err(|e| e.to_string())  // 处理 tokio_modbus::Error
+                    .and_then(|inner_result| inner_result.map_err(|e| e.to_string()).or(Ok(()))); // 处理 ExceptionCode，确保最终是 Result<(), String>
+                let _ = resp_tx.send(result);
+            }
+            // 读取 Coil
+            ModbusRequest::ReadCoil(addr, resp_tx) => {
+                let result = ctx.read_coils(addr, 1).await
+                    .map_err(|e| e.to_string())  // 处理外层 tokio_modbus::Error
+                    .and_then(|inner_result| inner_result.map_err(|e| e.to_string()))  // 处理 ExceptionCode
+                    .and_then(|vals| vals.get(0).copied().ok_or_else(|| "Coil 读取为空".to_string()));  // 安全地获取第一个元素
+                let _ = resp_tx.send(result);
+            }
+            // 写入 Coil
+            ModbusRequest::WriteCoil(addr, value, resp_tx) => {
+                let result = ctx.write_single_coil(addr, value).await
+                    .map_err(|e| e.to_string())  // 处理 tokio_modbus::Error
+                    .and_then(|inner_result| inner_result.map_err(|e| e.to_string()).or(Ok(()))); // 处理 ExceptionCode
+                let _ = resp_tx.send(result);
+            }
+            ModbusRequest::ReadMultipleRegisters(start, count, resp_tx) => {
+                let result: Result<Vec<u16>, String> = ctx.read_holding_registers(start, count).await
+                    .map_err(|e| e.to_string())
+                    .and_then(|inner| inner.map_err(|e| e.to_string()));
+                let _ = resp_tx.send(result);
+            }
+            ModbusRequest::WriteMultipleRegisters(start, values, resp_tx) => {
+                let result: Result<(), String> = ctx.write_multiple_registers(start, &values).await
+                    .map_err(|e| e.to_string())
+                    .and_then(|inner| inner.map_err(|e| e.to_string()).map(|_| ()));
+                let _ = resp_tx.send(result);
+            }
+            ModbusRequest::ReadMultipleCoils(start, count, resp_tx) => {
+                let result: Result<Vec<bool>, String> = ctx.read_coils(start, count).await
+                    .map_err(|e| e.to_string())
+                    .and_then(|inner| inner.map_err(|e| e.to_string()));
+                let _ = resp_tx.send(result);
+            }
+            ModbusRequest::WriteMultipleCoils(start, values, resp_tx) => {
+                let result: Result<(), String> = ctx.write_multiple_coils(start, &values).await
+                    .map_err(|e| e.to_string())
+                    .and_then(|inner| inner.map_err(|e| e.to_string()).map(|_| ()));
+                let _ = resp_tx.send(result);
+            }
+            ModbusRequest::MaskedWriteRegister(addr, and_mask, or_mask, resp_tx) => {
+                let result: Result<(), String> = ctx.masked_write_register(addr, and_mask, or_mask).await
+                    .map_err(|e| e.to_string())
+                    .and_then(|inner| inner.map_err(|e| e.to_string()).map(|_| ()));
+                let _ = resp_tx.send(result);
+            }
+            ModbusRequest::ReadDiscreteInputs(start, count, resp_tx) => {
+                let result: Result<Vec<bool>, String> = ctx.read_discrete_inputs(start, count).await
+                    .map_err(|e| e.to_string())
+                    .and_then(|inner| inner.map_err(|e| e.to_string()));
+                let _ = resp_tx.send(result);
+            }
+            ModbusRequest::ReadInputRegisters(start, count, resp_tx) => {
+                let result: Result<Vec<u16>, String> = ctx.read_input_registers(start, count).await
+                    .map_err(|e| e.to_string())
+                    .and_then(|inner| inner.map_err(|e| e.to_string()));
+                let _ = resp_tx.send(result);
+            }
+            ModbusRequest::ReadWriteMultipleRegisters(read_start, read_count, write_start, values, resp_tx) => {
+                let result: Result<Vec<u16>, String> = ctx.read_write_multiple_registers(read_start, read_count, write_start, &values).await
+                    .map_err(|e| e.to_string())
+                    .and_then(|inner| inner.map_err(|e| e.to_string()));
+                let _ = resp_tx.send(result);
+            }
+            // 收到停止信号停止plc连接
+            ModbusRequest::STOP(resp_tx) => {
+                println!("接收到 STOP 信号，终止任务");
+                let _ = resp_tx.send(Ok(())); // 发送成功停止的信号
+                break; // 直接跳出内层循环，结束任务
+            }
         }
     }
+    println!("所有 `Sender` 已关闭，退出 PLC 任务 关闭plc连接");
+    Ok(()) // 任务完成，成功返回
+       
 
 }
 

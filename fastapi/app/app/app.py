@@ -73,7 +73,7 @@ async def startup():
     yolo_seg_model = YOLO(seg_model_str).to(device)
     await asyncio.sleep(4)  # 等待模型稳定
     print("✅ YOLOv8 seg模型加载完成")
-    dummy_img = np.zeros((2448, 2048, 3), dtype=np.uint8)  # 创建黑色图片
+    dummy_img = np.random.randint(0, 255, (2448, 2048, 3), dtype=np.uint8)
     results = yolo_model(dummy_img)[0]
     results = yolo_seg_model(dummy_img)[0]
     torch.cuda.synchronize()
@@ -107,9 +107,14 @@ async def root():
     return {"Algo list": "Hello World",
             "Command": "run"}
 
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
 @app.get("/warmup")
 async def warmup():
-    dummy_img = np.zeros((2448, 2048, 3), dtype=np.uint8)  # 创建黑色图片
+    dummy_img = np.random.randint(0, 255, (2448, 2048, 3), dtype=np.uint8)
     results = yolo_model(dummy_img)[0]
     results = yolo_seg_model(dummy_img)[0]
     torch.cuda.synchronize()  # 等待所有 CUDA 操作完成
