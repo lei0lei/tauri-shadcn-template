@@ -232,6 +232,7 @@ impl TaskState {
             hole.action1.push(data as f64);
           }
       }
+      
     
   }
   // 动作2的深度数据
@@ -463,20 +464,41 @@ pub fn generate_detection_result(result: &Yolov8Result,hole_config: &HoleConfig)
 pub fn generate_depth_result(action1: &[f64], action2: &[f64], hole_config: &HoleConfig) -> (f64, bool) {
   if action1.is_empty() || action2.is_empty() {
     if hole_config.thru_hole {
-      return return (88888.0, true); // 避免空数组计算平均值导致错误
+      return (88888.0, true); // 避免空数组计算平均值导致错误
     }else{
-      return return (88888.0, false);
+      return  (88888.0, false);
     }
   }
 
-  let avg1 = action1.iter().sum::<f64>() / action1.len() as f64;
-  let avg2 = action2.iter().sum::<f64>() / action2.len() as f64;
+  let avg1_base = action1.iter().sum::<f64>() / action1.len() as f64;
+  let filtered1: Vec<f64> = action1.iter().copied().filter(|v| *v >= avg1_base).collect();
+  let avg1 = if filtered1.is_empty() {
+      avg1_base
+  } else {
+      filtered1.iter().sum::<f64>() / filtered1.len() as f64
+  };
+
+  // 计算 action2 中大于均值的均值
+  let avg2_base = action2.iter().sum::<f64>() / action2.len() as f64;
+  let filtered2: Vec<f64> = action2.iter().copied().filter(|v| *v >= avg2_base).collect();
+  let avg2 = if filtered2.is_empty() {
+      avg2_base
+  } else {
+      filtered2.iter().sum::<f64>() / filtered2.len() as f64
+  };
+
   let diff = (avg1 - avg2).abs();
   // 判断 diff 是否在 [min_val, max_val] 区间内
   let is_ok = (hole_config.depth_min..=hole_config.depth_max).contains(&diff);
   (diff, is_ok)
 
 }
+
+// 上升沿触发情况下的深度结果获取
+pub fn generate_depth_result_upedge(){
+  
+}
+
 
 // 获取直径结果
 pub fn generate_diameter_result(diameter: &HoleDiameter, hole_config: &HoleConfig) -> (f64, bool) {
@@ -800,13 +822,13 @@ pub async fn start_global_task(mut rx: mpsc::Receiver<GeneralRequest>,app_handle
 // 以下是一些假设的函数来模拟保存、处理等操作
 async fn save_image_tmp(image_data: Vec<u8>, path: String) -> Result<(), String> {
   // 模拟保存图像文件的逻辑
-  println!("保存图像到路径: {}", path);
+  // println!("保存图像到路径: {}", path);
   Ok(())
 }
 
 async fn save_json(json_data: String, path: String) -> Result<(), String> {
   // 模拟保存 JSON 文件的逻辑
-  println!("保存 JSON 到路径: {}", path);
+  // println!("保存 JSON 到路径: {}", path);
   Ok(())
 }
 
@@ -905,26 +927,25 @@ async fn send_sensor_data_to_frontend(
   match pos.last() {
     Some(&1) => {
 
-      // sendlog2frontend("[robot] [info] [传感器触发-1----]".to_string());
       // 访问当前状态，更新新孔位
       let mut task_state = GLOBAL_TASK_STATE.write().await;
       task_state.current_face = pos[0];
       task_state.current_hole = pos[1];
-      task_state.add_hole(pos[0], pos[1]).await;
-      sendlog2frontend("[robot] [info] [传感器触发-1----]".to_string());
-      // let log = format!("位置：{}", pos.last);
-      // sendlog2frontend(log.to_string());
 
       let face = task_state.current_face;
       let hole = task_state.current_hole;
 
       let hole_state = task_state.get_hole_state(face, hole).await;
+      if hole_state.is_none() {
+        task_state.add_hole(face, hole).await;
+        // sendlog2frontend("[robot] [info] [首次触发，新建孔位]".to_string());
+      }
 
-    // 打印返回的 Option 类型的 hole
-      println!("Hole state: {:?}", hole_state);
-
-
+      if -50.0<data && data<50.0 {
+        task_state.update_action1(pos[0],pos[1],data).await;
+      }
       let artifact = task_state.current_artifact.clone();
+      drop(task_state);
       // 更新前端孔位信息
       let current_stage = CurrentStage{
           face,         // u16 类型
@@ -934,28 +955,26 @@ async fn send_sensor_data_to_frontend(
       app_handle.emit("current_stage", current_stage)
                 .map_err(|_| "发送到前端失败")?;
       // 只更新有效数据
-      if -50.0<data && data<50.0 {
-        task_state.update_action1(pos[0],pos[1],data).await;
-      }
-      drop(task_state);
       // 前端刷新
       if -50.0<data && data<50.0 {
         let reciever = String::from("sensor-send-data-1");
         let formatted_data = format!("{:.*}", 4, data);
         app_handle.emit(&reciever, formatted_data).unwrap();
-        sendlog2frontend("[robot] [info] [传感器触发-1左侧]".to_string());
+        // sendlog2frontend("[robot] [info] [传感器触发-1左侧]".to_string());
       }else{
         let reciever = String::from("sensor-send-data-1");
         app_handle.emit(&reciever, "通孔").unwrap();
-        sendlog2frontend("[robot] [info] [传感器触发-1通孔]".to_string());
+        // sendlog2frontend("[robot] [info] [传感器触发-1通孔]".to_string());
       }
 
     }
     Some(&2) => {
-      sendlog2frontend("[robot] [info] [传感器触发-2----]".to_string());
+      // sendlog2frontend("[robot] [info] [传感器触发-2----]".to_string());
       let mut task_state = GLOBAL_TASK_STATE.write().await;
       if -50.0<data && data<50.0 {
+        println!("更新action2");
         task_state.update_action2(pos[0],pos[1],data).await;
+        println!("更新action2成功");
       }
       drop(task_state);
 
@@ -963,15 +982,15 @@ async fn send_sensor_data_to_frontend(
         let reciever = String::from("sensor-send-data-2");
         let formatted_data = format!("{:.*}", 5, data);
         app_handle.emit(&reciever, formatted_data).unwrap();
-        sendlog2frontend("[robot] [info] [传感器触发-2右侧]".to_string());
+        // sendlog2frontend("[robot] [info] [传感器触发-2右侧]".to_string());
       }else{
         let reciever = String::from("sensor-send-data-2");
         app_handle.emit(&reciever, "通孔").unwrap();
-        sendlog2frontend("[robot] [info] [传感器触发-2通孔]".to_string());
+        // sendlog2frontend("[robot] [info] [传感器触发-2通孔]".to_string());
       }
     }
     _ => {
-      sendlog2frontend("[robot] [info] [无效或错误的机器人位置数据-传感器]".to_string());
+      // sendlog2frontend("[robot] [info] [无效或错误的机器人位置数据-传感器]".to_string());
         // println!("无效或错误的机器人位置数据: {:?}", pos);
     }
   }
@@ -999,7 +1018,7 @@ fn save_image(encoded_data: &opencv::core::Vector<u8>, full_path: &PathBuf) -> R
   fs::write(full_path, &encoded_data)
     .map_err(|_| "保存图片失败")?; // 直接返回 &'static str
 
-  println!("图片已保存: {:?}", full_path);
+  // println!("图片已保存: {:?}", full_path);
   Ok(())
 }
 use base64::decode;
@@ -1008,7 +1027,7 @@ pub fn save_image_base64(encoded_data: &str, full_path: &PathBuf) -> Result<(), 
   let decoded_data = decode(encoded_data).map_err(|_| "Base64 解码失败")?;
   fs::write(full_path, &decoded_data).map_err(|_| "保存图片失败")?;
   
-  println!("图片已保存: {:?}", full_path);
+  // println!("图片已保存: {:?}", full_path);
   Ok(())
 }
 
@@ -1266,7 +1285,7 @@ async fn send_image_to_fastapi(
         
         // 更新孔位结果
         task_state_tmp.update_hole_result(face,hole,record.get_hole_result());
-
+        drop(task_state_tmp);
         // 取出record中的判定结果
         insert_hole_database(record).await;
 
@@ -1296,7 +1315,7 @@ async fn send_image_to_fastapi(
 
 async fn send_json_to_frontend(result: String) {
   // 模拟发送图像到前端
-  println!("发送图像到前端，图像大小: {} bytes", result);
+  // println!("发送图像到前端，图像大小: {} bytes", result);
 }
 
 async fn send_current_type_to_frontend(
@@ -2001,7 +2020,7 @@ async fn monitor_plc() -> Result<(), String> {
                 // 更新task_state.artifact_id
                 if artifact_id != -1 {
                   task_state.artifact_id = Some(artifact_id); // 使用 Some 包装 id
-                  println!("Artifact 插入成功，ID: {}", artifact_id);
+                  // println!("Artifact 插入成功，ID: {}", artifact_id);
                 } else {
                     println!("Artifact 插入失败");
                 }
@@ -2347,7 +2366,7 @@ pub async fn insert_hole_database(record:database::surrealdb::HoleRecord){
     // 等待响应
     match resp_rx.await {
       Ok(Ok(result)) => {
-          println!("插入成功，返回值: {}", result);
+          // println!("插入成功，返回值: {}", result);
       }
       Ok(Err(e)) => {
           eprintln!("插入失败，错误: {}", e);
@@ -2639,6 +2658,7 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
     tx.send(GeneralRequest::StartRobotProgram(resp_tx1)).await.map_err(|_| "启动机器人程序失败".to_string());
     tx.send(GeneralRequest::StartMonitorPLCProcess(resp_tx)).await.map_err(|_| "启动plc监控失败".to_string());
     tx.send(GeneralRequest::StartMonitorRobotProcess(resp_tx2)).await.map_err(|_| "启动机器人监控失败".to_string());
+
   });
 
   tauri::async_runtime::spawn(async move{
