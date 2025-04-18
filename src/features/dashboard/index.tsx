@@ -139,6 +139,39 @@ export default function Dashboard() {
     initSidecarListeners()
   }, [])
 
+  // useEffect(() => {
+  //   const interval = setInterval(async () => {
+  //     try {
+  //       const res = await fetch("http://localhost:8000/health")
+  //       const data = await res.json()
+  //       if (data.status === "ok") {
+  //         clearInterval(interval)
+  //         console.log("FastAPI 已启动，发送检测请求")
+
+  //         // 从 public 读取图片（路径为 /test.jpg）
+  //         const imageRes = await fetch("/images/fastapi_warmup.jpg")
+  //         const blob = await imageRes.blob()
+
+  //         const formData = new FormData()
+  //         formData.append("file", blob, "test.jpg")
+
+  //         const response = await fetch("http://localhost:8000/detect_luowen_with_draw/", {
+  //           method: "POST",
+  //           body: formData,
+  //         })
+  //         const result = await response.json()
+  //         console.log("检测请求已发送，返回结果：", result)
+  //         console.log("检测请求已发送")
+  //       }
+  //     } catch (err) {
+  //       console.log("FastAPI 未启动")
+  //     }
+  //   }, 1000)
+
+  //   return () => clearInterval(interval)
+  // }, [])
+
+
   return (
     <div className='flex flex-col min-h-screen p-4'>
       <Header>

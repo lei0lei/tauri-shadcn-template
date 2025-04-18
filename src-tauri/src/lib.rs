@@ -1159,26 +1159,25 @@ async fn send_image_to_fastapi(
     Some(&3) => {
 
       sendlog2frontend("[robot] [info] [相机触发-3]".to_string());
-
       let flie_name = "3_orig.jpg";
       let pp_refs: Vec<&str> = pp.iter().map(|s| s.as_str()).collect(); // 转换为 Vec<&str>
       let full_path_orig = generate_file_path(&pp_refs, flie_name);
       save_image(&opencv_vector, &full_path_orig)?;
-
+      println!("--1");
       let client = get_client().await;
       let part = Part::bytes(opencv_vector.to_vec())
                         .file_name("image.jpg")
                         .mime_str("image/jpeg")
                         .map_err(|_| "构造 Part 失败")?;
       let form = Form::new().part("file", part);
+      println!("--2");
       
-    
       let mut fastapi_request = String::from("http://localhost:8000/detect_diameter_with_draw/");
       let mut reciever = String::from("image-send-image-1");
 
       let response = client
           .post(&fastapi_request)
-          .timeout(Duration::from_secs(1))
+          .timeout(Duration::from_secs(2))
           .multipart(form)
           .send()
           .await
@@ -1189,18 +1188,19 @@ async fn send_image_to_fastapi(
           .json::<serde_json::Value>()
           .await
           .map_err(|_| "解析 JSON 失败")?;
-
+      println!("--3");
       let results = response_json.get("results").unwrap_or(&serde_json::json!({})).clone();
       let image_base64 = response_json
           .get("image_base64")
           .and_then(|v| v.as_str())
           .unwrap_or("")
           .to_string();
-
+      println!("--4");
       let flie_name = "3_det.jpg";
       let pp_refs: Vec<&str> = pp.iter().map(|s| s.as_str()).collect(); // 转换为 Vec<&str>
       let full_path_result = generate_file_path(&pp_refs, flie_name);
       save_image_base64(&image_base64, &full_path_result)?;
+      println!("--5");
       // TODO 换成直径检测结果
       let result = construct_action3(&results).await;
       let result = result.unwrap_or(HoleDiameter {
@@ -1208,9 +1208,9 @@ async fn send_image_to_fastapi(
         nei_diameter: 0.0,
         wai_center: (0.0, 0.0),
         wai_diameter: 0.0,
-    });
+      });
     // 
-
+    println!("--6");
       // 存储路径到taskstate
       let full_path_orig_str = full_path_orig.to_string_lossy().to_string();
       let full_path_result_str = full_path_result.to_string_lossy().to_string();
@@ -1222,7 +1222,7 @@ async fn send_image_to_fastapi(
                                   full_path_orig_str,
                                   full_path_result_str).await;
       }
-
+      println!("--7");
       app_handle.emit(&reciever, image_base64)
                 .map_err(|_| "发送图像到前端失败")?;
 
@@ -1248,7 +1248,7 @@ async fn send_image_to_fastapi(
 
       let response = client
           .post(&fastapi_request)
-          .timeout(Duration::from_secs(1))
+          .timeout(Duration::from_secs(2))
           .multipart(form)
           .send()
           .await
@@ -2611,6 +2611,56 @@ pub fn sendlog2frontend(log:String)-> Result<(), String>{
 //    ██║   ██╔══██║██║   ██║██╔══██╗██║
 //    ██║   ██║  ██║╚██████╔╝██║  ██║██║
 //    ╚═╝   ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝          
+// 检测后端fastapi加载并模拟发送一次请求
+pub async fn detect_after_health_ready() -> Result<(), Box<dyn std::error::Error>> {
+  let client = get_client().await;
+
+  let health_url = "http://localhost:8000/health";
+  let detect_url = "http://localhost:8000/detect_luowen_with_draw/";
+
+  loop {
+    match client.get(health_url).send().await {
+        Ok(res) => {
+            if let Ok(json) = res.json::<serde_json::Value>().await {
+                if json["status"] == "ok" {
+                    println!("✅ FastAPI 已启动");
+                    break;
+                }
+            }
+        }
+        Err(_) => {
+            println!("⏳ FastAPI 未启动...");
+        }
+    }
+    tokio::time::sleep(Duration::from_secs(1)).await;
+  }
+  let image_path = Path::new("D:\\data\\2025_04_18\\2025_04_18_11_58_39_804\\1\\1\\3_orig.jpg");
+  if !image_path.exists() {
+    return Err("❌ 图片文件不存在".into());
+  }
+
+  let image_data = fs::read(image_path)?;
+
+  let part = Part::bytes(image_data)
+      .file_name("3_orig.jpg")
+      .mime_str("image/jpeg")?;
+
+  let form = Form::new().part("file", part);
+
+  let response = client
+        .post(detect_url)
+        .multipart(form)
+        .timeout(Duration::from_secs(5))
+        .send()
+        .await?;
+
+  let json = response.json::<serde_json::Value>().await?;
+
+  println!("请求完成");
+  Ok(())
+}
+
+
 
 fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 
@@ -2752,7 +2802,11 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
   send_null_image_to_fastapi().await;
 
   });
-
+  tauri::async_runtime::spawn(async {
+    if let Err(err) = detect_after_health_ready().await {
+        println!("检测任务失败: {}", err);
+    }
+  });
   // insert_hole_database().await;
   // insert_log_database();
   // 发送一个假请求给fastapi

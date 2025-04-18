@@ -46,6 +46,7 @@ import torch
 origins = [
     "http://localhost:5173",  # 前端地址
     "http://127.0.0.1:5173",  # 或者你的前端地址（如果是 React 本地开发的话）
+    "http://localhost:8080",
 ]
 
 model_path = {
@@ -62,6 +63,19 @@ yolo_seg_model = None
 
     
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+
+
+
 @app.on_event("startup")
 async def startup():
     device = "cuda" if torch.cuda.is_available() else "cpu"
