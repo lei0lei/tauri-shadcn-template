@@ -495,8 +495,24 @@ pub fn generate_depth_result(action1: &[f64], action2: &[f64], hole_config: &Hol
 }
 
 // 上升沿触发情况下的深度结果获取
-pub fn generate_depth_result_upedge(){
-  
+pub fn generate_depth_result_trigger(action1: &[f64], action2: &[f64], hole_config: &HoleConfig) -> (f64, bool){
+  // 如果某个孔位未获取到有效值，判断是否为通孔
+  if action1.len() < 10 || action2.len() < 10 {
+    if hole_config.thru_hole {
+        return (88888.0, true);
+    } else {
+        return (88888.0, false);
+    }
+  }
+
+
+  let avg1 = action1[action1.len() - 10..].iter().sum::<f64>() / 10.0;
+  let avg2 = action2[action2.len() - 10..].iter().sum::<f64>() / 10.0;
+
+  let diff = (avg1 - avg2).abs();
+  let is_ok = (hole_config.depth_min..=hole_config.depth_max).contains(&diff);
+  (diff, is_ok)
+
 }
 
 
