@@ -53,11 +53,11 @@ export function Piechart() {
   const months = React.useMemo(() => desktopData.map((item) => item.month), [])
 
   return (
-    <Card data-chart={id} className="flex flex-col">
+    <Card data-chart={id} className="flex flex-col h-96">
       <ChartStyle id={id} config={chartConfig} />
       <CardHeader className="flex-row items-start space-y-0 pb-0">
         <div className="grid gap-1">
-          <CardTitle>Pie Chart - Interactive</CardTitle>
+          <CardTitle>当日产量</CardTitle>
         </div>
         <Select value={activeMonth} onValueChange={setActiveMonth}>
           <SelectTrigger className="ml-auto h-7 w-[130px] rounded-lg pl-2.5" aria-label="Select a value">
@@ -115,7 +115,7 @@ export function Piechart() {
                           {desktopData[activeIndex].desktop.toLocaleString()}
                         </tspan>
                         <tspan x={viewBox.cx} y={(viewBox.cy || 0) + 24} className="fill-muted-foreground">
-                          Visitors
+                          产量
                         </tspan>
                       </text>
                     )
