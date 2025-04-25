@@ -137,11 +137,10 @@ export  function Areachart() {
   })
 
   return (
-    <Card>
+    <Card className="h-80">
       <CardHeader className="flex items-center gap-2 space-y-0 border-b py-5 sm:flex-row">
         <div className="grid flex-1 gap-1 text-center sm:text-left">
-          <CardTitle>Area Chart - Interactive</CardTitle>
-          <CardDescription>Showing total visitors for the last 3 months</CardDescription>
+          <CardTitle>历史数据</CardTitle>
         </div>
         <Select value={timeRange} onValueChange={setTimeRange}>
           <SelectTrigger className="w-[160px] rounded-lg sm:ml-auto" aria-label="Select a value">
@@ -149,13 +148,13 @@ export  function Areachart() {
           </SelectTrigger>
           <SelectContent className="rounded-xl">
             <SelectItem value="90d" className="rounded-lg">
-              Last 3 months
+              过去3月
             </SelectItem>
             <SelectItem value="30d" className="rounded-lg">
-              Last 30 days
+              过去30天
             </SelectItem>
             <SelectItem value="7d" className="rounded-lg">
-              Last 7 days
+              过去7天
             </SelectItem>
           </SelectContent>
         </Select>

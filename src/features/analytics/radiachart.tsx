@@ -20,9 +20,9 @@ export  function Radiachart() {
   const totalVisitors = chartData[0].desktop + chartData[0].mobile
 
   return (
-    <Card className="flex flex-col">
+    <Card className="flex flex-col h-96">
       <CardHeader className="items-center pb-0">
-        <CardTitle>Radial Chart - Stacked</CardTitle>
+        <CardTitle>当日良率</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-1 items-center pb-0">
         <ChartContainer config={chartConfig} className="mx-auto aspect-square w-full max-w-[250px]">
@@ -38,7 +38,7 @@ export  function Radiachart() {
                           {totalVisitors.toLocaleString()}
                         </tspan>
                         <tspan x={viewBox.cx} y={(viewBox.cy || 0) + 4} className="fill-muted-foreground">
-                          Visitors
+                          合格数量
                         </tspan>
                       </text>
                     )
@@ -65,7 +65,7 @@ export  function Radiachart() {
       </CardContent>
       <CardFooter className="flex-col gap-2 text-sm">
         <div className="flex items-center gap-2 font-medium leading-none">
-          Trending up by 5.2% this month <TrendingUp className="h-4 w-4" />
+          本月上升5.2% <TrendingUp className="h-4 w-4" />
         </div>
       </CardFooter>
     </Card>
