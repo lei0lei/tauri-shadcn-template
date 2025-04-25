@@ -236,8 +236,8 @@ thru_hole = false
 screw_hole = 'M6'
 diameter_min = 4.9
 diameter_max = 5.1
-depth_min = 14.5
-depth_max = 15.5
+depth_min = 1000
+depth_max = 2000
 luowen = true
 enable_diameter = true
 enable_depth = true
@@ -544,6 +544,514 @@ run_sequence = ['A','B','C','D','E']
 
 [type.EY28]
 run_sequence = ['A','B','C','D','E']
+# +++++++++++++++++++++++++EY28-A++++++++++++++++++++++++++++++++++++
+[type.EY28.A]
+run_sequence = [1,2,3]
+[type.EY28.A.1]
+thru_hole = true
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.A.2]
+thru_hole = false
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 19.5
+depth_max = 20.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.A.3]
+thru_hole = false
+screw_hole = 'M14-1.25'
+diameter_min = 12.4
+diameter_max = 12.6
+depth_min = 19.5
+depth_max = 20.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+# +++++++++++++++++++++++++EY28-B++++++++++++++++++++++++++++++++++++
+[type.EY28.B]
+run_sequence = [1,2,3,4,5,6,7,8,9,10]
+
+[type.EY28.B.1]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 18.5
+depth_max = 19.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.B.2]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 18.5
+depth_max = 19.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.B.3]
+thru_hole = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 15.0
+depth_max = 100.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.B.4]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 21.5
+depth_max = 22.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.B.5]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 18.5
+depth_max = 19.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.B.6]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 18.5
+depth_max = 19.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.B.7]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 16.5
+depth_max = 17.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.B.8]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 16.5
+depth_max = 17.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.B.9]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 18.5
+depth_max = 19.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.B.10]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 18.5
+depth_max = 19.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+
+
+
+# +++++++++++++++++++++++++EY28-C++++++++++++++++++++++++++++++++++++
+
+[type.EY28.C]
+run_sequence = [1,2,3,4,5,6,7,8,9,10]
+
+[type.EY28.C.1]
+thru_hole = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.C.2]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 12.0
+depth_max = 13.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.C.3]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 12.0
+depth_max = 13.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.C.4]
+thru_hole = false
+screw_hole = 'M8-1.5'
+diameter_min = 6.6
+diameter_max = 6.8
+depth_min = 14.5
+depth_max = 15.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.C.5]
+thru_hole = false
+screw_hole = 'M8-1.5'
+diameter_min = 6.6
+diameter_max = 6.8
+depth_min = 14.5
+depth_max = 15.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.C.6]
+thru_hole = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.C.7]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 19.5
+depth_max = 20.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.C.8]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 19.5
+depth_max = 20.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.C.9]
+thru_hole = false
+screw_hole = 'M14-1.5'
+diameter_min = 12.4
+diameter_max = 12.6
+depth_min = 19.5
+depth_max = 20.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.C.10]
+thru_hole = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 20.0
+depth_max = 100.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+# +++++++++++++++++++++++++EY28-D++++++++++++++++++++++++++++++++++++
+[type.EY28.D]
+run_sequence = [1,2,3,4,5,6,7,8,9]
+
+[type.EY28.D.1]
+thru_hole = false
+screw_hole = 'M8-1.5'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 17.5
+depth_max = 18.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.D.2]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 15.5
+depth_max = 16.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.D.3]
+thru_hole = false
+screw_hole = 'M8-1.5'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 18.0
+depth_max = 19.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.D.4]
+thru_hole = true
+screw_hole = 'M8-1.5'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.D.5]
+thru_hole = true
+screw_hole = 'M8-1.5'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 20.0
+depth_max = 100.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.D.6]
+thru_hole = false
+screw_hole = 'M8-1.5'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 17.5
+depth_max = 18.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.D.7]
+thru_hole = true
+screw_hole = 'M8-1.5'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.D.8]
+thru_hole = false
+screw_hole = 'M8-1.5'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 17.5
+depth_max = 18.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.D.9]
+thru_hole = true
+screw_hole = 'M8-1.5'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+
+# +++++++++++++++++++++++++EY28-E++++++++++++++++++++++++++++++++++++
+[type.EY28.E]
+run_sequence = [1,2,3,4,5,6,7,8]
+
+[type.EY28.E.1]
+thru_hole = true
+screw_hole = 'M8-1.5'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 25.0
+depth_max = 100.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.E.2]
+thru_hole = true
+screw_hole = 'M8-1.5'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 25.0
+depth_max = 100.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.E.3]
+thru_hole = true
+screw_hole = 'M8-1.5'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 25.0
+depth_max = 100.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.E.4]
+thru_hole = true
+screw_hole = 'M8-1.5'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 25.0
+depth_max = 100.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.E.5]
+thru_hole = false
+screw_hole = 'M8-1.5'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 24.5
+depth_max = 25.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.E.6]
+thru_hole = true
+screw_hole = 'M8-1.5'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 25.0
+depth_max = 100.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.E.7]
+thru_hole = true
+screw_hole = 'M8-1.5'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 25.0
+depth_max = 100.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EY28.E.8]
+thru_hole = true
+screw_hole = 'M8-1.5'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 25.0
+depth_max = 100.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+
+
+
+
+
 
 [type.EK30]
 run_sequence = ['A','B','C','D','E']

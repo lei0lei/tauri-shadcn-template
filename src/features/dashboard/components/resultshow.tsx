@@ -86,6 +86,12 @@ export default function ResultShow() {
           holeIndex: hole,
           holeState: true, // 设为 true 表示孔状态良好（或者根据你的需求设定状态）
         });
+      } else{
+        updateResultComponent(surfaceName, {
+          holeIndex: hole,
+          holeState: false, // 设为 true 表示孔状态良好（或者根据你的需求设定状态）
+        });
+
       }
     };
 
@@ -117,7 +123,7 @@ export default function ResultShow() {
   }, [clearResult]);
 
   return (
-    <div className="space-y-1 flex-grow">
+    <div className="space-y-1 flex-grow h-96">
       {resultComponentValue.map((surface, index) => (
         <div key={index} className="flex items-center border p-1 rounded-lg max-h-10 select-none">
           {/* 第一列: 面名称和状态，占 1/9 */}

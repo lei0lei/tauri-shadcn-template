@@ -470,23 +470,24 @@ pub fn generate_depth_result(action1: &[f64], action2: &[f64], hole_config: &Hol
     }
   }
 
-  let avg1_base = action1.iter().sum::<f64>() / action1.len() as f64;
-  let filtered1: Vec<f64> = action1.iter().copied().filter(|v| *v >= avg1_base).collect();
-  let avg1 = if filtered1.is_empty() {
-      avg1_base
-  } else {
-      filtered1.iter().sum::<f64>() / filtered1.len() as f64
-  };
+  // let avg1_base = action1.iter().sum::<f64>() / action1.len() as f64;
+  // let filtered1: Vec<f64> = action1.iter().copied().filter(|v| *v >= avg1_base).collect();
+  // let avg1 = if filtered1.is_empty() {
+  //     avg1_base
+  // } else {
+  //     filtered1.iter().sum::<f64>() / filtered1.len() as f64
+  // };
 
-  // 计算 action2 中大于均值的均值
-  let avg2_base = action2.iter().sum::<f64>() / action2.len() as f64;
-  let filtered2: Vec<f64> = action2.iter().copied().filter(|v| *v >= avg2_base).collect();
-  let avg2 = if filtered2.is_empty() {
-      avg2_base
-  } else {
-      filtered2.iter().sum::<f64>() / filtered2.len() as f64
-  };
-
+  // // 计算 action2 中大于均值的均值
+  // let avg2_base = action2.iter().sum::<f64>() / action2.len() as f64;
+  // let filtered2: Vec<f64> = action2.iter().copied().filter(|v| *v >= avg2_base).collect();
+  // let avg2 = if filtered2.is_empty() {
+  //     avg2_base
+  // } else {
+  //     filtered2.iter().sum::<f64>() / filtered2.len() as f64
+  // };
+  let avg1 = action1.iter().copied().sum::<f64>() / action1.len() as f64;
+  let avg2 = action2.iter().copied().sum::<f64>() / action2.len() as f64;
   let diff = (avg1 - avg2).abs();
   // 判断 diff 是否在 [min_val, max_val] 区间内
   let is_ok = (hole_config.depth_min..=hole_config.depth_max).contains(&diff);
@@ -1299,7 +1300,9 @@ async fn send_image_to_fastapi(
         let mut task_state_tmp = GLOBAL_TASK_STATE.write().await;
         let record =task_state_tmp.get_hole_result_record(face,hole,&hole_config).await;
         
-        // 更新孔位结果
+        // 获取孔位结果
+        let final_result_from_record = record.get_hole_result().unwrap_or_else(|| false); 
+        // 更新数据库孔位结果
         task_state_tmp.update_hole_result(face,hole,record.get_hole_result());
         drop(task_state_tmp);
         // 取出record中的判定结果
@@ -1309,7 +1312,7 @@ async fn send_image_to_fastapi(
           face,         // u16 类型
           hole,         // u16 类型
           // artifact: artifact.clone(),  // 假设 artifact 仍然是 String 类型
-          final_result: true,
+          final_result: final_result_from_record,
         };
 
         app_handle.emit("hole_final_result", final_result_data)
