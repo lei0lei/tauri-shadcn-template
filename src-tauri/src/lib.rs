@@ -490,7 +490,7 @@ pub fn generate_depth_result(action1: &[f64], action2: &[f64], hole_config: &Hol
   let avg2 = action2.iter().copied().sum::<f64>() / action2.len() as f64;
   let diff = (avg1 - avg2).abs();
   // 判断 diff 是否在 [min_val, max_val] 区间内
-  let is_ok = (hole_config.depth_min..=hole_config.depth_max).contains(&diff);
+  let is_ok = ((hole_config.depth_min-0.1)..=(hole_config.depth_max+0.1)).contains(&diff);
   (diff, is_ok)
 
 }
@@ -511,7 +511,7 @@ pub fn generate_depth_result_trigger(action1: &[f64], action2: &[f64], hole_conf
   let avg2 = action2[action2.len() - 10..].iter().sum::<f64>() / 10.0;
 
   let diff = (avg1 - avg2).abs();
-  let is_ok = (hole_config.depth_min..=hole_config.depth_max).contains(&diff);
+  let is_ok = ((hole_config.depth_min-0.1)..=(hole_config.depth_max+0.1)).contains(&diff);
   (diff, is_ok)
 
 }
@@ -519,8 +519,8 @@ pub fn generate_depth_result_trigger(action1: &[f64], action2: &[f64], hole_conf
 
 // 获取直径结果
 pub fn generate_diameter_result(diameter: &HoleDiameter, hole_config: &HoleConfig) -> (f64, bool) {
-  let real_diameter = diameter.nei_diameter * 0.01-0.3;
-  let is_ok = real_diameter >= hole_config.diameter_min && real_diameter <= hole_config.diameter_max;
+  let real_diameter = diameter.nei_diameter * 0.01;
+  let is_ok = (real_diameter >= hole_config.diameter_min-0.03) && (real_diameter <= hole_config.diameter_max+0.03);
   (real_diameter, is_ok)
 }
 
@@ -1164,14 +1164,14 @@ async fn send_image_to_fastapi(
       let pp_refs: Vec<&str> = pp.iter().map(|s| s.as_str()).collect(); // 转换为 Vec<&str>
       let full_path_orig = generate_file_path(&pp_refs, flie_name);
       save_image(&opencv_vector, &full_path_orig)?;
-      println!("--1");
+
       let client = get_client().await;
       let part = Part::bytes(opencv_vector.to_vec())
                         .file_name("image.jpg")
                         .mime_str("image/jpeg")
                         .map_err(|_| "构造 Part 失败")?;
       let form = Form::new().part("file", part);
-      println!("--2");
+
       
       let mut fastapi_request = String::from("http://localhost:8000/detect_diameter_with_draw/");
       let mut reciever = String::from("image-send-image-1");
@@ -1189,19 +1189,19 @@ async fn send_image_to_fastapi(
           .json::<serde_json::Value>()
           .await
           .map_err(|_| "解析 JSON 失败")?;
-      println!("--3");
+
       let results = response_json.get("results").unwrap_or(&serde_json::json!({})).clone();
       let image_base64 = response_json
           .get("image_base64")
           .and_then(|v| v.as_str())
           .unwrap_or("")
           .to_string();
-      println!("--4");
+
       let flie_name = "3_det.jpg";
       let pp_refs: Vec<&str> = pp.iter().map(|s| s.as_str()).collect(); // 转换为 Vec<&str>
       let full_path_result = generate_file_path(&pp_refs, flie_name);
       save_image_base64(&image_base64, &full_path_result)?;
-      println!("--5");
+
       // TODO 换成直径检测结果
       let result = construct_action3(&results).await;
       let result = result.unwrap_or(HoleDiameter {
@@ -1211,7 +1211,7 @@ async fn send_image_to_fastapi(
         wai_diameter: 0.0,
       });
     // 
-    println!("--6");
+
       // 存储路径到taskstate
       let full_path_orig_str = full_path_orig.to_string_lossy().to_string();
       let full_path_result_str = full_path_result.to_string_lossy().to_string();
@@ -1223,7 +1223,7 @@ async fn send_image_to_fastapi(
                                   full_path_orig_str,
                                   full_path_result_str).await;
       }
-      println!("--7");
+
       app_handle.emit(&reciever, image_base64)
                 .map_err(|_| "发送图像到前端失败")?;
 
@@ -1372,21 +1372,28 @@ async fn get_client() -> Arc<Client> {
 
 // fastapi json解析
 pub async fn extract_action3_from_results(results: &serde_json::Value) -> Option<HoleDiameter> {
-  // 提取 "diameter-nei" 和 "diameter-wai" 的数据
-  let nei = results.get("diameter-nei")?.as_object()?;
-  let wai = results.get("diameter-wai")?.as_object()?;
+  // 提取 "diameter-nei"
+  let (nei_center_x, nei_center_y, nei_diameter) = if let Some(nei) = results.get("diameter-nei").and_then(|v| v.as_object()) {
+      (
+          nei.get("center_x").and_then(|v| v.as_f64()).unwrap_or(0.0),
+          nei.get("center_y").and_then(|v| v.as_f64()).unwrap_or(0.0),
+          nei.get("diameter").and_then(|v| v.as_f64()).unwrap_or(0.0),
+      )
+  } else {
+      (0.0, 0.0, 0.0)
+  };
 
-  // 从 "diameter-nei" 提取 center 和 diameter
-  let nei_center_x = nei.get("center_x")?.as_f64()?;
-  let nei_center_y = nei.get("center_y")?.as_f64()?;
-  let nei_diameter = nei.get("diameter")?.as_f64()?;
+  // 提取 "diameter-wai"
+  let (wai_center_x, wai_center_y, wai_diameter) = if let Some(wai) = results.get("diameter-wai").and_then(|v| v.as_object()) {
+      (
+          wai.get("center_x").and_then(|v| v.as_f64()).unwrap_or(0.0),
+          wai.get("center_y").and_then(|v| v.as_f64()).unwrap_or(0.0),
+          wai.get("diameter").and_then(|v| v.as_f64()).unwrap_or(0.0),
+      )
+  } else {
+      (0.0, 0.0, 0.0)
+  };
 
-  // 从 "diameter-wai" 提取 center 和 diameter
-  let wai_center_x = wai.get("center_x")?.as_f64()?;
-  let wai_center_y = wai.get("center_y")?.as_f64()?;
-  let wai_diameter = wai.get("diameter")?.as_f64()?;
-
-  // 创建 HoleDiameter
   Some(HoleDiameter {
       nei_center: (nei_center_x, nei_center_y),
       nei_diameter,
@@ -1394,6 +1401,7 @@ pub async fn extract_action3_from_results(results: &serde_json::Value) -> Option
       wai_diameter,
   })
 }
+
 pub async fn construct_action3(results: &serde_json::Value) -> Option<HoleDiameter> {
   // 使用上述方法提取数据并返回 HoleDiameter
   extract_action3_from_results(results).await
@@ -2790,7 +2798,7 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
 
   // 注册传感器回调
   rs_CF_RegisterEventCallback().await;
-  let ip = "192.168.0.101";
+  let ip = "192.168.0.105";
   let mut device_handler: sensors::cf3000_bindings::DeviceHandle_t = -1;
   rs_CF_GE_OpenDevice(ip,&mut device_handler).await;
   let log = format!("[sensor] [info] [传感器: {}]", device_handler);

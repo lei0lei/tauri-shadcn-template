@@ -539,8 +539,420 @@ enable_luowen = true
 [type.EH12]
 run_sequence = ['A','B','C','D','E']
 
+# +++++++++++++++++++++++++EH12-A++++++++++++++++++++++++++++++++++++
+[type.EH12.A]
+run_sequence = [1,2,3,4]
+[type.EH12.A.1]
+thru_hole = true
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 15.0
+depth_max = 100.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EH12.A.2]
+thru_hole = false
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 24.0
+depth_max = 25.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EH12.A.3]
+thru_hole = false
+screw_hole = 'M14-1.5'
+diameter_min = 12.4
+diameter_max = 12.6
+depth_min = 36.0
+depth_max = 37.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EH12.A.4]
+thru_hole = false
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 18.0
+depth_max = 19.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+# +++++++++++++++++++++++++EH12-B++++++++++++++++++++++++++++++++++++
+[type.EH12.B]
+run_sequence = [1,2,3,4,5,6,7,8,9,10,11,12,13]
+[type.EH12.B.1]
+thru_hole = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EH12.B.2]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 18.5
+depth_max = 19.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EH12.B.3]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 18.5
+depth_max = 19.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EH12.B.4]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 18.5
+depth_max = 19.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EH12.B.5]
+thru_hole = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EH12.B.6]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 15.5
+depth_max = 16.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EH12.B.7]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 18.5
+depth_max = 19.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EH12.B.8]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 18.5
+depth_max = 19.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EH12.B.9]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 17.5
+depth_max = 18.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EH12.B.10]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 17.5
+depth_max = 18.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EH12.B.11]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 18.5
+depth_max = 19.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EH12.B.12]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 18.5
+depth_max = 19.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EH12.B.13]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 18.5
+depth_max = 19.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+# +++++++++++++++++++++++++EH12-C++++++++++++++++++++++++++++++++++++
+[type.EH12.C]
+run_sequence = [1,2,3,4,5,6]
+[type.EH12.C.1]
+thru_hole = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EH12.C.2]
+thru_hole = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EH12.C.3]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 18.5
+depth_max = 19.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EH12.C.4]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 18.5
+depth_max = 19.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EH12.C.5]
+thru_hole = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 15.0
+depth_max = 100.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EH12.C.6]
+thru_hole = false
+screw_hole = 'M14-1.5'
+diameter_min = 12.4
+diameter_max = 12.6
+depth_min = 43.0
+depth_max = 44.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+# +++++++++++++++++++++++++EH12-D++++++++++++++++++++++++++++++++++++
+[type.EH12.D]
+run_sequence = [1,2,3,4,5,6,7,8,9]
+[type.EH12.D.1]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 23.5
+depth_max = 24.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EH12.D.2]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 16.5
+depth_max = 17.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EH12.D.3]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 17.5
+depth_max = 18.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EH12.D.4]
+thru_hole = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EH12.D.5]
+thru_hole = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EH12.D.6]
+thru_hole = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 15.0
+depth_max = 100.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EH12.D.7]
+thru_hole = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EH12.D.8]
+thru_hole = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 15.0
+depth_max = 100.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EH12.D.9]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 17.5
+depth_max = 18.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+# +++++++++++++++++++++++++EH12-E++++++++++++++++++++++++++++++++++++
+[type.EH12.E]
+run_sequence = [1,2,3,4]
 
+[type.EH12.E.1]
+thru_hole = true
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
+[type.EH12.E.2]
+thru_hole = false
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 33.5
+depth_max = 34.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EH12.E.3]
+thru_hole = true
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EH12.E.4]
+thru_hole = true
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 [type.EY28]
 run_sequence = ['A','B','C','D','E']
@@ -552,8 +964,8 @@ thru_hole = true
 screw_hole = 'M8-1.25'
 diameter_min = 6.7
 diameter_max = 6.9
-depth_min = 1000.0
-depth_max = 2000.0
+depth_min = 25.0
+depth_max = 100.0
 luowen = true
 enable_diameter = true
 enable_depth = true
@@ -713,7 +1125,7 @@ enable_luowen = true
 # +++++++++++++++++++++++++EY28-C++++++++++++++++++++++++++++++++++++
 
 [type.EY28.C]
-run_sequence = [1,2,3,4,5,6,7,8,9,10]
+run_sequence = [1,2,3,4,5,6,7,8,9,10,11]
 
 [type.EY28.C.1]
 thru_hole = true
@@ -834,6 +1246,19 @@ luowen = true
 enable_diameter = true
 enable_depth = true
 enable_luowen = true
+
+[type.EY28.C.11]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 7.7
+diameter_max = 7.9
+depth_min = 0.0
+depth_max = 100.0
+luowen = false
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
 # +++++++++++++++++++++++++EY28-D++++++++++++++++++++++++++++++++++++
 [type.EY28.D]
 run_sequence = [1,2,3,4,5,6,7,8,9]
@@ -1049,12 +1474,916 @@ enable_luowen = true
 
 
 
-
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 
 [type.EK30]
 run_sequence = ['A','B','C','D','E']
+# +++++++++++++++++++++++++EK40-A++++++++++++++++++++++++++++++++++++
+[type.EK30.A]
+run_sequence = [1,2,3,4]
+[type.EK30.A.1]
+thru_hole = false
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 20.5
+depth_max = 21.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.A.2]
+thru_hole = false
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 20.5
+depth_max = 21.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.A.3]
+thru_hole = false
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 20.5
+depth_max = 21.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.A.4]
+thru_hole = false
+screw_hole = 'M14-1.5'
+diameter_min = 12.4
+diameter_max = 12.6
+depth_min = 59.5
+depth_max = 60.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
 
+
+
+# +++++++++++++++++++++++++EK40-B++++++++++++++++++++++++++++++++++++
+[type.EK30.B]
+run_sequence = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17]
+[type.EK30.B.1]
+thru_hole = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EK30.B.2]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 21.5
+depth_max = 22.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.B.3]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 21.5
+depth_max = 22.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.B.4]
+thru_hole = true
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.B.5]
+thru_hole = true
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.B.6]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 20.5
+depth_max = 21.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.B.7]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 14.5
+depth_max = 15.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.B.8]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 14.5
+depth_max = 15.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.B.9]
+thru_hole = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.B.10]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 20.5
+depth_max = 21.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.B.11]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 14.5
+depth_max = 15.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.B.12]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 14.5
+depth_max = 15.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.B.13]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 14.5
+depth_max = 15.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.B.14]
+thru_hole = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.B.15]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 20.5
+depth_max = 21.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.B.16]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 14.5
+depth_max = 15.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.B.17]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 20.5
+depth_max = 21.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+# +++++++++++++++++++++++++EK40-C++++++++++++++++++++++++++++++++++++
+[type.EK30.C]
+run_sequence = [1]
+[type.EK30.C.1]
+thru_hole = false
+screw_hole = 'M14-1.5'
+diameter_min = 12.4
+diameter_max = 12.6
+depth_min = 59.5
+depth_max = 60.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+# +++++++++++++++++++++++++EK40-D++++++++++++++++++++++++++++++++++++
+[type.EK30.D]
+run_sequence = [1,2,3,4,5,6,7,8,9,10,11,12,13]
+
+[type.EK30.D.1]
+thru_hole = true
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.D.2]
+thru_hole = true
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.D.3]
+thru_hole = false
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 20.5
+depth_max = 21.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.D.4]
+thru_hole = false
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 20.5
+depth_max = 21.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.D.5]
+thru_hole = false
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 20.5
+depth_max = 21.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.D.6]
+thru_hole = false
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 20.5
+depth_max = 21.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.D.7]
+thru_hole = false
+screw_hole = 'M6'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 19.5
+depth_max = 20.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.D.8]
+thru_hole = false
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 20.5
+depth_max = 21.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.D.9]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 19.5
+depth_max = 20.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.D.10]
+thru_hole = false
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 20.5
+depth_max = 21.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.D.11]
+thru_hole = false
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 20.5
+depth_max = 21.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.D.12]
+thru_hole = false
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 20.5
+depth_max = 21.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.D.13]
+thru_hole = false
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 20.5
+depth_max = 21.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+# +++++++++++++++++++++++++EK40-E++++++++++++++++++++++++++++++++++++
+[type.EK30.E]
+run_sequence = [1,2,3,4,5]
+
+[type.EK30.E.1]
+thru_hole = false
+screw_hole = 'M10-1.25'
+diameter_min = 8.4
+diameter_max = 8.6
+depth_min = 42.5
+depth_max = 43.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.E.2]
+thru_hole = false
+screw_hole = 'M10-1.25'
+diameter_min = 8.4
+diameter_max = 8.6
+depth_min = 42.5
+depth_max = 43.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.E.3]
+thru_hole = false
+screw_hole = 'M10-1.25'
+diameter_min = 8.4
+diameter_max = 8.6
+depth_min = 42.5
+depth_max = 43.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.E.4]
+thru_hole = false
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 20.5
+depth_max = 21.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK30.E.5]
+thru_hole = false
+screw_hole = 'M10-1.25'
+diameter_min = 8.4
+diameter_max = 8.6
+depth_min = 42.5
+depth_max = 43.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+# +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 [type.EK40]
 run_sequence = ['A','B','C','D','E']
+
+# +++++++++++++++++++++++++EK40-A++++++++++++++++++++++++++++++++++++
+[type.EK40.A]
+run_sequence = [1,2]
+[type.EK40.A.1]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 25.0
+depth_max = 100.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK40.A.2]
+thru_hole = true
+screw_hole = 'Φ8H7'
+diameter_min = 7.9
+diameter_max = 8.1
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+
+# +++++++++++++++++++++++++EK40-B++++++++++++++++++++++++++++++++++++
+[type.EK40.B]
+run_sequence = [1,2,3,4,5,6,7,8,9,10,11,12,13,14]
+
+[type.EK40.B.1]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 14.5
+depth_max = 15.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EK40.B.2]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 14.5
+depth_max = 15.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK40.B.3]
+thru_hole = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK40.B.4]
+thru_hole = true
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK40.B.5]
+thru_hole = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK40.B.6]
+thru_hole = true
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK40.B.7]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 17.5
+depth_max = 18.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK40.B.8]
+thru_hole = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK40.B.9]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 17.5
+depth_max = 18.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK40.B.10]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 17.5
+depth_max = 18.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK40.B.11]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 14.5
+depth_max = 15.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK40.B.12]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 14.5
+depth_max = 15.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK40.B.13]
+thru_hole = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK40.B.14]
+thru_hole = false
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 17.5
+depth_max = 18.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+# +++++++++++++++++++++++++EK40-C++++++++++++++++++++++++++++++++++++
+[type.EK40.C]
+run_sequence = [1,2,3,4]
+[type.EK40.C.1]
+thru_hole = false
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 24.5
+depth_max = 25.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK40.C.2]
+thru_hole = false
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 16.5
+depth_max = 17.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK40.C.3]
+thru_hole = false
+screw_hole = 'M14-1.5'
+diameter_min = 12.4
+diameter_max = 12.6
+depth_min = 50.5
+depth_max = 51.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK40.C.4]
+thru_hole = false
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 16.5
+depth_max = 17.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+
+# +++++++++++++++++++++++++EK40-D++++++++++++++++++++++++++++++++++++
+[type.EK40.D]
+run_sequence = [1,2,3,4,5,6,7,8,9,10,11,12,13]
+
+[type.EK40.D.1]
+thru_hole = true
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+
+[type.EK40.D.2]
+thru_hole = true
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK40.D.3]
+thru_hole = true
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK40.D.4]
+thru_hole = true
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK40.D.5]
+thru_hole = true
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK40.D.6]
+thru_hole = false
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 18.5
+depth_max = 19.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK40.D.7]
+thru_hole = false
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 18.5
+depth_max = 19.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK40.D.8]
+thru_hole = true
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK40.D.9]
+thru_hole = false
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 18.5
+depth_max = 19.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK40.D.10]
+thru_hole = true
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK40.D.11]
+thru_hole = false
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 18.5
+depth_max = 19.5
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK40.D.12]
+thru_hole = true
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK40.D.13]
+thru_hole = true
+screw_hole = 'M8-1.25'
+diameter_min = 6.7
+diameter_max = 6.9
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+# +++++++++++++++++++++++++EK40-E++++++++++++++++++++++++++++++++++++
+[type.EK40.E]
+run_sequence = [1,2,3,4,5]
+[type.EK40.E.1]
+thru_hole = true
+screw_hole = 'M10-1.5'
+diameter_min = 8.4
+diameter_max = 8.6
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK40.E.2]
+thru_hole = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK40.E.3]
+thru_hole = true
+screw_hole = 'M10-1.5'
+diameter_min = 8.4
+diameter_max = 8.6
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK40.E.4]
+thru_hole = true
+screw_hole = 'M10-1.5'
+diameter_min = 8.4
+diameter_max = 8.6
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+[type.EK40.E.5]
+thru_hole = true
+screw_hole = 'M10-1.5'
+diameter_min = 8.4
+diameter_max = 8.6
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true

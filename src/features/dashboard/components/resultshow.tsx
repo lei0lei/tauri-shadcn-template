@@ -227,7 +227,7 @@ export default function ResultShow() {
                   </CardHeader>
                   <CardContent className="text-base space-y-1">
                     <div className="flex justify-between">
-                      <span>检测值：{dialogData.diameter ?? "无数据"}</span>
+                      <span>检测值：{dialogData.diameter != null ? Number(dialogData.diameter).toFixed(2) : "无数据"}</span>
                       <span>标准：{dialogData.diameter_min} - {dialogData.diameter_max}</span>
                     </div>
                   </CardContent>

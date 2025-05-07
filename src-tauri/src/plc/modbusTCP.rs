@@ -8,6 +8,9 @@ use tokio_modbus::prelude::*;
 use tokio::sync::oneshot;
 use std::sync::Arc;
 use lazy_static::lazy_static;
+use tokio::net::TcpStream;
+use tokio::io::AsyncWriteExt;
+
   
 // ███╗   ███╗ ██████╗ ██████╗ ██████╗ ██╗   ██╗███████╗
 // ████╗ ████║██╔═══██╗██╔══██╗██╔══██╗██║   ██║██╔════╝
@@ -163,6 +166,12 @@ pub async fn start_plc_task(plc_addr: SocketAddr, mut rx: mpsc::Receiver<ModbusR
             // 收到停止信号停止plc连接
             ModbusRequest::STOP(resp_tx) => {
                 println!("接收到 STOP 信号，终止任务");
+                if let Err(e) = ctx.disconnect().await {
+                    let _ = resp_tx.send(Err(format!("关闭连接失败: {}", e)));
+                    return Err(format!("关闭连接失败: {}", e));  // 返回一个错误信息
+                }
+                
+                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
                 let _ = resp_tx.send(Ok(())); // 发送成功停止的信号
                 break; // 直接跳出内层循环，结束任务
             }
@@ -171,7 +180,6 @@ pub async fn start_plc_task(plc_addr: SocketAddr, mut rx: mpsc::Receiver<ModbusR
     println!("所有 `Sender` 已关闭，退出 PLC 任务 关闭plc连接");
     Ok(()) // 任务完成，成功返回
        
-
 }
 
 // 读取plc寄存器
@@ -475,6 +483,12 @@ pub async fn start_robot_task(plc_addr: SocketAddr, mut rx: mpsc::Receiver<Modbu
                     // 收到停止信号停止plc连接
                     ModbusRequest::STOP(resp_tx) => {
                         println!("接收到 STOP 信号，终止任务");
+                        if let Err(e) = ctx.disconnect().await {
+                            let _ = resp_tx.send(Err(format!("关闭连接失败: {}", e)));
+                            return Err(format!("关闭连接失败: {}", e));  // 返回一个错误信息
+                        }
+                        
+                        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
                         let _ = resp_tx.send(Ok(())); // 发送成功停止的信号
                         break; // 直接跳出内层循环，结束任务
                     }

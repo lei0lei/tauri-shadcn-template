@@ -164,7 +164,7 @@ async def detect_diameter(
 ):
     pass
 
-def get_largest_mask_info(masks):
+def get_largest_mask_wai_info(masks):
     largest_contour = None
     max_area = 0
     
@@ -178,8 +178,32 @@ def get_largest_mask_info(masks):
                 largest_contour = contour
     
     if largest_contour is not None:
+        x,y,radius=0,0,0
         (x, y), radius = cv2.minEnclosingCircle(largest_contour)
         return {"center_x": int(x), "center_y": int(y), "diameter": int(radius * 2)}
+    
+    return None
+def get_largest_mask_nei_info(masks):
+    largest_contour = None
+    max_area = 0
+    
+    for mask in masks:
+        mask = np.array(mask, dtype=np.uint8) * 255
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        for contour in contours:
+            area = cv2.contourArea(contour)
+            if area > max_area:
+                max_area = area
+                largest_contour = contour
+    
+    if largest_contour is not None:
+        x,y=0,0
+        (x, y), radius = cv2.minEnclosingCircle(largest_contour)
+
+
+        diameter = 2 * np.sqrt(max_area / np.pi)
+        diameter = int(round(diameter))
+        return {"center_x": int(x), "center_y": int(y), "diameter": diameter}
     
     return None
 
@@ -218,16 +242,20 @@ async def detect_diameter_with_draw(
             
             class_id = int(class_id)
 
-            masks = [
-                cv2.resize(mask.cpu().numpy(), (orig_w, orig_h), interpolation=cv2.INTER_NEAREST)
-                for mask, cls in zip(results.masks.data, results.boxes.cls)
-                if int(cls) == class_id
-            ]
+            best_conf = -1
+            best_mask = None
 
-            if not masks:
+            for mask, cls, conf in zip(results.masks.data, results.boxes.cls, results.boxes.conf):
+                if int(cls) == class_id and conf > best_conf:
+                    best_conf = float(conf)
+                    best_mask = cv2.resize(mask.cpu().numpy(), (orig_w, orig_h), interpolation=cv2.INTER_NEAREST)
+
+            if best_mask is None:
                 continue
-
-            mask_info = get_largest_mask_info(masks)
+            if class_name =='diameter-nei':
+                mask_info = get_largest_mask_nei_info([best_mask])
+            if class_name =='diameter-wai':
+                mask_info = get_largest_mask_wai_info([best_mask])
             if mask_info:
                 detection_json[class_name] = mask_info
 
@@ -262,7 +290,7 @@ async def detect_diameter_with_draw(
         img_base64 = base64.b64encode(buffer).decode("utf-8")
         detection_json = {}
         img_bytes = io.BytesIO(buffer)
-    print('line 242')
+
     print(time.time()-t1)
     detection_json['algo_time'] = time.time()-t1
     return {"results": detection_json, "image_base64": img_base64}
