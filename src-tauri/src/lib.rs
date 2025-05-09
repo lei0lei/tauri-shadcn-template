@@ -171,6 +171,7 @@ pub struct HoleState {
   pub action4: Option<Yolov8Result>, // 动作4的检测结果，如圆心、直径等
   pub action4_orig_path: Option<String>,
   pub action4_result_path: Option<String>,
+  pub action5: Vec<f64>,
   pub result: Option<bool>,
 
 }
@@ -222,6 +223,7 @@ impl TaskState {
         action4: None,
         action4_orig_path:None,
         action4_result_path:None,
+        action5: Vec::new(),
         result:None,
     });
   }
@@ -232,8 +234,6 @@ impl TaskState {
             hole.action1.push(data as f64);
           }
       }
-      
-    
   }
   // 动作2的深度数据
   pub async fn update_action2(&mut self, face_id: u16, hole_id: u16, data: f64) {
@@ -243,6 +243,15 @@ impl TaskState {
       }
     }
   }
+
+    // 嵌孔的深度数据
+  pub async fn update_action5(&mut self, face_id: u16, hole_id: u16, data: f64) {
+
+      if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
+        hole.action2.push(data as f64);
+      }
+  }
+
   // 动作4的检测结果
   pub async fn update_action4(&mut self, face_id: u16, hole_id: u16, detection: Yolov8Result,orig_path:String, result_path:String) {
       if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
