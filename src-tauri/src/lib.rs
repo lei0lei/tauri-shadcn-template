@@ -528,8 +528,11 @@ pub fn generate_depth_result_trigger(action1: &[f64], action2: &[f64], hole_conf
 
 // 获取直径结果
 pub fn generate_diameter_result(diameter: &HoleDiameter, hole_config: &HoleConfig) -> (f64, bool) {
-  let real_diameter = diameter.nei_diameter * 0.0102;
-  let is_ok = (real_diameter >= hole_config.diameter_min-0.05) && (real_diameter <= hole_config.diameter_max+0.05);
+  let mut real_diameter = diameter.nei_diameter * 0.01018;
+  if real_diameter >10.0 {
+    real_diameter = real_diameter+0.1;
+  }
+  let is_ok = (real_diameter >= hole_config.diameter_min-0.03) && (real_diameter <= hole_config.diameter_max+0.03);
   (real_diameter, is_ok)
 }
 
