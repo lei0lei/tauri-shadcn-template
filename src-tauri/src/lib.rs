@@ -694,6 +694,8 @@ pub enum GeneralRequest {
   SendCurrentTypeToFrontend(oneshot::Sender<Result<(), String>>),
   // 清空前端结果显示
   SendFinishedToFrontend(bool,oneshot::Sender<Result<(), String>>),
+
+  SendStopTimerToFrontend(oneshot::Sender<Result<(), String>>),
 }
 
 pub async fn start_global_task(mut rx: mpsc::Receiver<GeneralRequest>,app_handle: tauri::AppHandle) -> Result<(), String> {
@@ -839,7 +841,16 @@ pub async fn start_global_task(mut rx: mpsc::Receiver<GeneralRequest>,app_handle
         let _ = resp_tx.send(Ok(()));
       }
       GeneralRequest::SendFinishedToFrontend(finished,resp_tx)=>{
+        app_handle
+          .emit("timer-start", ())  // payload 可以是空的
+          .map_err(|_| "发送 timer-start 事件失败")?;
         send_finished_to_frontend(app_handle.clone(),finished).await;
+        let _ = resp_tx.send(Ok(()));
+      }
+      GeneralRequest::SendStopTimerToFrontend(resp_tx)=>{
+        app_handle
+          .emit("timer-stop", ())  // payload 可以是空的
+          .map_err(|_| "发送 timer-start 事件失败")?;
         let _ = resp_tx.send(Ok(()));
       }
 
@@ -1528,6 +1539,28 @@ async fn monitor_robot() -> Result<(), String> {
 
                 let log = "[plc] [info] [工件退出<<<--]";
                 sendlog2frontend(log.to_string());
+                tokio::spawn(async move { 
+                  let (resp_tx, resp_rx) = oneshot::channel();
+                  let tx = GLOBAL_TX.lock().await.clone().unwrap_or_else(|| {
+                      panic!("GLOBAL_TX is not initialized. Ensure that start_plc_connect() has been called.");
+                  });
+                  // 在异步任务中处理发送日志
+              
+                  tx.send(GeneralRequest::SendStopTimerToFrontend(resp_tx))
+                      .await
+                      .map_err(|_| "发送请求失败".to_string());
+              
+                  // 处理接收响应
+                  match resp_rx.await {
+                      Ok(_) => {
+                      }
+                      Err(e) => {
+                          println!("日志发送失败 {}！",e);
+                      }
+                  }
+                });
+
+
                 // 更新数据库中产品结果,汇总所有孔位结果信息
 
 

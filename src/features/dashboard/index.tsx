@@ -15,7 +15,7 @@ import { Overview } from './components/overview'
 import  LogWindow  from './components/stateandlogs'
 import ResultShow from './components/resultshow'
 import { listen } from '@tauri-apps/api/event';
-import { useEffect } from "react";
+import { useEffect, useRef,useState } from "react"
 import StartStopButton from './components/startstop'
 import { Separator } from '@radix-ui/react-separator'
 import { useDashboardStore } from "@/stores/dashboardStore";
@@ -35,8 +35,46 @@ const iconMap : Record<string, React.ComponentType>= {
 import { invoke } from '@tauri-apps/api/core';
 
 export default function Dashboard() {
+
   const dbInstance = useDashboardStore((state) => state.dbInstance);
   const setDbInstance = useDashboardStore((state) => state.setDbInstance);
+  const [timer, setTimer] = useState(0)
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  useEffect(() => {
+    const startTimer = () => {
+      // 如果定时器已经存在，先清除它
+      console.log('start');
+      if (timerRef.current !== null) {
+        clearInterval(timerRef.current);
+      }
+      // 每次开始时重置计时器为 0
+      setTimer(0);
+      // 启动新的定时器
+      timerRef.current = setInterval(() => {
+        setTimer((prev) => prev + 1); // 每秒增加
+      }, 1000);
+    };
+
+
+    const stopTimer = () => {
+      console.log('stop');
+      if (timerRef.current) {
+        clearInterval(timerRef.current); // 停止定时器
+        timerRef.current = null;          // 清除定时器引用
+      }
+      
+    };
+
+
+    const unlistenStart = listen("timer-start", startTimer)
+    const unlistenStop = listen("timer-stop", stopTimer)
+
+    return () => {
+      unlistenStart.then(fn => fn())
+      unlistenStop.then(fn => fn())
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+  }, [])
 
   useEffect(() => {
     const initializeDb = async () => {
@@ -139,38 +177,6 @@ export default function Dashboard() {
     initSidecarListeners()
   }, [])
 
-  // useEffect(() => {
-  //   const interval = setInterval(async () => {
-  //     try {
-  //       const res = await fetch("http://localhost:8000/health")
-  //       const data = await res.json()
-  //       if (data.status === "ok") {
-  //         clearInterval(interval)
-  //         console.log("FastAPI 已启动，发送检测请求")
-
-  //         // 从 public 读取图片（路径为 /test.jpg）
-  //         const imageRes = await fetch("/images/fastapi_warmup.jpg")
-  //         const blob = await imageRes.blob()
-
-  //         const formData = new FormData()
-  //         formData.append("file", blob, "test.jpg")
-
-  //         const response = await fetch("http://localhost:8000/detect_luowen_with_draw/", {
-  //           method: "POST",
-  //           body: formData,
-  //         })
-  //         const result = await response.json()
-  //         console.log("检测请求已发送，返回结果：", result)
-  //         console.log("检测请求已发送")
-  //       }
-  //     } catch (err) {
-  //       console.log("FastAPI 未启动")
-  //     }
-  //   }, 1000)
-
-  //   return () => clearInterval(interval)
-  // }, [])
-
 
   return (
     <div className='flex flex-col min-h-screen p-4'>
@@ -217,7 +223,7 @@ export default function Dashboard() {
               <Card className="select-none">
                 <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                   <CardTitle className='text-sm font-medium'>
-                    统计
+                    计时
                   </CardTitle>
                   <svg
                     xmlns='http://www.w3.org/2000/svg'
@@ -235,10 +241,10 @@ export default function Dashboard() {
                   </svg>
                 </CardHeader>
                 <CardContent>
-                  <div className='text-2xl font-bold'>{statics}</div>
-                  <p className='text-xs text-muted-foreground'>
-                    +180.1% from last month
-                  </p>
+                  <div className='text-5xl font-bold'>
+                    {String(Math.floor(timer / 60)).padStart(2, '0')}:{String(timer % 60).padStart(2, '0')}
+                  </div>
+                  
                 </CardContent>
               </Card>
               <Card className="select-none">
