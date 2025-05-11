@@ -165,13 +165,15 @@ pub struct HoleState {
   pub hole_id: u16,   // 孔编号
   pub action1: Vec<f64>, // 动作1的数据
   pub action2: Vec<f64>, // 动作2的数据
+  pub action5: Vec<f64>, // 动作5的数据
   pub action3: Option<HoleDiameter>, // 动作3的检测结果
   pub action3_orig_path: Option<String>,
   pub action3_result_path: Option<String>,
   pub action4: Option<Yolov8Result>, // 动作4的检测结果，如圆心、直径等
   pub action4_orig_path: Option<String>,
   pub action4_result_path: Option<String>,
-  pub action5: Vec<f64>,
+  pub action6_orig_path: Option<String>,
+  pub action6_result_path: Option<String>,
   pub result: Option<bool>,
 
 }
@@ -217,13 +219,16 @@ impl TaskState {
         hole_id,
         action1: Vec::new(),
         action2: Vec::new(),
+        action5: Vec::new(),
         action3: None,
         action3_orig_path:None,
         action3_result_path:None,
         action4: None,
         action4_orig_path:None,
         action4_result_path:None,
-        action5: Vec::new(),
+        action6: None,
+        action6_orig_path:None,
+        action6_result_path:None,
         result:None,
     });
   }
@@ -246,12 +251,20 @@ impl TaskState {
 
     // 嵌孔的深度数据
   pub async fn update_action5(&mut self, face_id: u16, hole_id: u16, data: f64) {
-
+    if data>-50.0 && data<50.0{
       if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
-        hole.action2.push(data as f64);
+        hole.action5.push(data as f64);
+      }
+    }
+  }
+  // 动作6的检测结果
+  pub async fn update_action6(&mut self, face_id: u16, hole_id: u16, diameter: HoleDiameter,orig_path:String, result_path:String) {
+      if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
+          hole.action6 = Some(diameter);
+          hole.action6_orig_path = Some(orig_path.to_string());
+          hole.action6_result_path = Some(result_path.to_string());
       }
   }
-
   // 动作4的检测结果
   pub async fn update_action4(&mut self, face_id: u16, hole_id: u16, detection: Yolov8Result,orig_path:String, result_path:String) {
       if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
@@ -295,6 +308,7 @@ impl TaskState {
 
       let action1 = hole.action1.clone();
       let action2 = hole.action2.clone();
+      let action5 = hole.action5.clone();
       let action4 = hole.action4.clone().map_or( Yolov8Result {
                                                           class_id: 9999,
                                                           confidence: 0.0,
@@ -315,21 +329,36 @@ impl TaskState {
       let action4_orig_path = hole.action4_orig_path.as_ref().unwrap_or(&"wrong-path".to_string()).to_string();
       let action4_result_path = hole.action4_result_path.as_ref().unwrap_or(&"wrong-path".to_string()).to_string();
 
+
+      let action6_orig_path = hole.action6_orig_path.as_ref().unwrap_or(&"wrong-path".to_string()).to_string();
+      let action6_result_path = hole.action6_result_path.as_ref().unwrap_or(&"wrong-path".to_string()).to_string();
+      let action6 = hole.action6.clone().map_or(HoleDiameter {
+                                                                nei_center: (0.0, 0.0),    // 默认值
+                                                                nei_diameter: 0.0,         // 默认值
+                                                                wai_center: (0.0, 0.0),    // 默认值
+                                                                wai_diameter: 0.0,         // 默认值
+                                                              }, |v| v);
+      let action6_json = serde_json::to_value(&action6).unwrap_or(json!(null));
+
       // 获取深度结果
       let (depth, depth_result) = generate_depth_result(&action1, &action2, &hole_config);
+      let (qiankong_depth, qiankong_depth_result) = generate_qiankong_depth_result(&action1, &action5, &hole_config);
       // 获取直径结果
       let (diameter, diameter_result) = generate_diameter_result(&action3, &hole_config);
+      let (qiankong_diameter, qiankong_diameter_result) = generate_qiankong_diameter_result(&action6, &hole_config);
       // 获取螺纹结果
       let (luowen, luowen_result) = generate_detection_result(&action4, &hole_config);
       // 更新孔位结果
-      let hole_result = depth_result && diameter_result && luowen_result;
+      let hole_result = depth_result && diameter_result && luowen_result && qiankong_depth_result && qiankong_diameter_result;
       // self.update_final_result(final_result);
 
       let dummy_record = database::surrealdb::HoleRecord::new(
         action1,                             // action1
         action2,                             // action2
+        action5,                             // action2
         action3_json,                        // action3
         action4_json,                        // action4
+        action6_json,                        // action4
         artifact_id as i64,                  // artifact_id
         self.current_artifact.clone(),       // artifact_name
         depth,                               // depth TODO
@@ -351,6 +380,19 @@ impl TaskState {
         hole_config.diameter_min,                               // diameter_min
         hole_config.diameter_max,                               // diameter_max
         hole_config.thru_hole,                                  // thru_hole
+
+        hole_config.qiankong,                                  // thru_hole
+        hole_config.qiankong_depth_min,
+        hole_config.qiankong_depth_max,
+        qiankong_depth,
+        Some(qiankong_depth_result),
+        hole_config.qiankong_diameter_min,
+        hole_config.qiankong_diameter_max,
+        qiankong_diameter,
+        action6_orig_path,
+        action6_result_path,
+        Some(qiankong_diameter_result), 
+        
         Some(hole_result),                          // 最终结果 TODO
         luowen,                                     // luowen  TODO
       );
@@ -359,8 +401,10 @@ impl TaskState {
       database::surrealdb::HoleRecord::new(
         vec![1.0],                           // action1
         vec![1.0],                           // action2
+        vec![1.0], 
         json!({"key": "value"}), 
         json!({"key": "value"}),             // action4
+        json!({"key": "value"}),
         artifact_id as i64,                  // artifact_id
         "1".to_string(),                     // artifact_name
         12.5,                                // depth
@@ -382,6 +426,20 @@ impl TaskState {
         6.5,                                 // diameter_min
         7.0,                                 // diameter_max
         false,                               // thru_hole
+
+                                            // qiankong
+        false,
+        0.0
+        1000.0
+        0.0
+        Some(true),
+        0.0
+        1000.0
+        0.0,
+        "1".to_string(),  
+        "1".to_string(),  
+        Some(true),
+
         Some(true),                          //最终结果
         true,                                //螺纹
       )
@@ -417,6 +475,11 @@ pub struct HoleConfig{
   enable_diameter:bool,
   enable_depth:bool,
   enable_luowen:bool,
+  qiankong: bool,
+  qiankong_diameter_min: f64,
+  qiankong_diameter_max: f64,
+  qiankong_depth_min:f64,
+  qiankong_depth_max:f64,
 }
 
 impl HoleConfig {
@@ -457,6 +520,12 @@ impl HoleConfig {
           enable_diameter: get("enable_diameter")?.as_bool()?,
           enable_depth: get("enable_depth")?.as_bool()?,
           enable_luowen: get("enable_luowen")?.as_bool()?,
+          qiankong: get("qiankong")?.as_bool()?,
+          qiankong_diameter_min: get("qiankong_diameter_min")?.as_float()?,
+          qiankong_diameter_max: get("qiankong_diameter_max")?.as_float()?,
+          qiankong_depth_min: get("qiankong_depth_min")?.as_float()?,
+          qiankong_depth_max: get("qiankong_depth_max")?.as_float()?,
+
       })
   }
 }
@@ -479,22 +548,6 @@ pub fn generate_depth_result(action1: &[f64], action2: &[f64], hole_config: &Hol
     }
   }
 
-  // let avg1_base = action1.iter().sum::<f64>() / action1.len() as f64;
-  // let filtered1: Vec<f64> = action1.iter().copied().filter(|v| *v >= avg1_base).collect();
-  // let avg1 = if filtered1.is_empty() {
-  //     avg1_base
-  // } else {
-  //     filtered1.iter().sum::<f64>() / filtered1.len() as f64
-  // };
-
-  // // 计算 action2 中大于均值的均值
-  // let avg2_base = action2.iter().sum::<f64>() / action2.len() as f64;
-  // let filtered2: Vec<f64> = action2.iter().copied().filter(|v| *v >= avg2_base).collect();
-  // let avg2 = if filtered2.is_empty() {
-  //     avg2_base
-  // } else {
-  //     filtered2.iter().sum::<f64>() / filtered2.len() as f64
-  // };
   let avg1 = action1.iter().copied().sum::<f64>() / action1.len() as f64;
   let avg2 = action2.iter().copied().sum::<f64>() / action2.len() as f64;
   let diff = (avg1 - avg2).abs();
@@ -503,7 +556,24 @@ pub fn generate_depth_result(action1: &[f64], action2: &[f64], hole_config: &Hol
   (diff, is_ok)
 
 }
+// 嵌孔深度结果
+pub fn generate_qiankong_depth_result(action1: &[f64], action5: &[f64], hole_config: &HoleConfig) -> (f64, bool) {
+  if action1.is_empty() || action5.is_empty() {
+    if hole_config.thru_hole {
+      return (88888.0, true); // 避免空数组计算平均值导致错误
+    }else{
+      return  (88888.0, false);
+    }
+  }
 
+  let avg1 = action1.iter().copied().sum::<f64>() / action1.len() as f64;
+  let avg2 = action5.iter().copied().sum::<f64>() / action5.len() as f64;
+  let diff = (avg1 - avg2).abs();
+  // 判断 diff 是否在 [min_val, max_val] 区间内
+  let is_ok = ((hole_config.qiankong_depth_min-0.1)..=(hole_config.qiankong_depth_max+0.1)).contains(&diff);
+  (diff, is_ok)
+
+}
 // 上升沿触发情况下的深度结果获取
 pub fn generate_depth_result_trigger(action1: &[f64], action2: &[f64], hole_config: &HoleConfig) -> (f64, bool){
   // 如果某个孔位未获取到有效值，判断是否为通孔
@@ -533,6 +603,15 @@ pub fn generate_diameter_result(diameter: &HoleDiameter, hole_config: &HoleConfi
     real_diameter = real_diameter+0.1;
   }
   let is_ok = (real_diameter >= hole_config.diameter_min-0.03) && (real_diameter <= hole_config.diameter_max+0.03);
+  (real_diameter, is_ok)
+}
+
+pub fn generate_qiankong_diameter_result(diameter: &HoleDiameter, hole_config: &HoleConfig) -> (f64, bool) {
+  let mut real_diameter = diameter.nei_diameter * 0.01018;
+  if real_diameter >10.0 {
+    real_diameter = real_diameter+0.1;
+  }
+  let is_ok = (real_diameter >= hole_config.qiankong_diameter_min-0.03) && (real_diameter <= hole_config.qiankong_diameter_max+0.03);
   (real_diameter, is_ok)
 }
 

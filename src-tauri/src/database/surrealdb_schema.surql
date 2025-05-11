@@ -31,11 +31,18 @@ DEFINE FIELD action1 ON Hole_library TYPE array<float> PERMISSIONS FULL;
 DEFINE FIELD action1[*] ON Hole_library TYPE float PERMISSIONS FULL;
 DEFINE FIELD action2 ON Hole_library TYPE array<float> PERMISSIONS FULL;
 DEFINE FIELD action2[*] ON Hole_library TYPE float PERMISSIONS FULL;
+DEFINE FIELD action5 ON Hole_library TYPE array<float> PERMISSIONS FULL;
+DEFINE FIELD action5[*] ON Hole_library TYPE float PERMISSIONS FULL;
 DEFINE FIELD action3 ON Hole_library TYPE object PERMISSIONS FULL;
 DEFINE FIELD action3.nei_center ON TABLE Hole_library TYPE array<float>;
 DEFINE FIELD action3.nei_diameter ON TABLE Hole_library TYPE number;
 DEFINE FIELD action3.wai_center ON TABLE Hole_library TYPE array<float>;
 DEFINE FIELD action3.wai_diameter ON TABLE Hole_library TYPE number;
+DEFINE FIELD action6 ON Hole_library TYPE object PERMISSIONS FULL;
+DEFINE FIELD action6.nei_center ON TABLE Hole_library TYPE array<float>;
+DEFINE FIELD action6.nei_diameter ON TABLE Hole_library TYPE number;
+DEFINE FIELD action6.wai_center ON TABLE Hole_library TYPE array<float>;
+DEFINE FIELD action6.wai_diameter ON TABLE Hole_library TYPE number;
 DEFINE FIELD action4 ON Hole_library TYPE object PERMISSIONS FULL;
 DEFINE FIELD action4.bbox ON TABLE Hole_library TYPE array<float>;
 DEFINE FIELD action4.bbox[*] ON Hole_library TYPE float;
@@ -62,6 +69,19 @@ DEFINE FIELD depth_max ON Hole_library TYPE float PERMISSIONS FULL;
 DEFINE FIELD diameter_min ON Hole_library TYPE float PERMISSIONS FULL;
 DEFINE FIELD diameter_max ON Hole_library TYPE float PERMISSIONS FULL;
 DEFINE FIELD thru_hole ON Hole_library TYPE bool PERMISSIONS FULL;
+DEFINE FIELD qiankong ON Hole_library TYPE bool PERMISSIONS FULL;
+DEFINE FIELD qiankong_depth_min ON Hole_library TYPE float PERMISSIONS FULL;
+DEFINE FIELD qiankong_depth_max ON Hole_library TYPE float PERMISSIONS FULL;
+DEFINE FIELD qiankong_depth ON Hole_library TYPE float PERMISSIONS FULL;
+DEFINE FIELD qiankong_depth_result ON Hole_library TYPE option<bool> PERMISSIONS FULL;
+DEFINE FIELD qiankong_diameter_min ON Hole_library TYPE float PERMISSIONS FULL;
+DEFINE FIELD qiankong_diameter_max ON Hole_library TYPE float PERMISSIONS FULL;
+DEFINE FIELD qiankong_diameter ON Hole_library TYPE float PERMISSIONS FULL;
+DEFINE FIELD qiankong_diameter_orig_path ON Hole_library TYPE string PERMISSIONS FULL;
+DEFINE FIELD qiankong_diameter_result_path ON Hole_library TYPE string PERMISSIONS FULL;
+DEFINE FIELD qiankong_dimeter_result ON Hole_library TYPE option<bool> PERMISSIONS FULL;
+
+
 DEFINE FIELD hole_result ON Hole_library TYPE option<bool> PERMISSIONS FULL;
 DEFINE FIELD luowen ON Hole_library TYPE bool PERMISSIONS FULL;
 

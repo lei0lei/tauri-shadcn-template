@@ -145,8 +145,10 @@ impl ArtifactRecord {
 pub struct HoleRecord{
   action1: Vec<f64>,
   action2: Vec<f64>,
+  action5: Vec<f64>,
   action3: serde_json::Value,
   action4: serde_json::Value,
+  action6: serde_json::Value,
   artifact_id: i64,
   artifact_name: String,
   depth: f64,
@@ -168,6 +170,12 @@ pub struct HoleRecord{
   diameter_min: f64,
   diameter_max:f64,
   thru_hole: bool,
+  qiankong: bool,
+
+
+
+
+
   hole_result:Option<bool>,
   luowen:bool,
 }
@@ -176,8 +184,10 @@ impl HoleRecord {
   pub fn new(
     action1: Vec<f64>,
     action2: Vec<f64>,
+    action5: Vec<f64>,
     action3: serde_json::Value,
     action4: serde_json::Value,
+    action6: serde_json::Value,
     artifact_id: i64,
     artifact_name: String,
     depth: f64,
@@ -199,14 +209,29 @@ impl HoleRecord {
     diameter_min: f64,
     diameter_max:f64,
     thru_hole: bool,
+
+    qiankong:bool,
+    qiankong_depth_min:f64,
+    qiankong_depth_max:f64,
+    qiankong_depth:f64,
+    qiankong_depth_result: Option<bool>,
+    qiankong_diameter_min: f64,
+    qiankong_diameter_max: f64,
+    qiankong_diameter:f64,
+    qiankong_diameter_orig_path: String,
+    qiankong_diameter_result_path: String,
+    qiankong_dimeter_result: Option<bool>,
+
     hole_result:Option<bool>,
     luowen:bool,
   ) -> Self {
     HoleRecord {
       action1,
       action2,
+      action5,
       action3,
       action4,
+      action6,
       artifact_id,
       artifact_name,
       depth,
@@ -228,6 +253,19 @@ impl HoleRecord {
       diameter_min,
       diameter_max,
       thru_hole,
+
+      qiankong,
+      qiankong_depth_min,
+      qiankong_depth_max,
+      qiankong_depth,
+      qiankong_depth_result,
+      qiankong_diameter_min,
+      qiankong_diameter_max,
+      qiankong_diameter,
+      qiankong_diameter_orig_path，
+      qiankong_diameter_result_path,
+      qiankong_dimeter_result,
+
       hole_result,
       luowen,
     }
