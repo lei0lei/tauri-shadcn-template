@@ -330,23 +330,34 @@ impl TaskState {
       let action4_orig_path = hole.action4_orig_path.as_ref().unwrap_or(&"wrong-path".to_string()).to_string();
       let action4_result_path = hole.action4_result_path.as_ref().unwrap_or(&"wrong-path".to_string()).to_string();
 
-
-      let action6_orig_path = hole.action6_orig_path.as_ref().unwrap_or(&"wrong-path".to_string()).to_string();
-      let action6_result_path = hole.action6_result_path.as_ref().unwrap_or(&"wrong-path".to_string()).to_string();
-      let action6 = hole.action6.clone().map_or(HoleDiameter {
+      let (qiankong_depth, qiankong_depth_result, qiankong_diameter, qiankong_diameter_result, action6_json, action6_orig_path, action6_result_path) =
+        if hole_config.qiankong {
+            let action6 = hole.action6.clone().map_or(HoleDiameter {
                                                                 nei_center: (0.0, 0.0),    // 默认值
                                                                 nei_diameter: 0.0,         // 默认值
                                                                 wai_center: (0.0, 0.0),    // 默认值
                                                                 wai_diameter: 0.0,         // 默认值
                                                               }, |v| v);
-      let action6_json = serde_json::to_value(&action6).unwrap_or(json!(null));
+            let action6_json = serde_json::to_value(&action6).unwrap_or(json!(null));
+            let action6_orig_path = hole.action6_orig_path.as_ref().unwrap_or(&"wrong-path".to_string()).to_string();
+            let action6_result_path = hole.action6_result_path.as_ref().unwrap_or(&"wrong-path".to_string()).to_string();
+            let (qd, qdr) = generate_qiankong_depth_result(&action1, &action5, &hole_config);
+            let (qdia, qdia_r) = generate_qiankong_diameter_result(&action6, &hole_config);
+            (qd, qdr, qdia, qdia_r, action6_json, action6_orig_path, action6_result_path)
+        } else {
+            (0.0,
+            true, 
+            0.0, 
+            true, 
+            json!(null), 
+            "1".to_string(), 
+            "2".to_string())
+        };
 
       // 获取深度结果
       let (depth, depth_result) = generate_depth_result(&action1, &action2, &hole_config);
-      let (qiankong_depth, qiankong_depth_result) = generate_qiankong_depth_result(&action1, &action5, &hole_config);
       // 获取直径结果
       let (diameter, diameter_result) = generate_diameter_result(&action3, &hole_config);
-      let (qiankong_diameter, qiankong_diameter_result) = generate_qiankong_diameter_result(&action6, &hole_config);
       // 获取螺纹结果
       let (luowen, luowen_result) = generate_detection_result(&action4, &hole_config);
       // 更新孔位结果
@@ -559,12 +570,12 @@ pub fn generate_depth_result(action1: &[f64], action2: &[f64], hole_config: &Hol
 }
 // 嵌孔深度结果
 pub fn generate_qiankong_depth_result(action1: &[f64], action5: &[f64], hole_config: &HoleConfig) -> (f64, bool) {
+  if !hole_config.qiankong {
+    return (88888.0, true);
+  }
+  
   if action1.is_empty() || action5.is_empty() {
-    if hole_config.thru_hole {
-      return (88888.0, true); // 避免空数组计算平均值导致错误
-    }else{
       return  (88888.0, false);
-    }
   }
 
   let avg1 = action1.iter().copied().sum::<f64>() / action1.len() as f64;
@@ -608,6 +619,10 @@ pub fn generate_diameter_result(diameter: &HoleDiameter, hole_config: &HoleConfi
 }
 
 pub fn generate_qiankong_diameter_result(diameter: &HoleDiameter, hole_config: &HoleConfig) -> (f64, bool) {
+  if !hole_config.qiankong {
+    return (0.0,true);
+  }
+
   let mut real_diameter = diameter.nei_diameter * 0.01018;
   if real_diameter >10.0 {
     real_diameter = real_diameter+0.1;
@@ -1109,6 +1124,26 @@ async fn send_sensor_data_to_frontend(
         // sendlog2frontend("[robot] [info] [传感器触发-2通孔]".to_string());
       }
     }
+    Some(&11) => {
+      // sendlog2frontend("[robot] [info] [传感器触发-2----]".to_string());
+      let mut task_state = GLOBAL_TASK_STATE.write().await;
+      if -50.0<data && data<50.0 {
+        task_state.update_action5(pos[0],pos[1],data).await;
+      }
+      drop(task_state);
+
+      if -50.0<data && data<50.0 {
+        let reciever = String::from("sensor-send-data-2");
+        let formatted_data = format!("{:.*}", 5, data);
+        app_handle.emit(&reciever, formatted_data).unwrap();
+        // sendlog2frontend("[robot] [info] [传感器触发-2右侧]".to_string());
+      }else{
+        let reciever = String::from("sensor-send-data-2");
+        app_handle.emit(&reciever, "通孔").unwrap();
+        // sendlog2frontend("[robot] [info] [传感器触发-2通孔]".to_string());
+      }
+    }
+
     _ => {
       // sendlog2frontend("[robot] [info] [无效或错误的机器人位置数据-传感器]".to_string());
         // println!("无效或错误的机器人位置数据: {:?}", pos);
@@ -1398,28 +1433,131 @@ async fn send_image_to_fastapi(
 
       // 获取当前孔位配置信息
       if let Some(hole_config) = HoleConfig::new(artifact_type.to_string(), face, hole) {
-        
-        // TODO：构造record孔位结果插入数据库
-        let mut task_state_tmp = GLOBAL_TASK_STATE.write().await;
-        let record =task_state_tmp.get_hole_result_record(face,hole,&hole_config).await;
-        
-        // 获取孔位结果
-        let final_result_from_record = record.get_hole_result().unwrap_or_else(|| false); 
-        // 更新数据库孔位结果
-        task_state_tmp.update_hole_result(face,hole,record.get_hole_result());
-        drop(task_state_tmp);
-        // 取出record中的判定结果
-        insert_hole_database(record).await;
+        if !hole_config.qiankong {
+          // TODO：构造record孔位结果插入数据库
+          let mut task_state_tmp = GLOBAL_TASK_STATE.write().await;
+          let record =task_state_tmp.get_hole_result_record(face,hole,&hole_config).await;
+          
+          // 获取孔位结果
+          let final_result_from_record = record.get_hole_result().unwrap_or_else(|| false); 
+          // 更新数据库孔位结果
+          task_state_tmp.update_hole_result(face,hole,record.get_hole_result());
+          drop(task_state_tmp);
+          // 取出record中的判定结果
+          insert_hole_database(record).await;
 
-        let final_result_data = FinalResultData {
-          face,         // u16 类型
-          hole,         // u16 类型
-          // artifact: artifact.clone(),  // 假设 artifact 仍然是 String 类型
-          final_result: final_result_from_record,
-        };
+          let final_result_data = FinalResultData {
+            face,         // u16 类型
+            hole,         // u16 类型
+            // artifact: artifact.clone(),  // 假设 artifact 仍然是 String 类型
+            final_result: final_result_from_record,
+          };
 
-        app_handle.emit("hole_final_result", final_result_data)
-                    .map_err(|_| "发送到前端失败")?;
+          app_handle.emit("hole_final_result", final_result_data)
+                      .map_err(|_| "发送到前端失败")?;
+        }
+      }
+
+    }
+    Some(&12)=>{
+      if pos.first() == Some(&0) {
+          // 如果在第0面则为型号判断，如果型号判断不正确，中断操作,并返回给前端
+      } else {
+          // 第一个值不是0，则为嵌孔，进行嵌孔直径操作
+        sendlog2frontend("[robot] [info] [嵌孔相机触发-5]".to_string());
+        let flie_name = "5_orig.jpg";
+        let pp_refs: Vec<&str> = pp.iter().map(|s| s.as_str()).collect(); // 转换为 Vec<&str>
+        let full_path_orig = generate_file_path(&pp_refs, flie_name);
+        save_image(&opencv_vector, &full_path_orig)?;
+
+        let client = get_client().await;
+        let part = Part::bytes(opencv_vector.to_vec())
+                          .file_name("image.jpg")
+                          .mime_str("image/jpeg")
+                          .map_err(|_| "构造 Part 失败")?;
+        let form = Form::new().part("file", part);
+
+        
+        let mut fastapi_request = String::from("http://localhost:8000/detect_diameter_with_draw/");
+        let mut reciever = String::from("image-send-image-1");
+
+        let response = client
+            .post(&fastapi_request)
+            .timeout(Duration::from_secs(2))
+            .multipart(form)
+            .send()
+            .await
+            .map_err(|_| "发送请求失败")?;
+        
+        // 5. 解析响应
+        let response_json = response
+            .json::<serde_json::Value>()
+            .await
+            .map_err(|_| "解析 JSON 失败")?;
+
+        let results = response_json.get("results").unwrap_or(&serde_json::json!({})).clone();
+        let image_base64 = response_json
+            .get("image_base64")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+
+        let flie_name = "5_det.jpg";
+        let pp_refs: Vec<&str> = pp.iter().map(|s| s.as_str()).collect(); // 转换为 Vec<&str>
+        let full_path_result = generate_file_path(&pp_refs, flie_name);
+        save_image_base64(&image_base64, &full_path_result)?;
+
+        // TODO 换成直径检测结果
+        let result = construct_action3(&results).await;
+        let result = result.unwrap_or(HoleDiameter {
+          nei_center: (0.0, 0.0),
+          nei_diameter: 0.0,
+          wai_center: (0.0, 0.0),
+          wai_diameter: 0.0,
+        });
+      // 
+
+        // 存储路径到taskstate
+        let full_path_orig_str = full_path_orig.to_string_lossy().to_string();
+        let full_path_result_str = full_path_result.to_string_lossy().to_string();
+        {
+          let mut task_state = GLOBAL_TASK_STATE.write().await;
+          task_state.update_action6(face, 
+                                    hole, 
+                                    result,
+                                    full_path_orig_str,
+                                    full_path_result_str).await;
+        }
+
+        app_handle.emit(&reciever, image_base64)
+                  .map_err(|_| "发送图像到前端失败")?;
+
+        if let Some(hole_config) = HoleConfig::new(artifact_type.to_string(), face, hole) {
+          if hole_config.qiankong {
+            // TODO：构造record孔位结果插入数据库
+            let mut task_state_tmp = GLOBAL_TASK_STATE.write().await;
+            let record =task_state_tmp.get_hole_result_record(face,hole,&hole_config).await;
+            
+            // 获取孔位结果
+            let final_result_from_record = record.get_hole_result().unwrap_or_else(|| false); 
+            // 更新数据库孔位结果
+            task_state_tmp.update_hole_result(face,hole,record.get_hole_result());
+            drop(task_state_tmp);
+            // 取出record中的判定结果
+            insert_hole_database(record).await;
+
+            let final_result_data = FinalResultData {
+              face,         // u16 类型
+              hole,         // u16 类型
+              // artifact: artifact.clone(),  // 假设 artifact 仍然是 String 类型
+              final_result: final_result_from_record,
+            };
+
+            app_handle.emit("hole_final_result", final_result_data)
+                        .map_err(|_| "发送到前端失败")?;
+          }
+        }
+
 
       }
 
