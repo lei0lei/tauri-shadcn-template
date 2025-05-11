@@ -172,7 +172,16 @@ pub struct HoleRecord{
   thru_hole: bool,
   qiankong: bool,
 
-
+  qiankong_depth_min:f64,
+  qiankong_depth_max:f64,
+  qiankong_depth:f64,
+  qiankong_depth_result: Option<bool>,
+  qiankong_diameter_min: f64,
+  qiankong_diameter_max: f64,
+  qiankong_diameter:f64,
+  qiankong_diameter_orig_path: String,
+  qiankong_diameter_result_path: String,
+  qiankong_dimeter_result: Option<bool>,
 
 
 
@@ -262,7 +271,7 @@ impl HoleRecord {
       qiankong_diameter_min,
       qiankong_diameter_max,
       qiankong_diameter,
-      qiankong_diameter_orig_path，
+      qiankong_diameter_orig_path,
       qiankong_diameter_result_path,
       qiankong_dimeter_result,
 

@@ -172,6 +172,7 @@ pub struct HoleState {
   pub action4: Option<Yolov8Result>, // 动作4的检测结果，如圆心、直径等
   pub action4_orig_path: Option<String>,
   pub action4_result_path: Option<String>,
+  pub action6: Option<HoleDiameter>, // 动作3的检测结果
   pub action6_orig_path: Option<String>,
   pub action6_result_path: Option<String>,
   pub result: Option<bool>,
@@ -429,12 +430,12 @@ impl TaskState {
 
                                             // qiankong
         false,
-        0.0
-        1000.0
-        0.0
+        0.0,
+        1000.0,
+        0.0,
         Some(true),
-        0.0
-        1000.0
+        0.0,
+        1000.0,
         0.0,
         "1".to_string(),  
         "1".to_string(),  
