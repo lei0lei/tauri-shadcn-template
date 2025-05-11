@@ -52,7 +52,7 @@ const holesPreset: Record<string, SurfaceData[]> = {
     { surface: "D", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null,null,null,null] },
     { surface: "E", status: "NULL", holes: [null,null,null,null,null] }, ],
   "EY28": [ 
-    { surface: "A", status: "NULL", holes: [null,null,null] },
+    { surface: "A", status: "NULL", holes: [null,null,null,null] },
     { surface: "B", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null] },
     { surface: "C", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null,null] },
     { surface: "D", status: "NULL", holes: [null,null,null,null,null,null,null,null,null] },

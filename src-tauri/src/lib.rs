@@ -345,11 +345,18 @@ impl TaskState {
             let (qdia, qdia_r) = generate_qiankong_diameter_result(&action6, &hole_config);
             (qd, qdr, qdia, qdia_r, action6_json, action6_orig_path, action6_result_path)
         } else {
+          let default_action6 = HoleDiameter {
+              nei_center: (0.0, 0.0),
+              nei_diameter: 0.0,
+              wai_center: (0.0, 0.0),
+              wai_diameter: 0.0,
+          };
+          let default_action6_json = serde_json::to_value(&default_action6).unwrap_or(json!(null));
             (0.0,
             true, 
             0.0, 
             true, 
-            json!(null), 
+            default_action6_json, 
             "1".to_string(), 
             "2".to_string())
         };
@@ -1462,6 +1469,16 @@ async fn send_image_to_fastapi(
     Some(&12)=>{
       if pos.first() == Some(&0) {
           // 如果在第0面则为型号判断，如果型号判断不正确，中断操作,并返回给前端
+          sendlog2frontend("[robot] [info] [型号检测相机触发-5]".to_string());
+          let flie_name = "0_orig.jpg";
+          let pp_refs: Vec<&str> = pp.iter().map(|s| s.as_str()).collect(); // 转换为 Vec<&str>
+          let full_path_orig = generate_file_path(&pp_refs, flie_name);
+          save_image(&opencv_vector, &full_path_orig)?;
+
+
+
+
+
       } else {
           // 第一个值不是0，则为嵌孔，进行嵌孔直径操作
         sendlog2frontend("[robot] [info] [嵌孔相机触发-5]".to_string());

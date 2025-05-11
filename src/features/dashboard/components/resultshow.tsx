@@ -183,7 +183,14 @@ export default function ResultShow() {
                 <Badge className={dialogData.hole_result ? "bg-green-700 text-white text-base" : "bg-red-700 text-white text-base"}>
                 {dialogData.hole_result ? "OK" : "NG"}
               </Badge>
+              
                 </div>
+              {dialogData.qiankong && (
+                <div className="flex items-center gap-2">
+                  <Badge className="text-base">嵌孔</Badge>
+                </div>
+              )}
+
             </div>
           </div>
         </DialogHeader>
@@ -249,6 +256,48 @@ export default function ResultShow() {
                     </div>
                   </CardContent>
                 </Card>
+                {dialogData.qiankong && (
+                  <>
+                    {/* 嵌孔深度检测 */}
+                    <Card>
+                      <CardHeader className="flex-row justify-between items-center">
+                        <CardTitle className="text-lg">嵌孔深度检测</CardTitle>
+                        {dialogData.qiankong_depth_result ? (
+                          <IconCircleCheck className="text-green-700 w-11 h-11" />
+                        ) : (
+                          <IconCircleX className="text-red-700 w-11 h-11" />
+                        )}
+                      </CardHeader>
+                      <CardContent className="text-base space-y-1">
+                        <div className="flex justify-between">
+                          <span>检测值：{dialogData.qiankong_depth != null ? Number(dialogData.qiankong_depth).toFixed(2) : "无数据"}</span>
+                          <span>标准：{dialogData.qiankong_depth_min} - {dialogData.qiankong_depth_max}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* 嵌孔直径检测 */}
+                    <Card>
+                      <CardHeader className="flex-row justify-between items-center">
+                        <CardTitle className="text-lg">嵌孔直径检测</CardTitle>
+                        {dialogData.qiankong_dimeter_result ? (
+                          <IconCircleCheck className="text-green-700 w-11 h-11" />
+                        ) : (
+                          <IconCircleX className="text-red-700 w-11 h-11" />
+                        )}
+                      </CardHeader>
+                      <CardContent className="text-base space-y-1">
+                        <div className="flex justify-between">
+                          <span>检测值：{dialogData.qiankong_diameter != null ? Number(dialogData.qiankong_diameter).toFixed(2) : "无数据"}</span>
+                          <span>标准：{dialogData.qiankong_diameter_min} - {dialogData.qiankong_diameter_max}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </>
+                )}
+
+
+
               </div>
             </div>
           ) : (

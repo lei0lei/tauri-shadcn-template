@@ -330,11 +330,11 @@ luowen = false
 enable_diameter = true
 enable_depth = true
 enable_luowen = true
-qiankong = false
+qiankong = true
 qiankong_diameter_min = 0.0
 qiankong_diameter_max = 1000.0
-qiankong_depth_min = 0.0
-qiankong_depth_max = 1000.0
+qiankong_depth_min = 2.5
+qiankong_depth_max = 3.5
 # +++++++++++++++++++++++++++++++EH09-D++++++++++++++++++++++++++++++++++++++++
 
 [type.EH09.D]
@@ -1381,7 +1381,7 @@ qiankong_depth_max = 1000.0
 run_sequence = ['A','B','C','D','E']
 # +++++++++++++++++++++++++EY28-A++++++++++++++++++++++++++++++++++++
 [type.EY28.A]
-run_sequence = [1,2,3]
+run_sequence = [1,2,3,4]
 [type.EY28.A.1]
 thru_hole = true
 screw_hole = 'M8-1.25'
@@ -1432,6 +1432,24 @@ qiankong_diameter_min = 0.0
 qiankong_diameter_max = 1000.0
 qiankong_depth_min = 0.0
 qiankong_depth_max = 1000.0
+
+[type.EY28.A.4]
+thru_hole = true
+screw_hole = 'M6-1'
+diameter_min = 4.9
+diameter_max = 5.1
+depth_min = 1000.0
+depth_max = 2000.0
+luowen = true
+enable_diameter = true
+enable_depth = true
+enable_luowen = true
+qiankong = false
+qiankong_diameter_min = 0.0
+qiankong_diameter_max = 1000.0
+qiankong_depth_min = 0.0
+qiankong_depth_max = 1000.0
+
 # +++++++++++++++++++++++++EY28-B++++++++++++++++++++++++++++++++++++
 [type.EY28.B]
 run_sequence = [1,2,3,4,5,6,7,8,9,10]
@@ -1784,7 +1802,7 @@ qiankong_depth_min = 0.0
 qiankong_depth_max = 1000.0
 
 [type.EY28.C.11]
-thru_hole = false
+thru_hole = true
 screw_hole = 'M6-1'
 diameter_min = 7.7
 diameter_max = 7.9
@@ -1794,7 +1812,7 @@ luowen = false
 enable_diameter = true
 enable_depth = true
 enable_luowen = true
-qiankong = false
+qiankong = true
 qiankong_diameter_min = 0.0
 qiankong_diameter_max = 1000.0
 qiankong_depth_min = 0.0
@@ -2840,9 +2858,9 @@ luowen = false
 enable_diameter = true
 enable_depth = true
 enable_luowen = true
-qiankong = false
-qiankong_diameter_min = 0.0
-qiankong_diameter_max = 1000.0
+qiankong = true
+qiankong_diameter_min = 4.5
+qiankong_diameter_max = 5.5
 qiankong_depth_min = 0.0
 qiankong_depth_max = 1000.0
 
