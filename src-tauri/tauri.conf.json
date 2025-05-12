@@ -26,6 +26,11 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "windows": {
+              "wix": {
+                  "language": "zh-CN"
+              }
+          },
     "icon": [
       "icons/2061956.png",
       "icons/2061956.ico"

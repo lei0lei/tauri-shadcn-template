@@ -52,6 +52,8 @@ origins = [
 model_path = {
     'luowen_detect':"D:\\code\\tauri-shadcn-template\\fastapi\\app\\algo\\det.pt",
     'diameter_segment':"D:\\code\\tauri-shadcn-template\\fastapi\\app\\algo\\seg.pt",
+    'q_diameter_segment':"D:\\code\\tauri-shadcn-template\\fastapi\\app\\algo\\q_seg.pt",
+    'd_type':"D:\\code\\tauri-shadcn-template\\fastapi\\app\\algo\\type.pt",
 }
 
 # JSON 数据格式
@@ -60,7 +62,8 @@ class ImageMetadata(BaseModel):
 
 yolo_model = None
 yolo_seg_model = None
-
+q_seg_model = None
+type_model = None
     
 app = FastAPI()
 
@@ -81,15 +84,23 @@ async def startup():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     det_model_str = model_path["luowen_detect"]
     seg_model_str = model_path["diameter_segment"]
-    global yolo_model, yolo_seg_model
+    q_seg_model_str = model_path["q_diameter_segment"]
+    type_model_str = model_path["d_type"]
+    global yolo_model, yolo_seg_model,q_seg_model,type_model
     yolo_model = YOLO(det_model_str).to(device)
     print("✅ YOLOv8 det模型加载完成")
     yolo_seg_model = YOLO(seg_model_str).to(device)
-    await asyncio.sleep(4)  # 等待模型稳定
+    q_seg_model = YOLO(q_seg_model_str).to(device)
+    print("✅ YOLOv8 det模型加载完成")
+    type_model = YOLO(type_model_str).to(device)
+    print("✅ YOLOv8 det模型加载完成")
+    await asyncio.sleep(2)  # 等待模型稳定
     print("✅ YOLOv8 seg模型加载完成")
     dummy_img = np.random.randint(0, 255, (2448, 2048, 3), dtype=np.uint8)
     results = yolo_model(dummy_img)[0]
     results = yolo_seg_model(dummy_img)[0]
+    results = q_seg_model(dummy_img)[0]
+    results = type_model(dummy_img)[0]
     torch.cuda.synchronize()
     print("🔥 预热完成，YOLOv8 已准备就绪")
 
@@ -299,7 +310,92 @@ async def detect_diameter_with_draw(
     # headers = {"Content-Disposition": "attachment; filename=detected_image.png"}
     # return StreamingResponse(img_bytes, media_type="image/png", headers=headers, background=JSONResponse(content=detection_json))
 
+@app.post("/detect_q_diameter_with_draw/")
+async def detect_q_diameter_with_draw(
+    file: UploadFile = File(...),
+):
+# 读取图片数据
+    print('启动算法')
+    t1 =  time.time()
+    contents = await file.read()
+    image = np.frombuffer(contents, np.uint8)
+    image = cv2.imdecode(image, cv2.IMREAD_COLOR)
 
+    # 使用 YOLOv8 进行推理
+    try:
+        orig_h, orig_w = image.shape[:2]
+
+        results = q_seg_model(image)[0]
+        detections = sv.Detections.from_ultralytics(results)
+        # 绘制mask图片
+        mask_annotator = sv.MaskAnnotator()
+        label_annotator = sv.LabelAnnotator(text_position=sv.Position.CENTER_OF_MASS)
+
+        annotated_image = mask_annotator.annotate(
+            scene=image, detections=detections)
+        annotated_image = label_annotator.annotate(
+            scene=annotated_image, detections=detections)
+        
+        detection_json = {}
+        for class_name in ["diameter-nei", "diameter-wai"]:
+            class_id = next((k for k, v in results.names.items() if v == class_name), None)
+            if class_id is None:
+                continue
+            
+            class_id = int(class_id)
+
+            best_conf = -1
+            best_mask = None
+
+            for mask, cls, conf in zip(results.masks.data, results.boxes.cls, results.boxes.conf):
+                if int(cls) == class_id and conf > best_conf:
+                    best_conf = float(conf)
+                    best_mask = cv2.resize(mask.cpu().numpy(), (orig_w, orig_h), interpolation=cv2.INTER_NEAREST)
+
+            if best_mask is None:
+                continue
+            if class_name =='diameter-nei':
+                mask_info = get_largest_mask_nei_info([best_mask])
+            if class_name =='diameter-wai':
+                mask_info = get_largest_mask_wai_info([best_mask])
+            if mask_info:
+                detection_json[class_name] = mask_info
+
+        text_position_y = 70  # 从30像素开始绘制文本
+
+
+        for class_name, info in detection_json.items():
+            center_text = f"{class_name}_center: ({info['center_x']}, {info['center_y']})"
+            diameter_text = f"{class_name}_diameter: {info['diameter']}"
+
+            font_scale = 2  # 增大字体大小
+            font_color = (0, 255, 0)  # 绿色
+            thickness = 3  # 增加字体的厚度
+            # 绘制文本
+            cv2.putText(annotated_image, center_text, 
+                        (10, text_position_y), 
+                        cv2.FONT_HERSHEY_SIMPLEX, font_scale, font_color, thickness, cv2.LINE_AA)
+            text_position_y += 70  # 下一行文本向下偏移50像素
+
+            cv2.putText(annotated_image, diameter_text, 
+                        (10, text_position_y), 
+                        cv2.FONT_HERSHEY_SIMPLEX, font_scale, font_color, thickness, cv2.LINE_AA)
+            text_position_y += 70  # 下一行文本向下偏移50像素
+
+
+        # **直接用 OpenCV 编码为 PNG**
+        _, buffer = cv2.imencode('.jpg', annotated_image)
+        img_base64 = base64.b64encode(buffer).decode("utf-8")
+        img_bytes = io.BytesIO(buffer)
+    except:
+        _, buffer = cv2.imencode('.jpg', image)
+        img_base64 = base64.b64encode(buffer).decode("utf-8")
+        detection_json = {}
+        img_bytes = io.BytesIO(buffer)
+
+    print(time.time()-t1)
+    detection_json['algo_time'] = time.time()-t1
+    return {"results": detection_json, "image_base64": img_base64}
 
 
 @app.post("/detect_luowen_with_draw/")
@@ -317,7 +413,7 @@ async def detect_luowen_with_draw(
     # 使用 YOLOv8 进行推理
     try:
 
-        results = yolo_model(image,conf=0.3)[0]
+        results = yolo_model(image,conf=0.5)[0]
         detections = sv.Detections.from_ultralytics(results)
         
         # 解析检测结果
@@ -347,7 +443,46 @@ async def detect_luowen_with_draw(
     # headers = {"Content-Disposition": "attachment; filename=detected_image.png"}
     # return StreamingResponse(img_bytes, media_type="image/png", headers=headers)
 
+@app.post("/detect_type_with_draw/")
+async def detect_type_with_draw(
+    file: UploadFile = File(...),
+):
+    """处理图片，返回检测结果和绘制后的 Base64 图片"""
+    print('启动算法')
+    t1 =  time.time()
+    # 读取图片数据
+    contents = await file.read()
+    image = np.frombuffer(contents, np.uint8)
+    image = cv2.imdecode(image, cv2.IMREAD_COLOR)
 
+    # 使用 YOLOv8 进行推理
+    try:
+
+        results = type_model(image,conf=0.7)[0]
+        detections = sv.Detections.from_ultralytics(results)
+        
+        # 解析检测结果
+        detection_json = parse_yolo_results(results)
+        GREEN = (0, 255, 0)
+        # 使用 Supervision 绘制检测框
+        # image_with_boxes = draw_detections(image, results)
+        box_annotator = sv.BoxAnnotator(thickness=5)
+        annotated_frame = box_annotator.annotate(
+            scene=image.copy(),
+            detections=detections)
+
+        # **直接用 OpenCV 编码为 PNG**
+        _, buffer = cv2.imencode('.png', annotated_frame)
+        img_base64 = base64.b64encode(buffer).decode("utf-8")
+        img_bytes = io.BytesIO(buffer)
+    except:
+        _, buffer = cv2.imencode('.png', image)
+        img_base64 = base64.b64encode(buffer).decode("utf-8")
+        detection_json = {}
+        img_bytes = io.BytesIO(buffer)
+
+    print(time.time()-t1)
+    return {"results": detection_json, "image_base64": img_base64}
 
 @app.post("/detect_luowen/")
 async def detect_luowen(

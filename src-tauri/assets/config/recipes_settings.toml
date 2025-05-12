@@ -2179,7 +2179,7 @@ qiankong_depth_min = 0.0
 qiankong_depth_max = 1000.0
 
 [type.EK30.A.4]
-thru_hole = false
+thru_hole = true
 screw_hole = 'M14-1.5'
 diameter_min = 12.4
 diameter_max = 12.6
@@ -2493,7 +2493,7 @@ qiankong_depth_max = 1000.0
 [type.EK30.C]
 run_sequence = [1]
 [type.EK30.C.1]
-thru_hole = false
+thru_hole = true
 screw_hole = 'M14-1.5'
 diameter_min = 12.4
 diameter_max = 12.6

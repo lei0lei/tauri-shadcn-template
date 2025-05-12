@@ -1475,10 +1475,84 @@ async fn send_image_to_fastapi(
           let full_path_orig = generate_file_path(&pp_refs, flie_name);
           save_image(&opencv_vector, &full_path_orig)?;
 
+          // EH09:0  ey28:4   ek30:2   eh12:1 ek40:3
+          let client = get_client().await;
+          let part = Part::bytes(opencv_vector.to_vec())
+                                .file_name("image.jpg")
+                                .mime_str("image/jpeg")
+                                .map_err(|_| "构造 Part 失败")?;
+          let form = Form::new().part("file", part);
+        
+          let mut fastapi_request = String::from("http://localhost:8000/detect_type_with_draw/");
+          let mut reciever = String::from("image-send-image-2");
+
+          let response = client
+              .post(&fastapi_request)
+              .timeout(Duration::from_secs(2))
+              .multipart(form)
+              .send()
+              .await
+              .map_err(|_| "发送请求失败")?;
+          
+          // 5. 解析响应
+          let response_json = response
+              .json::<serde_json::Value>()
+              .await
+              .map_err(|_| "解析 JSON 失败")?;
+
+          let results = response_json.get("results").unwrap_or(&serde_json::json!({})).clone();
+          let image_base64 = response_json
+              .get("image_base64")
+              .and_then(|v| v.as_str())
+              .unwrap_or("")
+              .to_string();
+
+          let flie_name = "0_det.jpg";
+          let pp_refs: Vec<&str> = pp.iter().map(|s| s.as_str()).collect(); // 转换为 Vec<&str>
+          let full_path_result = generate_file_path(&pp_refs, flie_name);
+          save_image_base64(&image_base64, &full_path_result)?;
 
 
+          app_handle.emit(&reciever, image_base64)
+                    .map_err(|_| "发送到前端失败")?;
 
+          // 型号解析
+          let result = construct_action4(&results).await;
+                let result = result.unwrap_or(Yolov8Result {
+                  class_id: 9999,
+                  confidence: 0.0,
+                  bbox: (0.0, 0.0, 0.0, 0.0),
+          });
+          println!("检测结果: {:?}", result); // 打印 result
+          // class_id 与型号的对应表
+          let class_id_map: std::collections::HashMap<u32, &str> = [
+              (0, "EH09"),
+              (1, "EH12"),
+              (2, "EK30"),
+              (3, "EK40"),
+              (4, "EY28"),
+          ].iter().cloned().collect();
+          // 获取plc型号
+          let current_type = get_current_type().clone();
 
+          // plc型号与检测型号不符
+          if let Some(current_type) = current_type {
+              if let Some(&detected_type) = class_id_map.get(&result.class_id) {
+                  if detected_type != current_type {
+                      println!("型号不一致：当前为 {}, 检测为 {}", current_type, detected_type);
+                      // 在这里添加你要执行的操作
+                  } else {
+                      println!("型号一致：{}", current_type);
+                  }
+              } else {
+                  println!("未知class_id: {}", result.class_id);
+              }
+          } else {
+              println!("获取当前型号失败");
+          }
+          
+
+          // sendlog2frontend("[robot] [info] [检测零件型号-5]".to_string());
       } else {
           // 第一个值不是0，则为嵌孔，进行嵌孔直径操作
         sendlog2frontend("[robot] [info] [嵌孔相机触发-5]".to_string());
@@ -1495,7 +1569,7 @@ async fn send_image_to_fastapi(
         let form = Form::new().part("file", part);
 
         
-        let mut fastapi_request = String::from("http://localhost:8000/detect_diameter_with_draw/");
+        let mut fastapi_request = String::from("http://localhost:8000/detect_q_diameter_with_draw/");
         let mut reciever = String::from("image-send-image-1");
 
         let response = client
