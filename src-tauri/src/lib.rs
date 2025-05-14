@@ -1539,15 +1539,29 @@ async fn send_image_to_fastapi(
           if let Some(current_type) = current_type {
               if let Some(&detected_type) = class_id_map.get(&result.class_id) {
                   if detected_type != current_type {
+                      let log = format!("[software] [error] [工装型号: {} 选择型号: {} 机器人停止]", detected_type,current_type);
+                      pause_robot().await;
+                      send_robot_err_to_plc().await;
+                      sendlog2frontend(log.to_string());
                       println!("型号不一致：当前为 {}, 检测为 {}", current_type, detected_type);
                       // 在这里添加你要执行的操作
                   } else {
+                      let log = format!("[software] [info] [工装型号: {} 选择型号: {} 机器人继续]", detected_type,current_type);
+                      sendlog2frontend(log.to_string());
                       println!("型号一致：{}", current_type);
                   }
               } else {
+                  let log = format!("[software] [error] [工装型号: 无法检测 选择型号: {}]",current_type);
+                  pause_robot().await;
+                  send_robot_err_to_plc().await;
+                  sendlog2frontend(log.to_string());
                   println!("未知class_id: {}", result.class_id);
               }
           } else {
+              let log = format!("[software] [error] [未选择型号]");
+              pause_robot().await;
+              send_robot_err_to_plc().await;
+              sendlog2frontend(log.to_string());
               println!("获取当前型号失败");
           }
           
