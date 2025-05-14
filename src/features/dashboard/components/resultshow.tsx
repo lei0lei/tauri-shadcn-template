@@ -44,6 +44,7 @@ export default function ResultShow() {
   const dbInstance = useDashboardStore((state) => state.dbInstance);
   // const [surfaceDialogData, setSurfaceDialogData] = useState(null);
   const [isSurfaceDialogOpen, setSurfaceDialogOpen] = useState(false);
+  const [selectedSurfaceId, setSelectedSurfaceId] = useState<string | null>(null);
 
   const handleBadgeClick = async (surface: string, holeIndex: number) => {
     try {
@@ -84,6 +85,7 @@ export default function ResultShow() {
   function handleSurfaceClick(surfaceId:string) {
     // 连接数据库访问整个面的数据
     console.log(surfaceId)
+    setSelectedSurfaceId(surfaceId);
     // const data = 'test'
     // setSurfaceDialogData(data);
     setSurfaceDialogOpen(true);
@@ -141,11 +143,11 @@ export default function ResultShow() {
   return (
     <div className="space-y-1 flex-grow h-96">
       {resultComponentValue.map((surface, index) => (
-        <div key={index} className="flex items-center border p-1 rounded-lg max-h-10 select-none">
+        <div key={index} className="flex items-center border p-0.5 rounded-lg max-h-10 select-none">
           {/* 第一列: 面名称和状态，占 1/9 */}
-          <div className="w-[10%] flex-shrink-0 text-center mr-4 pr-4 border-r-2">
+          <div className="w-[10%] flex-shrink-0 text-center mr-4 pr-4 py-0 border-r-2 items-center justify-center h-full">
             <Button
-              className={`w-[20px] h-[16px] text-center text-xs font-medium px-0 py-0 leading-none ${
+              className={`w-[24px] h-[16px] text-center text-xs font-medium px-0 py-0 p-0 rounded-sm leading-none ${
                   surface.status === "OK"
                     ? "bg-green-700 hover:bg-green-800"
                     : surface.status === "NG"
@@ -325,12 +327,11 @@ export default function ResultShow() {
       </Dialog>
       )}
       <Dialog open={isSurfaceDialogOpen} onOpenChange={setSurfaceDialogOpen}>
-        <DialogContent className="w-[1400px] h-[800px] !max-w-none !max-h-none">
+        <DialogContent className="w-[1700px] h-[900px] !max-w-none !max-h-none">
           <DialogHeader>
-            <DialogTitle>面 信息</DialogTitle>
+            <DialogTitle>面: {selectedSurfaceId}</DialogTitle>
           </DialogHeader>
-          <div>状态：</div>
-          <div>孔总数：</div>
+
           {/* 根据需要添加更多字段 */}
         </DialogContent>
       </Dialog>

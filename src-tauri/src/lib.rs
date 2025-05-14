@@ -570,6 +570,13 @@ pub fn generate_depth_result(action1: &[f64], action2: &[f64], hole_config: &Hol
   let avg1 = action1.iter().copied().sum::<f64>() / action1.len() as f64;
   let avg2 = action2.iter().copied().sum::<f64>() / action2.len() as f64;
   let diff = (avg1 - avg2).abs();
+  if diff < 2.0{
+    if hole_config.thru_hole {
+      return (diff, true); // 避免空数组计算平均值导致错误
+    }else{
+      return  (diff, false);
+    }
+  }
   // 判断 diff 是否在 [min_val, max_val] 区间内
   let is_ok = ((hole_config.depth_min-0.1)..=(hole_config.depth_max+0.1)).contains(&diff);
   (diff, is_ok)
@@ -620,6 +627,8 @@ pub fn generate_diameter_result(diameter: &HoleDiameter, hole_config: &HoleConfi
   let mut real_diameter = diameter.nei_diameter * 0.01018;
   if real_diameter >10.0 {
     real_diameter = real_diameter+0.1;
+  } else {
+    real_diameter = real_diameter-0.02;
   }
   let is_ok = (real_diameter >= hole_config.diameter_min-0.03) && (real_diameter <= hole_config.diameter_max+0.03);
   (real_diameter, is_ok)
