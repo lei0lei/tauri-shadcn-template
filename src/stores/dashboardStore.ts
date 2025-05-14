@@ -140,7 +140,6 @@ export const useDashboardStore = create<DashboardState>((set,get) => ({
       { surface: "F", status: "NULL", holes: [] }
     ],
   setArtifactType: (atype: string) => {
-    console.log('lien 137 set state');
     set({ artifactType: atype });
 
     // 根据不同型号设置 holes

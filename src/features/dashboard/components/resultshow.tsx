@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge"; // 引入Shadcn的Button和Badge组件
+import {Button} from "@/components/ui/button";
 import { useDashboardStore } from "@/stores/dashboardStore"; // 导入 zustand store
 import { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
@@ -8,6 +9,11 @@ import { IconCircleCheck, IconCircleX } from "@tabler/icons-react"
 import { Separator } from "@/components/ui/separator"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useState } from "react";
+// import EH12_A from "@/assets/EH12_A.png";
+// import EH12_B from "@/assets/EH12_B.png";
+// import EH12_C from "@/assets/EH12_C.png";
+// import EH12_D from "@/assets/EH12_D.png";
+// import EH12_E from "@/assets/EH12_E.png";
 // import { Label } from "@/components/ui/label"
 const faceMapping: { [key: number]: string } = {
   1: "A",
@@ -34,8 +40,10 @@ export default function ResultShow() {
   const [isDialogOpen, setDialogOpen] = useState(false);
   const [dialogData, setDialogData] = useState<any>(null); // 用于存储从 Tauri 获取的数据
   const artifact = useDashboardStore((state) => state.artifact);
+  // const artifactType = useDashboardStore((state) => state.artifactType);
   const dbInstance = useDashboardStore((state) => state.dbInstance);
-
+  // const [surfaceDialogData, setSurfaceDialogData] = useState(null);
+  const [isSurfaceDialogOpen, setSurfaceDialogOpen] = useState(false);
 
   const handleBadgeClick = async (surface: string, holeIndex: number) => {
     try {
@@ -72,6 +80,14 @@ export default function ResultShow() {
     }
   };
 
+
+  function handleSurfaceClick(surfaceId:string) {
+    // 连接数据库访问整个面的数据
+    console.log(surfaceId)
+    // const data = 'test'
+    // setSurfaceDialogData(data);
+    setSurfaceDialogOpen(true);
+  }
   useEffect(() => {
     // 监听后端发送的 hole_final_result 事件
     const handleHoleFinalResult = (event: { payload: { face: number, hole: number, artifact: string, final_result: boolean } }) => {
@@ -128,17 +144,19 @@ export default function ResultShow() {
         <div key={index} className="flex items-center border p-1 rounded-lg max-h-10 select-none">
           {/* 第一列: 面名称和状态，占 1/9 */}
           <div className="w-[10%] flex-shrink-0 text-center mr-4 pr-4 border-r-2">
-          <h5
-              className={`text-xs font-medium ${
-                surface.status === "OK"
-                  ? "text-green-700"
-                  : surface.status === "NG"
-                  ? "text-red-700"
-                  : "text-gray-700"
-              }`}
+            <Button
+              className={`w-[20px] h-[16px] text-center text-xs font-medium px-0 py-0 leading-none ${
+                  surface.status === "OK"
+                    ? "bg-green-700 hover:bg-green-800"
+                    : surface.status === "NG"
+                    ? "bg-red-700 hover:bg-red-800"
+                    : "bg-gray-500 hover:bg-gray-600"
+                }`}
+
+                onClick={() => handleSurfaceClick(surface.surface)}
             >
-              <strong>{surface.surface}</strong>
-            </h5>
+              {surface.surface}
+            </Button>
           </div>
           
           {/* 第二列: 孔的状态，占 8/9 */}
@@ -306,6 +324,16 @@ export default function ResultShow() {
         </DialogContent>
       </Dialog>
       )}
+      <Dialog open={isSurfaceDialogOpen} onOpenChange={setSurfaceDialogOpen}>
+        <DialogContent className="w-[1400px] h-[800px] !max-w-none !max-h-none">
+          <DialogHeader>
+            <DialogTitle>面 信息</DialogTitle>
+          </DialogHeader>
+          <div>状态：</div>
+          <div>孔总数：</div>
+          {/* 根据需要添加更多字段 */}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
