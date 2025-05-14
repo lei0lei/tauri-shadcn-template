@@ -9,11 +9,11 @@ import { IconCircleCheck, IconCircleX } from "@tabler/icons-react"
 import { Separator } from "@/components/ui/separator"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useState } from "react";
-// import EH12_A from "@/assets/EH12_A.png";
-// import EH12_B from "@/assets/EH12_B.png";
-// import EH12_C from "@/assets/EH12_C.png";
-// import EH12_D from "@/assets/EH12_D.png";
-// import EH12_E from "@/assets/EH12_E.png";
+import EH12_A from "@/assets/EH12_A.png";
+import EH12_B from "@/assets/EH12_B.png";
+import EH12_C from "@/assets/EH12_C.png";
+import EH12_D from "@/assets/EH12_D.png";
+import EH12_E from "@/assets/EH12_E.png";
 // import { Label } from "@/components/ui/label"
 const faceMapping: { [key: number]: string } = {
   1: "A",
@@ -33,6 +33,39 @@ const faceReverseMapping: { [key: string]: number } = {
   "E": 5,
   "F": 6,
 };
+
+const imageMap: Record<string, Record<string, string>> = {
+
+  // EH09: {
+  //   A: EH09_A,
+  //   B: EH09_B,
+  //   C: EH09_C,
+  //   D: EH09_D,
+  //   E: EH09_E,
+  //   F: EH09_F,
+  // },
+  EH12: {
+    A: EH12_A,
+    B: EH12_B,
+    C: EH12_C,
+    D: EH12_D,
+    E: EH12_E,
+  },
+  // EY28: {
+  //   A: EY28_A,
+  //   B: EY28_B,
+  //   C: EY28_C,
+  //   D: EY28_D,
+  //   E: EY28_E,
+  // },
+  // 可添加其他类型
+};
+function getSurfaceImage(type: string, surfaceId: string | null): string | null {
+  if (!type || !surfaceId) return null;
+  const surfaceKey = surfaceId.charAt(0).toUpperCase(); // 只取首字母
+  return imageMap[type]?.[surfaceKey] ?? null;
+}
+
 export default function ResultShow() {
   const resultComponentValue = useDashboardStore((state) => state.resultComponentValue);
   const updateResultComponent = useDashboardStore((state) => state.updateResultComponent);
@@ -40,11 +73,13 @@ export default function ResultShow() {
   const [isDialogOpen, setDialogOpen] = useState(false);
   const [dialogData, setDialogData] = useState<any>(null); // 用于存储从 Tauri 获取的数据
   const artifact = useDashboardStore((state) => state.artifact);
-  // const artifactType = useDashboardStore((state) => state.artifactType);
+  const artifactType = useDashboardStore((state) => state.artifactType);
   const dbInstance = useDashboardStore((state) => state.dbInstance);
   // const [surfaceDialogData, setSurfaceDialogData] = useState(null);
   const [isSurfaceDialogOpen, setSurfaceDialogOpen] = useState(false);
   const [selectedSurfaceId, setSelectedSurfaceId] = useState<string | null>(null);
+  const [surfaceImage, setSurfaceImage] = useState<string | null>(null);
+
 
   const handleBadgeClick = async (surface: string, holeIndex: number) => {
     try {
@@ -86,6 +121,10 @@ export default function ResultShow() {
     // 连接数据库访问整个面的数据
     console.log(surfaceId)
     setSelectedSurfaceId(surfaceId);
+    const surfaceKey = surfaceId.charAt(0).toUpperCase();
+    const image = imageMap[artifactType]?.[surfaceKey] ?? null;
+    setSurfaceImage(image);
+      console.log(surfaceImage)
     // const data = 'test'
     // setSurfaceDialogData(data);
     setSurfaceDialogOpen(true);
@@ -331,7 +370,31 @@ export default function ResultShow() {
           <DialogHeader>
             <DialogTitle>面: {selectedSurfaceId}</DialogTitle>
           </DialogHeader>
-
+          <svg viewBox="0 0 1000 800" className="w-full h-[800px] rounded border bg-gray-100">
+            {surfaceImage && (
+              <image href={surfaceImage} x="0" y="0" width="700" height="600" />
+            )}
+          {/*
+            {holes.map((hole) => (
+              <circle
+                key={hole.id}
+                cx={hole.x}
+                cy={hole.y}
+                r={12}
+                fill={
+                  hole.status === "ok"
+                    ? "rgba(34,197,94,0.5)"
+                    : hole.status === "ng"
+                    ? "rgba(239,68,68,0.5)"
+                    : "rgba(107,114,128,0.5)"
+                }
+                stroke={selectedHoleId === hole.id ? "black" : "transparent"}
+                strokeWidth={selectedHoleId === hole.id ? 3 : 0}
+                onClick={() => setSelectedHole(hole.id)}
+                style={{ cursor: "pointer" }}
+              />
+            ))}*/}
+          </svg>
           {/* 根据需要添加更多字段 */}
         </DialogContent>
       </Dialog>
