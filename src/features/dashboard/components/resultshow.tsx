@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge"; // 引入Shadcn的Button和Badge组件
 import {Button} from "@/components/ui/button";
 import { useDashboardStore } from "@/stores/dashboardStore"; // 导入 zustand store
+import { useHoleStore } from "@/stores/svgshow"; // 导入 zustand store
 import { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog"; // 引入Shadcn的Dialog组件
@@ -9,6 +10,8 @@ import { IconCircleCheck, IconCircleX } from "@tabler/icons-react"
 import { Separator } from "@/components/ui/separator"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useState } from "react";
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
+
 import EH12_A from "@/assets/EH12_A.png";
 import EH12_B from "@/assets/EH12_B.png";
 import EH12_C from "@/assets/EH12_C.png";
@@ -60,14 +63,11 @@ const imageMap: Record<string, Record<string, string>> = {
   // },
   // 可添加其他类型
 };
-function getSurfaceImage(type: string, surfaceId: string | null): string | null {
-  if (!type || !surfaceId) return null;
-  const surfaceKey = surfaceId.charAt(0).toUpperCase(); // 只取首字母
-  return imageMap[type]?.[surfaceKey] ?? null;
-}
+
 
 export default function ResultShow() {
   const resultComponentValue = useDashboardStore((state) => state.resultComponentValue);
+  const holePositions = useHoleStore((state) => state.holePositions);
   const updateResultComponent = useDashboardStore((state) => state.updateResultComponent);
   const clearResult = useDashboardStore((state) => state.clearResult);
   const [isDialogOpen, setDialogOpen] = useState(false);
@@ -75,10 +75,12 @@ export default function ResultShow() {
   const artifact = useDashboardStore((state) => state.artifact);
   const artifactType = useDashboardStore((state) => state.artifactType);
   const dbInstance = useDashboardStore((state) => state.dbInstance);
-  // const [surfaceDialogData, setSurfaceDialogData] = useState(null);
+  const [surfaceDialogData, setSurfaceDialogData] = useState(null);
   const [isSurfaceDialogOpen, setSurfaceDialogOpen] = useState(false);
   const [selectedSurfaceId, setSelectedSurfaceId] = useState<string | null>(null);
   const [surfaceImage, setSurfaceImage] = useState<string | null>(null);
+  const [selectedHoleId, setSelectedHoleId] = useState<number | null>(null);
+
 
 
   const handleBadgeClick = async (surface: string, holeIndex: number) => {
@@ -117,14 +119,45 @@ export default function ResultShow() {
   };
 
 
-  function handleSurfaceClick(surfaceId:string) {
+  async function handleSurfaceClick(surfaceId:string) {
     // 连接数据库访问整个面的数据
     console.log(surfaceId)
     setSelectedSurfaceId(surfaceId);
+    // 加载面图像
     const surfaceKey = surfaceId.charAt(0).toUpperCase();
     const image = imageMap[artifactType]?.[surfaceKey] ?? null;
     setSurfaceImage(image);
-      console.log(surfaceImage)
+    // 获取面数据
+    try {
+      if (!dbInstance) {
+        console.error("数据库实例未初始化");
+        setDialogData("数据库未连接");
+        setDialogOpen(true);
+        return;
+      }
+
+      const faceId = faceReverseMapping[surfaceId];
+
+      const query = `
+      SELECT * FROM Hole_library
+      WHERE artifact_name = $artifact
+      AND face_id = $faceId
+      `;
+
+      const surreal_result = await dbInstance.query(query, {
+        artifact,
+        faceId,
+
+      });
+      const result = surreal_result as any[][]; // 强制断言为二维数组
+      const data = result?.[0]?.[0];
+      console.log("queryResult:", data);
+
+      setSurfaceDialogData(data); // data 是从数据库拿到的记录对象
+    } catch (error) {
+      console.error("调用 Tauri 后端命令失败:", error);
+    }
+
     // const data = 'test'
     // setSurfaceDialogData(data);
     setSurfaceDialogOpen(true);
@@ -370,31 +403,73 @@ export default function ResultShow() {
           <DialogHeader>
             <DialogTitle>面: {selectedSurfaceId}</DialogTitle>
           </DialogHeader>
-          <svg viewBox="0 0 1000 800" className="w-full h-[800px] rounded border bg-gray-100">
-            {surfaceImage && (
-              <image href={surfaceImage} x="0" y="0" width="700" height="600" />
-            )}
-          {/*
-            {holes.map((hole) => (
-              <circle
-                key={hole.id}
-                cx={hole.x}
-                cy={hole.y}
-                r={12}
-                fill={
-                  hole.status === "ok"
-                    ? "rgba(34,197,94,0.5)"
-                    : hole.status === "ng"
-                    ? "rgba(239,68,68,0.5)"
-                    : "rgba(107,114,128,0.5)"
-                }
-                stroke={selectedHoleId === hole.id ? "black" : "transparent"}
-                strokeWidth={selectedHoleId === hole.id ? 3 : 0}
-                onClick={() => setSelectedHole(hole.id)}
-                style={{ cursor: "pointer" }}
-              />
-            ))}*/}
-          </svg>
+          <div className="flex items-center justify-center w-[800px] h-[800px] bg-gray-100 rounded">
+            <TransformWrapper
+              initialScale={1}
+              minScale={0.5}
+              maxScale={4}
+              wheel={{ step: 0.1 }}
+              doubleClick={{
+                disabled: false,     // 启用双击
+                mode: "reset",       // 双击重置视图（缩放和位置）
+              }}
+              panning={{ velocityDisabled: true }}
+            >
+              <TransformComponent>
+                <svg viewBox="0 0 800 800" className="w-[800px] h-[800px]">
+                  <defs>
+                    <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
+                      <path
+                        d="M 30 0 L 0 0 0 30"
+                        fill="none"
+                        stroke="rgba(0,0,0,0.1)"
+                        strokeWidth="1"
+                      />
+                    </pattern>
+                  </defs>
+                  <rect width="100%" height="100%" fill="url(#grid)" onClick={() => setSelectedHoleId(null)}/>
+
+                  {surfaceImage && (
+                    <image href={surfaceImage} x="0" y="0" width="800" height="800" />
+                  )}
+                {/* 渲染孔位按钮 */}
+                {(resultComponentValue.find(s => s.surface === selectedSurfaceId)?.holes || []).map((status, index) => {
+                    const holeId = index + 1;
+                    const pos = holePositions.find(
+                      (p) =>
+                        p.artifact === artifactType &&
+                        p.surface === selectedSurfaceId &&
+                        p.holeId === holeId
+                    );
+                    if (!pos) return null;
+                    const fillColor =
+                      status === true
+                        ? "fill-green-700"
+                        : status === false
+                        ? "fill-red-700"
+                        : "fill-slate-900";
+
+                    return (
+                      <circle
+                        key={holeId}
+                        cx={pos.x}
+                        cy={pos.y}
+                        r={pos.r}
+                        className={fillColor}
+                        stroke={selectedHoleId === holeId ? "black" : "transparent"}
+                        strokeWidth={selectedHoleId === holeId ? 3 : 0}
+                        onClick={() => setSelectedHoleId(holeId)}
+                        style={{ cursor: "pointer" }}
+                      />
+                    );
+
+                })}
+                </svg>
+
+              </TransformComponent>
+            </TransformWrapper>
+
+          </div>
           {/* 根据需要添加更多字段 */}
         </DialogContent>
       </Dialog>
