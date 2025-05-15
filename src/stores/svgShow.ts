@@ -75,9 +75,21 @@ export const useHoleStore = create<HolePositionStore>(() => {
     { artifact: "EH12", surface: "E", holeId: 3, x: 190, y: 520 ,r:18},
     { artifact: "EH12", surface: "E", holeId: 4, x: 208, y: 240 ,r:18},
     // EY28 - A面
-
+    { artifact: "EY28", surface: "A", holeId: 1, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "A", holeId: 2, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "A", holeId: 3, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "A", holeId: 4, x: 530, y: 230 ,r:17},
     // EY28 - B面
-
+    { artifact: "EY28", surface: "B", holeId: 1, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "B", holeId: 2, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "B", holeId: 3, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "B", holeId: 4, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "B", holeId: 5, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "B", holeId: 6, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "B", holeId: 7, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "B", holeId: 8, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "B", holeId: 9, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "B", holeId: 10, x: 530, y: 230 ,r:17},
     // EY28 - C面
 
     // EY28 - D面

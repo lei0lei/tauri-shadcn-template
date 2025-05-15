@@ -20,12 +20,18 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import placeholder from "@/assets/placeholder.svg";
 
 import EH12_A from "@/assets/EH12_A.png";
 import EH12_B from "@/assets/EH12_B.png";
 import EH12_C from "@/assets/EH12_C.png";
 import EH12_D from "@/assets/EH12_D.png";
 import EH12_E from "@/assets/EH12_E.png";
+
+import EY28_A from "@/assets/EY28_A.png";
+import EY28_B from "@/assets/EY28_B.png";
+
+
 // import { Label } from "@/components/ui/label"
 const faceMapping: { [key: number]: string } = {
   1: "A",
@@ -63,13 +69,13 @@ const imageMap: Record<string, Record<string, string>> = {
     D: EH12_D,
     E: EH12_E,
   },
-  // EY28: {
-  //   A: EY28_A,
-  //   B: EY28_B,
-  //   C: EY28_C,
-  //   D: EY28_D,
-  //   E: EY28_E,
-  // },
+  EY28: {
+    A: EY28_A,
+    B: EY28_B,
+    // C: EY28_C,
+    // D: EY28_D,
+    // E: EY28_E,
+  },
   // 可添加其他类型
 };
 
@@ -127,6 +133,10 @@ export default function ResultShow() {
     }
   };
 
+  function handleHoleClick(holeId: number, e: React.MouseEvent) {
+    e.stopPropagation(); // 阻止事件冒泡
+    setSelectedHoleId(holeId);
+  }
 
   async function handleSurfaceClick(surfaceId:string) {
     // 连接数据库访问整个面的数据
@@ -167,8 +177,6 @@ export default function ResultShow() {
       console.error("调用 Tauri 后端命令失败:", error);
     }
 
-    // const data = 'test'
-    // setSurfaceDialogData(data);
     setSurfaceDialogOpen(true);
   }
   useEffect(() => {
@@ -408,14 +416,13 @@ export default function ResultShow() {
       </Dialog>
       )}
       <Dialog open={isSurfaceDialogOpen} onOpenChange={(open) => {
-                                    
-                                    if (!open) {
-                                      // Dialog 关闭时清空状态
-                                      setSelectedHoleId(null);
-                                      // 可以继续清空其他状态
-                                    }
-                                    setSurfaceDialogOpen(open);
-      }}>
+                                        if (!open) {
+                                          // Dialog 关闭时清空状态
+                                          setSelectedHoleId(null);
+                                          // 可以继续清空其他状态
+                                        }
+                                        setSurfaceDialogOpen(open);
+                                    }}>
         <DialogContent className="w-[1700px] h-[900px] !max-w-none !max-h-none">
           <DialogHeader>
             <DialogTitle>面: {selectedSurfaceId}</DialogTitle>
@@ -445,10 +452,11 @@ export default function ResultShow() {
                         />
                       </pattern>
                     </defs>
-                    <rect width="100%" height="100%" fill="url(#grid)" onClick={() => setSelectedHoleId(null)}/>
+                    <rect width="100%" height="100%" fill="url(#grid)" onClick={() => {console.log('clicked');
+                                                                         setSelectedHoleId(null)}}/>
 
                     {surfaceImage && (
-                      <image href={surfaceImage} x="0" y="0" width="800" height="800" />
+                      <image href={surfaceImage} x="0" y="0" width="800" height="800" pointerEvents="none"/>
                     )}
                   {/* 渲染孔位按钮 */}
                   {(resultComponentValue.find(s => s.surface === selectedSurfaceId)?.holes || []).map((status, index) => {
@@ -484,7 +492,7 @@ export default function ResultShow() {
                           }
                           onMouseEnter={() => setHoveredHoleId(holeId)}
                           onMouseLeave={() => setHoveredHoleId(null)}
-                          onClick={() => setSelectedHoleId(holeId)}
+                          onClick={(e) => handleHoleClick(holeId, e)}
                           style={{ cursor: "pointer" }}
                         />
                       );
@@ -498,49 +506,68 @@ export default function ResultShow() {
             </div>
             <div className="flex flex-col w-full">
               {/* 表格部分 */}
-              <ScrollArea className="h-[400px] border rounded">
+              <div className="border rounded">
+              
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>孔位 ID</TableHead>
-                      <TableHead>型号</TableHead>
-                      <TableHead>直径</TableHead>
-                      <TableHead>深度</TableHead>
-                      <TableHead>螺纹</TableHead>
+                      <TableHead className="w-[60px] text-center bg-slate-600 text-white">孔位</TableHead>
+                      <TableHead className="w-[60px] text-center bg-slate-600 text-white">型号</TableHead>
+                      <TableHead className="w-[80px] text-center bg-slate-600 text-white">直径</TableHead>
+                      <TableHead className="w-[80px] text-center bg-slate-600 text-white">深度</TableHead>
+                      <TableHead className="w-[80px] text-center bg-slate-600 text-white">螺纹</TableHead>
                     </TableRow>
                   </TableHeader>
+                  </Table>
+                  <ScrollArea className="h-[400px]">
+                  <Table className="table-fixed w-full">
                   <TableBody>
-                    {/* {holeData.map((hole) => (
-                      <TableRow
-                        key={hole.id}
-                        ref={(el) => {
-                          if (hole.id === selectedHoleId) {
-                            el?.scrollIntoView({ behavior: "smooth", block: "center" });
-                          }
-                        }}
-                        className={hole.id === selectedHoleId ? "bg-blue-100" : ""}
-                      >
-                        <TableCell>{hole.id}</TableCell>
-                        <TableCell>{hole.model}</TableCell>
-                        <TableCell>{hole.diameter}</TableCell>
-                        <TableCell>{hole.depth}</TableCell>
-                        <TableCell>{hole.thread}</TableCell>
-                      </TableRow>
-                    ))} */}
+                    {(resultComponentValue.find(s => s.surface === selectedSurfaceId)?.holes || []).map((_, index) => {
+                      const holeId = index + 1;
+                      const pos = holePositions.find(
+                        (p) =>
+                          p.artifact === artifactType &&
+                          p.surface === selectedSurfaceId &&
+                          p.holeId === holeId
+                      );
+                      if (!pos) return null;
+
+                      return (
+                        <TableRow
+                          key={holeId}
+                          ref={(el) => {
+                            if (holeId === selectedHoleId) {
+                              el?.scrollIntoView({ behavior: "smooth", block: "center" });
+                            }
+                          }}
+                          className={`hover:bg-slate-200 ${index % 2 === 0 ? "bg-gray-200" : "bg-gray-100"} ${
+                            holeId === selectedHoleId ? "bg-slate-500" : ""
+                          }`}
+                          onClick={() => setSelectedHoleId(holeId)}
+                          style={{ cursor: "pointer" }}
+                        >
+                          <TableCell className="text-center w-[60px] text-slate-600">{holeId}</TableCell>
+                          <TableCell className="text-center w-[60px] text-slate-600"></TableCell>
+                          <TableCell className="text-center w-[80px] text-slate-600"></TableCell>
+                          <TableCell className="text-center w-[80px] text-slate-600"></TableCell>
+                          <TableCell className="text-center w-[80px] text-slate-600"></TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </ScrollArea>
-
+                </div>
               {/* 下方 2x2 内容区域 */}
               <div className="grid grid-cols-2 grid-rows-2 gap-4 mt-4">
                 <Card>
                   <CardContent className="p-2 flex items-center justify-center h-[300px]">
-                    {/* <img src={image1Url} alt="图1" className="max-h-full max-w-full object-contain" /> */}
+                    <img src={placeholder} alt="直径" className="max-h-full max-w-full object-contain" />
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="p-2 flex items-center justify-center h-[300px]">
-                    {/* <img src={image2Url} alt="图2" className="max-h-full max-w-full object-contain" /> */}
+                    <img src={placeholder} alt="螺纹" className="max-h-full max-w-full object-contain" />
                   </CardContent>
                 </Card>
                 <Card className="h-[40px] p-0">
@@ -555,8 +582,6 @@ export default function ResultShow() {
                 </Card>
               </div>
             </div>
-
-
           </div>
           {/* 根据需要添加更多字段 */}
         </DialogContent>
