@@ -11,6 +11,15 @@ import { Separator } from "@/components/ui/separator"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { useState } from "react";
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 import EH12_A from "@/assets/EH12_A.png";
 import EH12_B from "@/assets/EH12_B.png";
@@ -80,7 +89,7 @@ export default function ResultShow() {
   const [selectedSurfaceId, setSelectedSurfaceId] = useState<string | null>(null);
   const [surfaceImage, setSurfaceImage] = useState<string | null>(null);
   const [selectedHoleId, setSelectedHoleId] = useState<number | null>(null);
-
+  const [hoveredHoleId, setHoveredHoleId] = useState<number | null>(null);
 
 
   const handleBadgeClick = async (surface: string, holeIndex: number) => {
@@ -398,76 +407,155 @@ export default function ResultShow() {
         </DialogContent>
       </Dialog>
       )}
-      <Dialog open={isSurfaceDialogOpen} onOpenChange={setSurfaceDialogOpen}>
+      <Dialog open={isSurfaceDialogOpen} onOpenChange={(open) => {
+                                    
+                                    if (!open) {
+                                      // Dialog 关闭时清空状态
+                                      setSelectedHoleId(null);
+                                      // 可以继续清空其他状态
+                                    }
+                                    setSurfaceDialogOpen(open);
+      }}>
         <DialogContent className="w-[1700px] h-[900px] !max-w-none !max-h-none">
           <DialogHeader>
             <DialogTitle>面: {selectedSurfaceId}</DialogTitle>
           </DialogHeader>
-          <div className="flex items-center justify-center w-[800px] h-[800px] bg-gray-100 rounded">
-            <TransformWrapper
-              initialScale={1}
-              minScale={0.5}
-              maxScale={4}
-              wheel={{ step: 0.1 }}
-              doubleClick={{
-                disabled: false,     // 启用双击
-                mode: "reset",       // 双击重置视图（缩放和位置）
-              }}
-              panning={{ velocityDisabled: true }}
-            >
-              <TransformComponent>
-                <svg viewBox="0 0 800 800" className="w-[800px] h-[800px]">
-                  <defs>
-                    <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
-                      <path
-                        d="M 30 0 L 0 0 0 30"
-                        fill="none"
-                        stroke="rgba(0,0,0,0.1)"
-                        strokeWidth="1"
-                      />
-                    </pattern>
-                  </defs>
-                  <rect width="100%" height="100%" fill="url(#grid)" onClick={() => setSelectedHoleId(null)}/>
+          <div className="flex gap-4">
+            <div className="flex items-center justify-center w-[800px] h-[800px] bg-gray-100 rounded">
+              <TransformWrapper
+                initialScale={1}
+                minScale={0.5}
+                maxScale={4}
+                wheel={{ step: 0.1 }}
+                doubleClick={{
+                  disabled: false,     // 启用双击
+                  mode: "reset",       // 双击重置视图（缩放和位置）
+                }}
+                panning={{ velocityDisabled: true }}
+              >
+                <TransformComponent>
+                  <svg viewBox="0 0 800 800" className="w-[800px] h-[800px]">
+                    <defs>
+                      <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
+                        <path
+                          d="M 30 0 L 0 0 0 30"
+                          fill="none"
+                          stroke="rgba(0,0,0,0.1)"
+                          strokeWidth="1"
+                        />
+                      </pattern>
+                    </defs>
+                    <rect width="100%" height="100%" fill="url(#grid)" onClick={() => setSelectedHoleId(null)}/>
 
-                  {surfaceImage && (
-                    <image href={surfaceImage} x="0" y="0" width="800" height="800" />
-                  )}
-                {/* 渲染孔位按钮 */}
-                {(resultComponentValue.find(s => s.surface === selectedSurfaceId)?.holes || []).map((status, index) => {
-                    const holeId = index + 1;
-                    const pos = holePositions.find(
-                      (p) =>
-                        p.artifact === artifactType &&
-                        p.surface === selectedSurfaceId &&
-                        p.holeId === holeId
-                    );
-                    if (!pos) return null;
-                    const fillColor =
-                      status === true
-                        ? "fill-green-700"
-                        : status === false
-                        ? "fill-red-700"
-                        : "fill-slate-900";
+                    {surfaceImage && (
+                      <image href={surfaceImage} x="0" y="0" width="800" height="800" />
+                    )}
+                  {/* 渲染孔位按钮 */}
+                  {(resultComponentValue.find(s => s.surface === selectedSurfaceId)?.holes || []).map((status, index) => {
+                      const holeId = index + 1;
+                      const pos = holePositions.find(
+                        (p) =>
+                          p.artifact === artifactType &&
+                          p.surface === selectedSurfaceId &&
+                          p.holeId === holeId
+                      );
+                      if (!pos) return null;
+                      const fillColor =
+                        status === true
+                          ? "fill-green-700"
+                          : status === false
+                          ? "fill-red-700"
+                          : "fill-slate-900";
 
-                    return (
-                      <circle
-                        key={holeId}
-                        cx={pos.x}
-                        cy={pos.y}
-                        r={pos.r}
-                        className={fillColor}
-                        stroke={selectedHoleId === holeId ? "black" : "transparent"}
-                        strokeWidth={selectedHoleId === holeId ? 3 : 0}
-                        onClick={() => setSelectedHoleId(holeId)}
-                        style={{ cursor: "pointer" }}
-                      />
-                    );
+                      return (
+                        <circle
+                          key={holeId}
+                          cx={pos.x}
+                          cy={pos.y}
+                          r={pos.r}
+                          className={fillColor}
+                          stroke={
+                            selectedHoleId === holeId || hoveredHoleId === holeId
+                              ? "#334155" // slate-700
+                              : "transparent"
+                          }
+                          strokeWidth={
+                            selectedHoleId === holeId || hoveredHoleId === holeId ? 5 : 0
+                          }
+                          onMouseEnter={() => setHoveredHoleId(holeId)}
+                          onMouseLeave={() => setHoveredHoleId(null)}
+                          onClick={() => setSelectedHoleId(holeId)}
+                          style={{ cursor: "pointer" }}
+                        />
+                      );
 
-                })}
-                </svg>
+                  })}
+                  </svg>
 
-              </TransformComponent>
-            </TransformWrapper>
+                </TransformComponent>
+              </TransformWrapper>
+
+            </div>
+            <div className="flex flex-col w-full">
+              {/* 表格部分 */}
+              <ScrollArea className="h-[400px] border rounded">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>孔位 ID</TableHead>
+                      <TableHead>型号</TableHead>
+                      <TableHead>直径</TableHead>
+                      <TableHead>深度</TableHead>
+                      <TableHead>螺纹</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {/* {holeData.map((hole) => (
+                      <TableRow
+                        key={hole.id}
+                        ref={(el) => {
+                          if (hole.id === selectedHoleId) {
+                            el?.scrollIntoView({ behavior: "smooth", block: "center" });
+                          }
+                        }}
+                        className={hole.id === selectedHoleId ? "bg-blue-100" : ""}
+                      >
+                        <TableCell>{hole.id}</TableCell>
+                        <TableCell>{hole.model}</TableCell>
+                        <TableCell>{hole.diameter}</TableCell>
+                        <TableCell>{hole.depth}</TableCell>
+                        <TableCell>{hole.thread}</TableCell>
+                      </TableRow>
+                    ))} */}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+
+              {/* 下方 2x2 内容区域 */}
+              <div className="grid grid-cols-2 grid-rows-2 gap-4 mt-4">
+                <Card>
+                  <CardContent className="p-2 flex items-center justify-center h-[300px]">
+                    {/* <img src={image1Url} alt="图1" className="max-h-full max-w-full object-contain" /> */}
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-2 flex items-center justify-center h-[300px]">
+                    {/* <img src={image2Url} alt="图2" className="max-h-full max-w-full object-contain" /> */}
+                  </CardContent>
+                </Card>
+                <Card className="h-[40px] p-0">
+                  <CardContent className="flex items-center justify-center text-sm font-bold h-full p-0">
+                    表面: 1
+                  </CardContent>
+                </Card>
+                <Card className="h-[40px] p-0">
+                  <CardContent className="flex items-center justify-center text-sm font-bold h-full p-0">
+                    底部: 2
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
 
           </div>
           {/* 根据需要添加更多字段 */}
