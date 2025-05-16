@@ -23,6 +23,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import placeholder from "@/assets/placeholder.svg";
 import { invoke } from '@tauri-apps/api/core';
 
+import EH09_A from "@/assets/EH09_A.png";
+import EH09_B from "@/assets/EH09_B.png";
+import EH09_C from "@/assets/EH09_C.png";
+import EH09_D from "@/assets/EH09_D.png";
+import EH09_E from "@/assets/EH09_E.png";
+import EH09_F from "@/assets/EH09_F.png";
 
 import EH12_A from "@/assets/EH12_A.png";
 import EH12_B from "@/assets/EH12_B.png";
@@ -32,7 +38,21 @@ import EH12_E from "@/assets/EH12_E.png";
 
 import EY28_A from "@/assets/EY28_A.png";
 import EY28_B from "@/assets/EY28_B.png";
+import EY28_C from "@/assets/EY28_C.png";
+import EY28_D from "@/assets/EY28_D.png";
+import EY28_E from "@/assets/EY28_E.png";
 
+import EK30_A from "@/assets/EK30_A.png";
+import EK30_B from "@/assets/EK30_B.png";
+import EK30_C from "@/assets/EK30_C.png";
+import EK30_D from "@/assets/EK30_D.png";
+import EK30_E from "@/assets/EK30_E.png";
+
+import EK40_A from "@/assets/EK40_A.png";
+import EK40_B from "@/assets/EK40_B.png";
+import EK40_C from "@/assets/EK40_C.png";
+import EK40_D from "@/assets/EK40_D.png";
+import EK40_E from "@/assets/EK40_E.png";
 
 // import { Label } from "@/components/ui/label"
 const faceMapping: { [key: number]: string } = {
@@ -56,14 +76,14 @@ const faceReverseMapping: { [key: string]: number } = {
 
 const imageMap: Record<string, Record<string, string>> = {
 
-  // EH09: {
-  //   A: EH09_A,
-  //   B: EH09_B,
-  //   C: EH09_C,
-  //   D: EH09_D,
-  //   E: EH09_E,
-  //   F: EH09_F,
-  // },
+  EH09: {
+    A: EH09_A,
+    B: EH09_B,
+    C: EH09_C,
+    D: EH09_D,
+    E: EH09_E,
+    F: EH09_F,
+  },
   EH12: {
     A: EH12_A,
     B: EH12_B,
@@ -74,9 +94,23 @@ const imageMap: Record<string, Record<string, string>> = {
   EY28: {
     A: EY28_A,
     B: EY28_B,
-    // C: EY28_C,
-    // D: EY28_D,
-    // E: EY28_E,
+    C: EY28_C,
+    D: EY28_D,
+    E: EY28_E,
+  },
+  EK30: {
+    A: EK30_A,
+    B: EK30_B,
+    C: EK30_C,
+    D: EK30_D,
+    E: EK30_E,
+  },
+  EK40: {
+    A: EK40_A,
+    B: EK40_B,
+    C: EK40_C,
+    D: EK40_D,
+    E: EK40_E,
   },
   // 可添加其他类型
 };
