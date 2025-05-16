@@ -17,22 +17,55 @@ interface HolePositionStore {
 export const useHoleStore = create<HolePositionStore>(() => {
   const holePositions: HolePosition[] = [
     // EH09 - A面
-    // { artifact: "EH09", surface: "A", holeId: 1, x: 100, y: 150 },
-    // { artifact: "EH09", surface: "A", holeId: 2, x: 200, y: 250 },
-    // { artifact: "EH09", surface: "A", holeId: 3, x: 300, y: 350 },
+    { artifact: "EH09", surface: "A", holeId: 1, x: 100, y: 150 ,r:15},
+    { artifact: "EH09", surface: "A", holeId: 2, x: 200, y: 250 ,r:15},
 
     // EH09 - B面
-    // { artifact: "EH09", surface: "B", holeId: 1, x: 120, y: 160 },
-    // { artifact: "EH09", surface: "B", holeId: 2, x: 220, y: 260 },
+    { artifact: "EH09", surface: "B", holeId: 1, x: 120, y: 160 ,r:15},
+    { artifact: "EH09", surface: "B", holeId: 2, x: 220, y: 260 ,r:15},
+    { artifact: "EH09", surface: "B", holeId: 3, x: 120, y: 160 ,r:15},
+    { artifact: "EH09", surface: "B", holeId: 4, x: 220, y: 260 ,r:15},
+    { artifact: "EH09", surface: "B", holeId: 5, x: 120, y: 160 ,r:15},
+    { artifact: "EH09", surface: "B", holeId: 6, x: 220, y: 260 ,r:15},
+    { artifact: "EH09", surface: "B", holeId: 7, x: 120, y: 160 ,r:15},
+    { artifact: "EH09", surface: "B", holeId: 8, x: 220, y: 260 ,r:15},
+    { artifact: "EH09", surface: "B", holeId: 9, x: 120, y: 160 ,r:15},
+  
 
     // EH09 - C面
+    { artifact: "EH09", surface: "C", holeId: 1, x: 120, y: 160 ,r:15},
+    { artifact: "EH09", surface: "C", holeId: 2, x: 220, y: 260 ,r:15},
+    { artifact: "EH09", surface: "C", holeId: 3, x: 120, y: 160 ,r:15},
+    { artifact: "EH09", surface: "C", holeId: 4, x: 220, y: 260 ,r:15},
+    { artifact: "EH09", surface: "C", holeId: 5, x: 120, y: 160 ,r:15},
 
+  
     // EH09 - D面
-
+    { artifact: "EH09", surface: "D", holeId: 1, x: 120, y: 160 ,r:15},
+    { artifact: "EH09", surface: "D", holeId: 2, x: 220, y: 260 ,r:15},
+    { artifact: "EH09", surface: "D", holeId: 3, x: 120, y: 160 ,r:15},
+    { artifact: "EH09", surface: "D", holeId: 4, x: 220, y: 260 ,r:15},
+    { artifact: "EH09", surface: "D", holeId: 5, x: 120, y: 160 ,r:15},
+    { artifact: "EH09", surface: "D", holeId: 6, x: 220, y: 260 ,r:15},
+    { artifact: "EH09", surface: "D", holeId: 7, x: 120, y: 160 ,r:15},
+    { artifact: "EH09", surface: "D", holeId: 8, x: 220, y: 260 ,r:15},
+    { artifact: "EH09", surface: "D", holeId: 9, x: 120, y: 160 ,r:15},
+    { artifact: "EH09", surface: "D", holeId: 10, x: 220, y: 260 ,r:15},
+    { artifact: "EH09", surface: "D", holeId: 11, x: 120, y: 160 ,r:15},
+    { artifact: "EH09", surface: "D", holeId: 12, x: 220, y: 260 ,r:15},
+    { artifact: "EH09", surface: "D", holeId: 13, x: 120, y: 160 ,r:15},
     // EH09 - E面
-
+    { artifact: "EH09", surface: "E", holeId: 1, x: 120, y: 160 ,r:15},
+    { artifact: "EH09", surface: "E", holeId: 2, x: 220, y: 260 ,r:15},
+    { artifact: "EH09", surface: "E", holeId: 3, x: 120, y: 160 ,r:15},
+    { artifact: "EH09", surface: "E", holeId: 4, x: 220, y: 260 ,r:15},
+    { artifact: "EH09", surface: "E", holeId: 5, x: 120, y: 160 ,r:15},
+    { artifact: "EH09", surface: "E", holeId: 6, x: 220, y: 260 ,r:15},
     // EH09 - F面
-
+    { artifact: "EH09", surface: "F", holeId: 1, x: 120, y: 160 ,r:15},
+    { artifact: "EH09", surface: "F", holeId: 2, x: 220, y: 260 ,r:15},
+    { artifact: "EH09", surface: "F", holeId: 3, x: 120, y: 160 ,r:15},
+    { artifact: "EH09", surface: "F", holeId: 4, x: 220, y: 260 ,r:15},
     // EH12 - A面
     { artifact: "EH12", surface: "A", holeId: 1, x: 364, y: 228 ,r:15},
     { artifact: "EH12", surface: "A", holeId: 2, x: 504, y: 470 ,r:15},
@@ -91,31 +124,124 @@ export const useHoleStore = create<HolePositionStore>(() => {
     { artifact: "EY28", surface: "B", holeId: 9, x: 530, y: 230 ,r:17},
     { artifact: "EY28", surface: "B", holeId: 10, x: 530, y: 230 ,r:17},
     // EY28 - C面
-
+    { artifact: "EY28", surface: "C", holeId: 1, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "C", holeId: 2, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "C", holeId: 3, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "C", holeId: 4, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "C", holeId: 5, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "C", holeId: 6, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "C", holeId: 7, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "C", holeId: 8, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "C", holeId: 9, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "C", holeId: 10, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "C", holeId: 11, x: 530, y: 230 ,r:17},
     // EY28 - D面
-
+    { artifact: "EY28", surface: "D", holeId: 1, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "D", holeId: 2, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "D", holeId: 3, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "D", holeId: 4, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "D", holeId: 5, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "D", holeId: 6, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "D", holeId: 7, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "D", holeId: 8, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "D", holeId: 9, x: 530, y: 230 ,r:17},
     // EY28 - E面
-
+    { artifact: "EY28", surface: "E", holeId: 1, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "E", holeId: 2, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "E", holeId: 3, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "E", holeId: 4, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "E", holeId: 5, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "E", holeId: 6, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "E", holeId: 7, x: 530, y: 230 ,r:17},
+    { artifact: "EY28", surface: "E", holeId: 8, x: 530, y: 230 ,r:17},
     // EK30 - A面
-
+    { artifact: "EK30", surface: "A", holeId: 1, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "A", holeId: 2, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "A", holeId: 3, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "A", holeId: 4, x: 530, y: 230 ,r:17},
     // EK30 - B面
-
+    { artifact: "EK30", surface: "B", holeId: 1, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "B", holeId: 2, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "B", holeId: 3, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "B", holeId: 4, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "B", holeId: 5, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "B", holeId: 6, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "B", holeId: 7, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "B", holeId: 8, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "B", holeId: 9, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "B", holeId: 10, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "B", holeId: 11, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "B", holeId: 12, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "B", holeId: 13, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "B", holeId: 14, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "B", holeId: 15, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "B", holeId: 16, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "B", holeId: 17, x: 530, y: 230 ,r:17},
     // EK30 - C面
-
+    { artifact: "EK30", surface: "C", holeId: 1, x: 530, y: 230 ,r:17},
     // EK30 - D面
-
+    { artifact: "EK30", surface: "D", holeId: 1, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "D", holeId: 2, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "D", holeId: 3, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "D", holeId: 4, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "D", holeId: 5, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "D", holeId: 6, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "D", holeId: 7, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "D", holeId: 8, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "D", holeId: 9, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "D", holeId: 10, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "D", holeId: 11, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "D", holeId: 12, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "D", holeId: 13, x: 530, y: 230 ,r:17},
     // EK30 - E面
-
+    { artifact: "EK30", surface: "E", holeId: 1, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "E", holeId: 2, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "E", holeId: 3, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "E", holeId: 4, x: 530, y: 230 ,r:17},
+    { artifact: "EK30", surface: "E", holeId: 5, x: 530, y: 230 ,r:17},
     // EK40 - A面
-
+    { artifact: "EK40", surface: "A", holeId: 1, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "A", holeId: 2, x: 530, y: 230 ,r:17},
     // EK40 - B面
-
+    { artifact: "EK40", surface: "B", holeId: 1, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "B", holeId: 2, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "B", holeId: 3, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "B", holeId: 4, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "B", holeId: 5, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "B", holeId: 6, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "B", holeId: 7, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "B", holeId: 8, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "B", holeId: 9, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "B", holeId: 10, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "B", holeId: 11, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "B", holeId: 12, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "B", holeId: 13, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "B", holeId: 14, x: 530, y: 230 ,r:17},
     // EK40 - C面
-
+    { artifact: "EK40", surface: "C", holeId: 1, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "C", holeId: 2, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "C", holeId: 3, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "C", holeId: 4, x: 530, y: 230 ,r:17},
     // EK40 - D面
-
+    { artifact: "EK40", surface: "D", holeId: 1, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "D", holeId: 2, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "D", holeId: 3, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "D", holeId: 4, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "D", holeId: 5, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "D", holeId: 6, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "D", holeId: 7, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "D", holeId: 8, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "D", holeId: 9, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "D", holeId: 10, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "D", holeId: 11, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "D", holeId: 12, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "D", holeId: 13, x: 530, y: 230 ,r:17},
     // EK40 - E面
-
+    { artifact: "EK40", surface: "E", holeId: 1, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "E", holeId: 2, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "E", holeId: 3, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "E", holeId: 4, x: 530, y: 230 ,r:17},
+    { artifact: "EK40", surface: "E", holeId: 5, x: 530, y: 230 ,r:17},
 
   ];
 
