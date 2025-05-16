@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge"; // 引入Shadcn的Button和Badge组件
 import {Button} from "@/components/ui/button";
 import { useDashboardStore } from "@/stores/dashboardStore"; // 导入 zustand store
-import { useHoleStore } from "@/stores/svgshow"; // 导入 zustand store
+import { useHoleStore } from "@/stores/svgShow"; // 导入 zustand store
 import { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { Dialog, DialogTrigger, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog"; // 引入Shadcn的Dialog组件
@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import placeholder from "@/assets/placeholder.svg";
+import { invoke } from '@tauri-apps/api/core';
+
 
 import EH12_A from "@/assets/EH12_A.png";
 import EH12_B from "@/assets/EH12_B.png";
@@ -79,6 +81,23 @@ const imageMap: Record<string, Record<string, string>> = {
   // 可添加其他类型
 };
 
+function ImageViewer({ path }: { path: string }) {
+  const [imgBase64, setImgBase64] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!path) return;
+    invoke<string>("load_image_base64", { path })
+      .then((base64) => setImgBase64(base64))
+      .catch((err) => console.error("读取图片失败:", err));
+  }, [path]);
+
+  return imgBase64 ? (
+    <img src={`data:image/jpeg;base64,${imgBase64}`} alt="图像" className="max-h-full max-w-full object-contain" />
+  ) : (
+    <img src={placeholder} alt="图像" className="max-h-full max-w-full object-contain" />
+  );
+}
+
 
 export default function ResultShow() {
   const resultComponentValue = useDashboardStore((state) => state.resultComponentValue);
@@ -90,12 +109,17 @@ export default function ResultShow() {
   const artifact = useDashboardStore((state) => state.artifact);
   const artifactType = useDashboardStore((state) => state.artifactType);
   const dbInstance = useDashboardStore((state) => state.dbInstance);
-  const [surfaceDialogData, setSurfaceDialogData] = useState(null);
+  const [surfaceDialogData, setSurfaceDialogData] = useState<any>(null);
   const [isSurfaceDialogOpen, setSurfaceDialogOpen] = useState(false);
   const [selectedSurfaceId, setSelectedSurfaceId] = useState<string | null>(null);
   const [surfaceImage, setSurfaceImage] = useState<string | null>(null);
   const [selectedHoleId, setSelectedHoleId] = useState<number | null>(null);
   const [hoveredHoleId, setHoveredHoleId] = useState<number | null>(null);
+
+  const [imageResult1, setImageResult1] = useState<string>(placeholder);
+  const [imageResult2, setImageResult2] = useState<string>(placeholder);
+  const [labelResult1, setLabelResult1] = useState<string>("表面: ");
+  const [labelResult2, setLabelResult2] = useState<string>("底部: ");
 
 
   const handleBadgeClick = async (surface: string, holeIndex: number) => {
@@ -136,6 +160,48 @@ export default function ResultShow() {
   function handleHoleClick(holeId: number, e: React.MouseEvent) {
     e.stopPropagation(); // 阻止事件冒泡
     setSelectedHoleId(holeId);
+
+    const hole = surfaceDialogData?.[holeId - 1];
+
+    if (!hole) return;
+
+
+    setImageResult1(hole.diameter_result_path || placeholder);
+    setImageResult2(hole.luowen_result_path || placeholder);
+
+      // 处理 action1 平均值
+    const a1: number[] = hole.action1 || [];
+    const a2: number[] = hole.action2 || [];
+    const average = (arr: number[]) =>
+        arr.length === 0 ? "88888.000" : (arr.reduce((sum, v) => sum + v, 0) / arr.length).toFixed(3);
+
+    setLabelResult1(`表面: ${average(a1)}`);
+    setLabelResult2(`底部: ${average(a2)}`);
+
+  }
+
+  function handleTableHoleClick(holeId: number){
+    setSelectedHoleId(holeId);
+
+    
+    const hole = surfaceDialogData?.[holeId - 1];
+
+    if (!hole) return;
+
+
+    setImageResult1(hole.diameter_result_path || placeholder);
+    setImageResult2(hole.luowen_result_path || placeholder);
+
+      // 处理 action1 平均值
+    const a1: number[] = hole.action1 || [];
+    const a2: number[] = hole.action2 || [];
+    const average = (arr: number[]) =>
+        arr.length === 0 ? "88888.000" : (arr.reduce((sum, v) => sum + v, 0) / arr.length).toFixed(3);
+
+    setLabelResult1(`表面: ${average(a1)}`);
+    setLabelResult2(`底部: ${average(a2)}`);
+
+
   }
 
   async function handleSurfaceClick(surfaceId:string) {
@@ -161,6 +227,7 @@ export default function ResultShow() {
       SELECT * FROM Hole_library
       WHERE artifact_name = $artifact
       AND face_id = $faceId
+      ORDER BY hole_id
       `;
 
       const surreal_result = await dbInstance.query(query, {
@@ -169,10 +236,10 @@ export default function ResultShow() {
 
       });
       const result = surreal_result as any[][]; // 强制断言为二维数组
-      const data = result?.[0]?.[0];
-      console.log("queryResult:", data);
+      const holesData = result?.[0] || [];
+      console.log("queryResult1:", holesData);
 
-      setSurfaceDialogData(data); // data 是从数据库拿到的记录对象
+      setSurfaceDialogData(holesData); // data 是从数据库拿到的记录对象
     } catch (error) {
       console.error("调用 Tauri 后端命令失败:", error);
     }
@@ -419,6 +486,10 @@ export default function ResultShow() {
                                         if (!open) {
                                           // Dialog 关闭时清空状态
                                           setSelectedHoleId(null);
+                                          setLabelResult1(`表面: `);
+                                          setLabelResult2(`底部: `);
+                                          setImageResult1(placeholder);
+                                          setImageResult2(placeholder);
                                           // 可以继续清空其他状态
                                         }
                                         setSurfaceDialogOpen(open);
@@ -475,6 +546,7 @@ export default function ResultShow() {
                           ? "fill-red-700"
                           : "fill-slate-900";
 
+
                       return (
                         <circle
                           key={holeId}
@@ -519,7 +591,7 @@ export default function ResultShow() {
                     </TableRow>
                   </TableHeader>
                   </Table>
-                  <ScrollArea className="h-[400px]">
+                  <ScrollArea className="h-[380px]">
                   <Table className="table-fixed w-full">
                   <TableBody>
                     {(resultComponentValue.find(s => s.surface === selectedSurfaceId)?.holes || []).map((_, index) => {
@@ -531,7 +603,7 @@ export default function ResultShow() {
                           p.holeId === holeId
                       );
                       if (!pos) return null;
-
+                      const hole = surfaceDialogData?.[index]; // ✅ 根据 index 获取 hole 数据
                       return (
                         <TableRow
                           key={holeId}
@@ -543,14 +615,22 @@ export default function ResultShow() {
                           className={`hover:bg-slate-200 ${index % 2 === 0 ? "bg-gray-200" : "bg-gray-100"} ${
                             holeId === selectedHoleId ? "bg-slate-500" : ""
                           }`}
-                          onClick={() => setSelectedHoleId(holeId)}
+                          onClick={() => handleTableHoleClick(holeId)}
                           style={{ cursor: "pointer" }}
                         >
                           <TableCell className="text-center w-[60px] text-slate-600">{holeId}</TableCell>
-                          <TableCell className="text-center w-[60px] text-slate-600"></TableCell>
-                          <TableCell className="text-center w-[80px] text-slate-600"></TableCell>
-                          <TableCell className="text-center w-[80px] text-slate-600"></TableCell>
-                          <TableCell className="text-center w-[80px] text-slate-600"></TableCell>
+                          <TableCell className="text-center w-[60px] text-slate-600">
+                              {hole?.standard_hole_type || ""}
+                          </TableCell>
+                          <TableCell className="text-center w-[80px] text-slate-600">
+                              {hole?.diameter?.toFixed(3) || ""}
+                          </TableCell>
+                          <TableCell className="text-center w-[80px] text-slate-600">
+                              {hole?.depth?.toFixed(3) || ""}
+                          </TableCell>
+                          <TableCell className="text-center w-[80px] text-slate-600">
+                              {hole?.have_luowen === undefined ? "" : (hole.luowen ? "是" : "否")}
+                          </TableCell>
                         </TableRow>
                       );
                     })}
@@ -562,22 +642,24 @@ export default function ResultShow() {
               <div className="grid grid-cols-2 grid-rows-2 gap-4 mt-4">
                 <Card>
                   <CardContent className="p-2 flex items-center justify-center h-[300px]">
-                    <img src={placeholder} alt="直径" className="max-h-full max-w-full object-contain" />
+                    <ImageViewer path={imageResult1} />
+                          {/* <img src={imageResult1} alt="直径" className="max-h-full max-w-full object-contain" /> */}
                   </CardContent>
                 </Card>
                 <Card>
                   <CardContent className="p-2 flex items-center justify-center h-[300px]">
-                    <img src={placeholder} alt="螺纹" className="max-h-full max-w-full object-contain" />
+                    <ImageViewer path={imageResult2} />
+                    {/* <img src={imageResult2} alt="螺纹" className="max-h-full max-w-full object-contain" /> */}
                   </CardContent>
                 </Card>
                 <Card className="h-[40px] p-0">
-                  <CardContent className="flex items-center justify-center text-sm font-bold h-full p-0">
-                    表面: 1
+                  <CardContent className="flex items-center justify-center text-m font-bold h-full p-0">
+                    {labelResult1}
                   </CardContent>
                 </Card>
                 <Card className="h-[40px] p-0">
-                  <CardContent className="flex items-center justify-center text-sm font-bold h-full p-0">
-                    底部: 2
+                  <CardContent className="flex items-center justify-center text-m font-bold h-full p-0">
+                    {labelResult2}
                   </CardContent>
                 </Card>
               </div>

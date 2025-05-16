@@ -2859,8 +2859,8 @@ enable_diameter = true
 enable_depth = true
 enable_luowen = true
 qiankong = true
-qiankong_diameter_min = 4.5
-qiankong_diameter_max = 5.5
+qiankong_diameter_min = 13.5
+qiankong_diameter_max = 14.5
 qiankong_depth_min = 0.0
 qiankong_depth_max = 1000.0
 

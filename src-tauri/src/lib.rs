@@ -9,6 +9,9 @@ use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
 use tauri::{AppHandle, Manager,Emitter};
 use base64;
+
+use base64::{engine::general_purpose, Engine as _};
+
 use std::time::Duration;
 use tokio::process::Child; 
 use tokio::sync::{oneshot, Mutex, mpsc};
@@ -2569,6 +2572,13 @@ async fn selected_artifact_type(){
   });
 }
 
+#[tauri::command(rename_all = "snake_case")]
+fn load_image_base64(path: String) -> Result<String, String> {
+    fs::read(&path)
+        .map_err(|e| format!("读取失败: {}", e))
+        .map(|bytes| general_purpose::STANDARD.encode(bytes))
+}
+
 // 访问当前选择类型
 #[tauri::command]
 async fn frontend_select_artifact_type(artifactType: String){
@@ -3266,6 +3276,8 @@ pub fn run_tauri_app() {
                                             write_register_frontend_robot,
                                             frontend_select_artifact_type,
                                             selected_artifact_type,
+                                            load_image_base64,
+                                    
                                             // 机器人调试
                                             reset_start_robot,
                                             reset_alarm_robot,
