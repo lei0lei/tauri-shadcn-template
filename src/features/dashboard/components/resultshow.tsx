@@ -656,14 +656,20 @@ export default function ResultShow() {
                           <TableCell className="text-center w-[60px] text-slate-600">
                               {hole?.standard_hole_type || ""}
                           </TableCell>
-                          <TableCell className="text-center w-[80px] text-slate-600">
-                              {hole?.diameter?.toFixed(3) || ""}
+                          <TableCell
+                            className={`text-center w-[80px] ${hole?.dimeter_result === false ? "text-red-500" : "text-slate-600"}`}
+                          >
+                            {hole?.diameter?.toFixed(3) || ""}
                           </TableCell>
-                          <TableCell className="text-center w-[80px] text-slate-600">
-                              {hole?.depth?.toFixed(3) || ""}
+                          <TableCell
+                            className={`text-center w-[80px] ${hole?.depth_result === false ? "text-red-500" : "text-slate-600"}`}
+                          >
+                            {hole?.depth?.toFixed(3) || ""}
                           </TableCell>
-                          <TableCell className="text-center w-[80px] text-slate-600">
-                              {hole?.have_luowen === undefined ? "" : (hole.luowen ? "是" : "否")}
+                          <TableCell
+                            className={`text-center w-[80px] ${hole?.luowen_result === false ? "text-red-500" : "text-slate-600"}`}
+                          >
+                            {hole?.have_luowen === undefined ? "" : (hole.luowen ? "是" : "否")}
                           </TableCell>
                         </TableRow>
                       );
