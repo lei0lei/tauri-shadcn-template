@@ -172,7 +172,7 @@ pub struct HoleState {
   pub action3: Option<HoleDiameter>, // 动作3的检测结果
   pub action3_orig_path: Option<String>,
   pub action3_result_path: Option<String>,
-  pub action4: Option<Yolov8Result>, // 动作4的检测结果，如圆心、直径等
+  pub action4: Option<Vec<Yolov8Result>>, // 动作4的检测结果，如圆心、直径等
   pub action4_orig_path: Option<String>,
   pub action4_result_path: Option<String>,
   pub action6: Option<HoleDiameter>, // 动作3的检测结果
@@ -270,7 +270,7 @@ impl TaskState {
       }
   }
   // 动作4的检测结果
-  pub async fn update_action4(&mut self, face_id: u16, hole_id: u16, detection: Yolov8Result,orig_path:String, result_path:String) {
+  pub async fn update_action4(&mut self, face_id: u16, hole_id: u16, detection: Vec<Yolov8Result>,orig_path:String, result_path:String) {
       if let Some(hole) = self.holes.get_mut(&(face_id, hole_id)) {
           hole.action4 = Some(detection);
           hole.action4_orig_path = Some(orig_path.to_string());
@@ -313,11 +313,11 @@ impl TaskState {
       let action1 = hole.action1.clone();
       let action2 = hole.action2.clone();
       let action5 = hole.action5.clone();
-      let action4 = hole.action4.clone().map_or( Yolov8Result {
+      let action4 = hole.action4.clone().map_or(vec![ Yolov8Result {
                                                           class_id: 9999,
                                                           confidence: 0.0,
                                                           bbox: (0.0, 0.0, 0.0, 0.0),
-                                                      }, |v| v);
+                                                      }], |v| v);
       let action3_orig_path = hole.action3_orig_path.as_ref().unwrap_or(&"wrong-path".to_string()).to_string();
       let action3_result_path = hole.action3_result_path.as_ref().unwrap_or(&"wrong-path".to_string()).to_string();
       let action3 = hole.action3.clone().map_or(HoleDiameter {
@@ -553,11 +553,17 @@ impl HoleConfig {
 }
 
 // 获取螺纹检测结果
-pub fn generate_detection_result(result: &Yolov8Result,hole_config: &HoleConfig) -> (bool, bool) {
-  let has_luowen = result.class_id == 0;
+pub fn generate_detection_result(result: &[Yolov8Result],hole_config: &HoleConfig) -> (bool, bool) {
+  if result.iter().any(|r| r.class_id == 1) {
+        // 有 class_id == 1，直接返回 false
+      (false, false)
+  }else{
+
+  let has_luowen = result.iter().any(|r| r.class_id == 0);
   let config_expect = hole_config.luowen;
   let match_config = has_luowen == config_expect;
   (has_luowen, match_config)
+  }
 }
 
 // 获取深度结果
@@ -1430,12 +1436,12 @@ async fn send_image_to_fastapi(
       let full_path_result = generate_file_path(&pp_refs, flie_name);
       save_image_base64(&image_base64, &full_path_result)?;
 
-      let result = construct_action4(&results).await;
-      let result = result.unwrap_or(Yolov8Result {
-        class_id: 9999,
-        confidence: 0.0,
-        bbox: (0.0, 0.0, 0.0, 0.0),
-    });
+      let result = construct_action4_multi(&results).await;
+      let result = result.unwrap_or(vec![Yolov8Result {
+          class_id: 9999,
+          confidence: 0.0,
+          bbox: (0.0, 0.0, 0.0, 0.0),
+      }]);
 
       let full_path_orig_str = full_path_orig.to_string_lossy().to_string();
       let full_path_result_str = full_path_result.to_string_lossy().to_string();
@@ -1781,6 +1787,38 @@ pub async fn parse_yolov8_results(results: &serde_json::Value) -> Option<Yolov8R
       confidence,
       bbox: (x1, y1, x2, y2),
   })
+}
+
+pub async fn parse_yolov8_multi_results(results: &serde_json::Value) -> Option<Vec<Yolov8Result>> {
+    let arr = results.as_array()?; // 必须是数组
+
+    let mut parsed = Vec::new();
+
+    for item in arr {
+        let bbox = item.get("bbox")?.as_array()?;
+        if bbox.len() != 4 {
+            continue;
+        }
+
+        let x1 = bbox[0].as_f64()?;
+        let y1 = bbox[1].as_f64()?;
+        let x2 = bbox[2].as_f64()?;
+        let y2 = bbox[3].as_f64()?;
+        let confidence = item.get("confidence")?.as_f64()?;
+        let class_id = item.get("class_id")?.as_u64()? as u32;
+
+        parsed.push(Yolov8Result {
+            class_id,
+            confidence,
+            bbox: (x1, y1, x2, y2),
+        });
+    }
+
+    Some(parsed)
+}
+
+pub async fn construct_action4_multi(results: &serde_json::Value) -> Option<Vec<Yolov8Result>> {
+    parse_yolov8_multi_results(results).await
 }
 
 pub async fn construct_action4(results: &serde_json::Value) -> Option<Yolov8Result> {

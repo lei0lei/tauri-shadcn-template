@@ -168,6 +168,27 @@ def parse_yolo_results(results):
 
     return detection  # 或 json.dumps(detection, indent=4) 如果你需要字符串
 
+def parse_yolo_multi_results(results):
+    """解析 YOLOv8 检测结果，返回所有目标"""
+    if len(results.boxes) == 0:
+        return []  # 返回空列表
+
+    boxes = results.boxes.xyxy.cpu().numpy()
+    confs = results.boxes.conf.cpu().numpy()
+    clss = results.boxes.cls.cpu().numpy()
+
+    detections = []
+    for i in range(len(boxes)):
+        detection = {
+            "bbox": [float(v) for v in boxes[i]],  # [x1, y1, x2, y2]
+            "confidence": float(confs[i]),
+            "class_id": int(clss[i]),
+        }
+        detections.append(detection)
+
+    return detections
+
+
 
 @app.post("/detect_diameter")
 async def detect_diameter(
@@ -417,7 +438,7 @@ async def detect_luowen_with_draw(
         detections = sv.Detections.from_ultralytics(results)
         
         # 解析检测结果
-        detection_json = parse_yolo_results(results)
+        detection_json = parse_yolo_multi_results(results)
         GREEN = (0, 255, 0)
         # 使用 Supervision 绘制检测框
         # image_with_boxes = draw_detections(image, results)

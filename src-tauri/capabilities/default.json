@@ -3,11 +3,41 @@
   "identifier": "default",
   "description": "Capability for the main window",
   "windows": [
-    "main"
+    "*"
   ],
   "permissions": [
     "core:default",
     "opener:default",
-    "shell:default"
+    "shell:default",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "exec-sh",
+          "cmd": "powershell.exe",
+          "args": [
+            "-Command",
+            {
+              "validator": ".*"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "identifier": "shell:allow-spawn",
+      "allow": [
+        {
+          "name": "exec-sh",
+          "cmd": "powershell.exe",
+          "args": [
+            "-Command",
+            {
+              "validator": ".*"
+            }
+          ]
+        }
+      ]
+    }
   ]
 }
