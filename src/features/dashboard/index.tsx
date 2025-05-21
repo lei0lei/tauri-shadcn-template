@@ -308,8 +308,8 @@ export default function Dashboard() {
       leftWrapper.style.width = "800px";
       leftWrapper.style.height = "800px";
       leftWrapper.style.position = "absolute";
-      leftWrapper.style.top = "50px";
-      leftWrapper.style.left = "100px";
+      leftWrapper.style.top = "80px";
+      leftWrapper.style.left = "50px";
 
 
       const svgNS = "http://www.w3.org/2000/svg"
@@ -380,8 +380,8 @@ export default function Dashboard() {
       rightWrapper.style.width = "800px";
       rightWrapper.style.height = "800px";
       rightWrapper.style.position = "absolute";
-      rightWrapper.style.top = "50px";
-      rightWrapper.style.left = "100px";
+      rightWrapper.style.top = "80px";
+      rightWrapper.style.left = "50px";
       // rightWrapper.style.fontSize = "12px";
 
       rightWrapper.innerHTML = `
@@ -531,7 +531,7 @@ export default function Dashboard() {
                   <Badge
                     className="cursor-pointer"
                     onClick={handleExportClick}                  >
-                    导出
+                    导出工件数据
                   </Badge>
                   <svg
                     xmlns='http://www.w3.org/2000/svg'
