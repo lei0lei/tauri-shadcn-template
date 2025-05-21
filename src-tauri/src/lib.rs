@@ -3256,6 +3256,8 @@ static mut WINDOW_CLOSING: bool = false;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run_tauri_app() {
   tauri::Builder::default()
+    .plugin(tauri_plugin_dialog::init())
+    .plugin(tauri_plugin_fs::init())
     .plugin(tauri_plugin_shell::init())
     .setup(setup)
     .on_window_event(move |window, event| match event {

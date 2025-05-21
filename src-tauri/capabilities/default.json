@@ -38,6 +38,21 @@
           ]
         }
       ]
+    },
+    {
+      "identifier": "fs:scope",
+      "allow": [{ "path": "$APPDATA" }, { "path": "$APPDATA/**" }]
+    },
+    "fs:default",
+    {
+  "identifier": "fs:allow-write-file",
+  "allow": [
+    {
+      "path": ".*\\.pdf$", 
+      "recursive": true
     }
+  ]
+},
+    "dialog:default"
   ]
 }

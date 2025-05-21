@@ -21,7 +21,86 @@ import { Separator } from '@radix-ui/react-separator'
 import { useDashboardStore } from "@/stores/dashboardStore";
 import { IconCheck, IconX, IconCamera, IconParkingCircleFilled, IconAsset, IconServer, IconCircle, IconDeviceFloppy } from "@tabler/icons-react";
 // import Surreal from 'surrealdb';
+import { toPng } from 'html-to-image';
+import jsPDF from 'jspdf';
+import { useHoleStore } from "@/stores/svgShow";
+import { save } from '@tauri-apps/plugin-dialog';
+import { writeFile, BaseDirectory } from '@tauri-apps/plugin-fs';
+
 import { getDb } from "@/utils/surreal"; // 引入数据库初始化函数
+import EH09_A from "@/assets/EH09_A.png";
+import EH09_B from "@/assets/EH09_B.png";
+import EH09_C from "@/assets/EH09_C.png";
+import EH09_D from "@/assets/EH09_D.png";
+import EH09_E from "@/assets/EH09_E.png";
+import EH09_F from "@/assets/EH09_F.png";
+
+import EH12_A from "@/assets/EH12_A.png";
+import EH12_B from "@/assets/EH12_B.png";
+import EH12_C from "@/assets/EH12_C.png";
+import EH12_D from "@/assets/EH12_D.png";
+import EH12_E from "@/assets/EH12_E.png";
+
+import EY28_A from "@/assets/EY28_A.png";
+import EY28_B from "@/assets/EY28_B.png";
+import EY28_C from "@/assets/EY28_C.png";
+import EY28_D from "@/assets/EY28_D.png";
+import EY28_E from "@/assets/EY28_E.png";
+
+import EK30_A from "@/assets/EK30_A.png";
+import EK30_B from "@/assets/EK30_B.png";
+import EK30_C from "@/assets/EK30_C.png";
+import EK30_D from "@/assets/EK30_D.png";
+import EK30_E from "@/assets/EK30_E.png";
+
+import EK40_A from "@/assets/EK40_A.png";
+import EK40_B from "@/assets/EK40_B.png";
+import EK40_C from "@/assets/EK40_C.png";
+import EK40_D from "@/assets/EK40_D.png";
+import EK40_E from "@/assets/EK40_E.png";
+
+
+const imageMap: Record<string, Record<string, string>> = {
+
+  EH09: {
+    A: EH09_A,
+    B: EH09_B,
+    C: EH09_C,
+    D: EH09_D,
+    E: EH09_E,
+    F: EH09_F,
+  },
+  EH12: {
+    A: EH12_A,
+    B: EH12_B,
+    C: EH12_C,
+    D: EH12_D,
+    E: EH12_E,
+  },
+  EY28: {
+    A: EY28_A,
+    B: EY28_B,
+    C: EY28_C,
+    D: EY28_D,
+    E: EY28_E,
+  },
+  EK30: {
+    A: EK30_A,
+    B: EK30_B,
+    C: EK30_C,
+    D: EK30_D,
+    E: EK30_E,
+  },
+  EK40: {
+    A: EK40_A,
+    B: EK40_B,
+    C: EK40_C,
+    D: EK40_D,
+    E: EK40_E,
+  },
+  // 可添加其他类型
+};
+
 
 const iconMap : Record<string, React.ComponentType>= {
   "相机": IconCamera,
@@ -34,10 +113,16 @@ const iconMap : Record<string, React.ComponentType>= {
 
 import { invoke } from '@tauri-apps/api/core';
 
+
+
 export default function Dashboard() {
 
   const dbInstance = useDashboardStore((state) => state.dbInstance);
   const setDbInstance = useDashboardStore((state) => state.setDbInstance);
+  const resultComponentValue = useDashboardStore((state) => state.resultComponentValue);
+  const holePositions = useHoleStore((state) => state.holePositions);
+
+
   const [timer, setTimer] = useState(0)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   useEffect(() => {
@@ -76,6 +161,10 @@ export default function Dashboard() {
     }
   }, [])
 
+
+
+
+
   useEffect(() => {
     const initializeDb = async () => {
       if (!dbInstance) {
@@ -96,6 +185,9 @@ export default function Dashboard() {
   // @ts-ignore
   const { logs, setLogs, artifactType,setArtifactType,statics,artifact,setArtifact} = useDashboardStore();
   const {current_hole,setCurrentHole,current_face}= useDashboardStore();
+
+
+
   useEffect(() => {
     // 监听后端发送的 log_received 事件
     const handleStageReceived = (event: { payload: { face: number, hole: number, artifact: string} }) => {
@@ -178,6 +270,122 @@ export default function Dashboard() {
   }, [])
 
 
+  const handleExportClick = async () => {
+    const doc = new jsPDF({
+      orientation: 'landscape', // 横向
+      unit: 'px',               // 使用像素单位（可选）
+      format: [800, 1600]        // 自定义宽高（如有需要）
+    })
+
+    for (const { surface, holes } of resultComponentValue) {
+      const surfaceImage = imageMap[artifactType]?.[surface]
+      console.log(surfaceImage)
+      doc.text(surface, 40, 40)
+      if (!surfaceImage) continue
+      const wrapper = document.createElement("div")
+      wrapper.style.width = "800px"
+      wrapper.style.height = "800px"
+
+      const svgNS = "http://www.w3.org/2000/svg"
+      const svg = document.createElementNS(svgNS, "svg")
+      svg.setAttribute("viewBox", "0 0 800 800")
+      svg.setAttribute("width", "800")
+      svg.setAttribute("height", "800")
+
+      // 网格
+      const defs = document.createElementNS(svgNS, "defs")
+      const pattern = document.createElementNS(svgNS, "pattern")
+      pattern.setAttribute("id", "grid")
+      pattern.setAttribute("width", "30")
+      pattern.setAttribute("height", "30")
+      pattern.setAttribute("patternUnits", "userSpaceOnUse")
+      const path = document.createElementNS(svgNS, "path")
+      path.setAttribute("d", "M 30 0 L 0 0 0 30")
+      path.setAttribute("fill", "none")
+      path.setAttribute("stroke", "rgba(0,0,0,0.1)")
+      path.setAttribute("stroke-width", "1")
+      pattern.appendChild(path)
+      defs.appendChild(pattern)
+      svg.appendChild(defs)
+
+      const grid = document.createElementNS(svgNS, "rect")
+      grid.setAttribute("width", "100%")
+      grid.setAttribute("height", "100%")
+      grid.setAttribute("fill", "url(#grid)")
+      svg.appendChild(grid)
+
+
+      // 背景图
+      const bg = document.createElementNS(svgNS, "image")
+      bg.setAttribute("href", surfaceImage) // ✅ 推荐写法，现代浏览器支持
+      bg.setAttribute("x", "0")
+      bg.setAttribute("y", "0")
+      bg.setAttribute("width", "800")
+      bg.setAttribute("height", "800")
+      svg.appendChild(bg)
+
+      const imgWidth = 800;   // 图片宽度，最好和页面宽度一致
+      const imgHeight = 800;  // 图片高度，按比例设置
+
+      wrapper.appendChild(svg)
+      document.body.appendChild(wrapper)
+
+      // 孔位
+      holes.forEach((status, index) => {
+        const holeId = index + 1
+        const pos = holePositions.find(
+          (p) => p.artifact === artifactType && p.surface === surface && p.holeId === holeId
+        )
+        if (!pos) return
+
+        const circle = document.createElementNS(svgNS, "circle")
+        circle.setAttribute("cx", pos.x.toString())
+        circle.setAttribute("cy", pos.y.toString())
+        circle.setAttribute("r", pos.r.toString())
+        circle.setAttribute("stroke", "#1e293b");
+        circle.setAttribute("stroke-width", "5");
+        status=true
+        const fill =
+          status === true ? "#15803d" : status === false ? "#b91c1c" : "#1e293b"
+        circle.setAttribute("fill", fill)
+        svg.appendChild(circle)
+      })
+
+      const dataUrl = await toPng(wrapper)
+      doc.addImage(dataUrl, "PNG", 10, 10, imgWidth, imgHeight)
+      doc.addPage()
+
+      document.body.removeChild(wrapper)
+
+
+    }
+  // 移除最后一页空白
+    const pageCount = doc.getNumberOfPages();
+    if (pageCount > 1) {
+      doc.deletePage(pageCount);
+    }
+
+    // 获取 PDF 二进制内容
+    const pdfArrayBuffer = doc.output("arraybuffer");
+    const pdfBytes = new Uint8Array(pdfArrayBuffer);
+
+    // 弹出保存对话框
+    const defaultName = `${artifactType}-${artifact}.pdf`;
+    const path = await save({
+      defaultPath: defaultName,
+      filters: [{ name: "PDF 文件", extensions: ["pdf"] }]
+    });
+
+    if (path) {
+      await writeFile(path, pdfBytes);
+      console.log("PDF 保存成功:", path);
+    } else {
+      console.log("用户取消保存");
+    }
+  }
+
+
+
   return (
     <div className='flex flex-col min-h-screen p-4'>
       <Header>
@@ -250,6 +458,11 @@ export default function Dashboard() {
               <Card className="select-none">
                 <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                   <CardTitle className='text-sm font-medium'>当前工件</CardTitle>
+                  <Badge
+                    className="cursor-pointer"
+                    onClick={handleExportClick}                  >
+                    导出
+                  </Badge>
                   <svg
                     xmlns='http://www.w3.org/2000/svg'
                     viewBox='0 0 24 24'
