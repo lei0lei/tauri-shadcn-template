@@ -25,8 +25,8 @@ import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
 import { useHoleStore } from "@/stores/svgShow";
 import { save } from '@tauri-apps/plugin-dialog';
-import { writeFile, BaseDirectory } from '@tauri-apps/plugin-fs';
-
+import { writeFile } from '@tauri-apps/plugin-fs';
+import { Dialog, DialogTrigger, DialogContent, DialogClose } from "@/components/ui/dialog";
 import { getDb } from "@/utils/surreal"; // 引入数据库初始化函数
 import EH09_A from "@/assets/EH09_A.png";
 import EH09_B from "@/assets/EH09_B.png";
@@ -113,7 +113,14 @@ const iconMap : Record<string, React.ComponentType>= {
 
 import { invoke } from '@tauri-apps/api/core';
 
-
+const faceReverseMapping: { [key: string]: number } = {
+  "A": 1,
+  "B": 2,
+  "C": 3,
+  "D": 4,
+  "E": 5,
+  "F": 6,
+};
 
 export default function Dashboard() {
 
@@ -121,7 +128,6 @@ export default function Dashboard() {
   const setDbInstance = useDashboardStore((state) => state.setDbInstance);
   const resultComponentValue = useDashboardStore((state) => state.resultComponentValue);
   const holePositions = useHoleStore((state) => state.holePositions);
-
 
   const [timer, setTimer] = useState(0)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
@@ -278,13 +284,33 @@ export default function Dashboard() {
     })
 
     for (const { surface, holes } of resultComponentValue) {
+      // === 1. 查询当前面孔数据 ===
+      if (!dbInstance) {
+        console.error("数据库未初始化")
+        continue  // 跳过当前面
+      }
+      const faceId = faceReverseMapping[surface];
+      const query = `
+        SELECT * FROM Hole_library
+        WHERE artifact_name = '2025_05_20_16_36_08_736' AND face_id = $faceId
+        ORDER BY hole_id
+      `;
+      const surreal_result = await dbInstance.query(query, {
+        // artifact,
+        faceId: faceId,
+      });
+      const holesData = Array.isArray(surreal_result?.[0]) ? surreal_result[0] : [];
       const surfaceImage = imageMap[artifactType]?.[surface]
-      console.log(surfaceImage)
-      doc.text(surface, 40, 40)
       if (!surfaceImage) continue
-      const wrapper = document.createElement("div")
-      wrapper.style.width = "800px"
-      wrapper.style.height = "800px"
+
+
+      const leftWrapper = document.createElement("div");
+      leftWrapper.style.width = "800px";
+      leftWrapper.style.height = "800px";
+      leftWrapper.style.position = "absolute";
+      leftWrapper.style.top = "50px";
+      leftWrapper.style.left = "100px";
+
 
       const svgNS = "http://www.w3.org/2000/svg"
       const svg = document.createElementNS(svgNS, "svg")
@@ -324,12 +350,6 @@ export default function Dashboard() {
       bg.setAttribute("height", "800")
       svg.appendChild(bg)
 
-      const imgWidth = 800;   // 图片宽度，最好和页面宽度一致
-      const imgHeight = 800;  // 图片高度，按比例设置
-
-      wrapper.appendChild(svg)
-      document.body.appendChild(wrapper)
-
       // 孔位
       holes.forEach((status, index) => {
         const holeId = index + 1
@@ -351,11 +371,61 @@ export default function Dashboard() {
         svg.appendChild(circle)
       })
 
-      const dataUrl = await toPng(wrapper)
-      doc.addImage(dataUrl, "PNG", 10, 10, imgWidth, imgHeight)
-      doc.addPage()
 
-      document.body.removeChild(wrapper)
+      leftWrapper.appendChild(svg);
+      document.body.appendChild(leftWrapper);
+
+          // 2. 创建右侧表格容器，独立生成
+      const rightWrapper = document.createElement("div");
+      rightWrapper.style.width = "800px";
+      rightWrapper.style.height = "800px";
+      rightWrapper.style.position = "absolute";
+      rightWrapper.style.top = "50px";
+      rightWrapper.style.left = "100px";
+      // rightWrapper.style.fontSize = "12px";
+
+      rightWrapper.innerHTML = `
+            <table border="1" style="border-collapse:collapse;width:90%;font-size:16px;text-align:center;line-height:2;">
+              <thead>
+                <tr style="background:#334155;color:white;">
+                  <th>孔位</th><th>型号</th><th>直径</th><th>深度</th><th>螺纹</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${(holesData as any[]).map((hole: any, index: number) => {
+                  const holeId = index + 1;
+                  const diameterColor = hole.dimeter_result === false ? "red" : "#334155";
+                  const depthColor = hole.depth_result === false ? "red" : "#334155";
+                  const threadColor = hole.luowen_result === false ? "red" : "#334155";
+                  return `
+                    <tr style="background:${index % 2 === 0 ? "#e2e8f0" : "#f1f5f9"};">
+                      <td>${holeId}</td>
+                      <td>${hole.standard_hole_type || ""}</td>
+                      <td style="color:${diameterColor};">${hole.diameter?.toFixed(3) || ""}</td>
+                      <td style="color:${depthColor};">${hole.depth?.toFixed(3) || ""}</td>
+                      <td style="color:${threadColor};">${hole.have_luowen === undefined ? "" : hole.luowen ? "是" : "否"}</td>
+                    </tr>
+                  `;
+                }).join("")}
+              </tbody>
+            </table>
+          `;
+      document.body.appendChild(rightWrapper);
+
+      // 3. 分别截图
+      const leftDataUrl = await toPng(leftWrapper);
+      const rightDataUrl = await toPng(rightWrapper);
+      // 4. 加到 PDF，左右各占 800x800，间距可调整
+      doc.text(surface, 40, 40); // 标题放这里
+
+      doc.addImage(leftDataUrl, "PNG", 10, 10, 800, 800);
+      doc.addImage(rightDataUrl, "PNG", 800, 50, 800, 800);
+
+      doc.addPage();
+
+      // 清理DOM
+      document.body.removeChild(leftWrapper);
+      document.body.removeChild(rightWrapper);
 
 
     }
