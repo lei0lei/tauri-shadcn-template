@@ -1,12 +1,12 @@
 # 硬件连接设置和参数设置
 
 [sensors]
-ip = '192.168.0.101'
+ip = '192.168.0.105'
 
 
 
 [cameras]
-ip = '192.168.1.100'
+ip = '192.168.0.102'
 lib_path = 'C:\\Program Files (x86)\\Common Files\\MVS\\Runtime\\Win64_x64\\MvCameraControl.dll'
 
  

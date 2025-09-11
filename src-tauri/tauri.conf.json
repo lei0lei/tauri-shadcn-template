@@ -14,8 +14,9 @@
     "windows": [
       {
         "title": "tauri-shadcn-template",
-        "width": 800,
-        "height": 600
+        "width": 1920,
+        "height": 1080,
+        "maximized": true
       }
     ],
     "security": {
@@ -25,6 +26,11 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "windows": {
+              "wix": {
+                  "language": "zh-CN"
+              }
+          },
     "icon": [
       "icons/2061956.png",
       "icons/2061956.ico"

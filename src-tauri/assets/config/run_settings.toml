@@ -1,6 +1,6 @@
 # 运行时设置
-[log]
-log_dir = ''
+[path]
+data_save_dir = 'D:/data'
 
 
 [service]
@@ -9,7 +9,9 @@ algo_backend = 'fastapi'
 
 [database]
 database = 'surreal'
-ip_port = '127.0.0.1:8000'
+ip_port = '127.0.0.1:8011'
+username = 'lei0lei'
+password = '12345678'
 
 [save]
 orginal_image_save = true

@@ -25,3 +25,10 @@ dist-ssr
 
 .venv
 __pycache__
+
+runs
+
+yolo.pid
+
+yolov8s.pt
+yolo11n.pt

@@ -1,3 +1,5 @@
+#![allow(warnings)] 
+
 use std::sync::{Arc, Mutex};
 use tauri::{Emitter, Manager, RunEvent};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
@@ -7,14 +9,30 @@ use tokio::io::{AsyncBufReadExt, BufReader}; // 引入 tokio 的异步读取特�
 use tauri::{AppHandle};
 use tokio::process::Command as TokioCommand; // 使用 tokio 版本的 Command
 use tokio::task;
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+use std::os::windows::process::CommandExt; // 启用 Windows 专用扩展
+use tokio::process::Child;
 
 
-// Helper function to spawn the sidecar and monitor its stdout/stderr
-pub fn spawn_and_monitor_sidecar(app_handle: tauri::AppHandle) -> Result<(), String> {
+pub struct SidecarStates {
+    pub fastapi: Arc<Mutex<Option<Arc<Mutex<Child>>>>>,
+    pub surrealdb: Arc<Mutex<Option<Arc<Mutex<Child>>>>>,
+}
+
+// ███████╗ █████╗ ███████╗████████╗ █████╗ ██████╗ ██╗
+// ██╔════╝██╔══██╗██╔════╝╚══██╔══╝██╔══██╗██╔══██╗██║
+// █████╗  ███████║███████╗   ██║   ███████║██████╔╝██║
+// ██╔══╝  ██╔══██║╚════██║   ██║   ██╔══██║██╔═══╝ ██║
+// ██║     ██║  ██║███████║   ██║   ██║  ██║██║     ██║
+// ╚═╝     ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝     ╚═╝
+                                                    
+                                          
+// 启动fastapi
+pub fn spawn_and_monitor_fastapi_sidecar(app_handle: tauri::AppHandle) -> Result<(), String> {
     // Check if a sidecar process already exists
-    if let Some(state) = app_handle.try_state::<Arc<Mutex<Option<Arc<Mutex<tokio::process::Child>>>>>>() {
-        let child_process = state.lock().unwrap();
-        if child_process.is_some() {
+    if let Some(states) = app_handle.try_state::<Arc<SidecarStates>>() {
+        let fastapi_state = states.fastapi.lock().unwrap();
+        if fastapi_state.is_some() {
             // A sidecar is already running, do not spawn a new one
             println!("[tauri] Sidecar is already running. Skipping spawn.");
             return Ok(()); // Exit early since sidecar is already running
@@ -34,20 +52,222 @@ pub fn spawn_and_monitor_sidecar(app_handle: tauri::AppHandle) -> Result<(), Str
         .arg("-m")
         .arg("uvicorn")  // 只指定 uvicorn 模块
         .arg("app.app:app") // 将 FastAPI 应用传给 uvicorn
+        .arg("--lifespan")
+        .arg("on")
         .stdout(Stdio::piped()) // 捕获标准输出
         .stderr(Stdio::piped()) // 捕获错误输出
+        .creation_flags(CREATE_NO_WINDOW)  // 👈 添加这一行隐藏窗口
         .spawn()
         .map_err(|e| e.to_string())?;
  
     let sidecar_command = Arc::new(Mutex::new(sidecar_command));
     // Store the child process in the app state
-    if let Some(state) = app_handle.try_state::<Arc<Mutex<Option<Arc<Mutex<tokio::process::Child>>>>>>() {
-        println!("State acquired successfully");
-        *state.lock().unwrap() = Some(sidecar_command.clone());
-    } else {
+
+    // if let Some(states) = app_handle.try_state::<Arc<SidecarStates>>() {
+    //     println!("State acquired successfully");
+    //     let fastapi_state = states.fastapi.lock().unwrap();
+    //     *fastapi_state.lock().unwrap() = Some(sidecar_command.clone());
+    if let Some(states) = app_handle.try_state::<Arc<SidecarStates>>() {
+        let mut fastapi_state = states.fastapi.lock().unwrap();
+        *fastapi_state = Some(sidecar_command.clone());
+    }else {
         return Err("Failed to access app state".to_string());
     }
+
+
+    // if let Some(fastapi_state) = app_handle.try_state::<Arc<Mutex<Option<Arc<Mutex<tokio::process::Child>>>>>>() {
+    //     println!("State acquired successfully");
+    //     *fastapi_state.lock().unwrap() = Some(sidecar_command.clone());
+    // } else {
+    //     return Err("Failed to access app state".to_string());
+    // }
     // Clone the app_handle here to move it into async block
+    let app_handle = app_handle.clone();
+    
+    // Spawn an async task to handle sidecar communication
+    tauri::async_runtime::spawn({
+        let app_handle = app_handle.clone(); // Clone the Arc here
+        let sidecar_command = sidecar_command.clone(); // Clone the Arc here
+        async move {
+            // We must take the stdout and stderr to move them into tasks
+            let mut sidecar_command = sidecar_command.lock().unwrap(); // Lock to access the child process
+            let mut stdout = sidecar_command.stdout.take().unwrap();
+            let mut stderr = sidecar_command.stderr.take().unwrap();
+
+            let mut stdout_reader = BufReader::new(stdout);
+            let mut stderr_reader = BufReader::new(stderr);
+
+            // Monitor stdout of the sidecar process
+            tokio::spawn({
+                let app_handle = app_handle.clone(); // Clone the Arc here
+                async move {
+                    let mut line = String::new();
+                    while stdout_reader.read_line(&mut line).await.unwrap() > 0 {
+                        println!("Sidecar stdout: {}", line);
+                        println!("Emitting sidecar-stdout event with payload: {}", line);
+                        // Emit the line to the frontend (directly without locking)
+                        app_handle
+                            .emit("sidecar-stdout", line.clone())
+                            .expect("Failed to emit sidecar stdout event");
+                        line.clear();
+                    }
+                }
+            });
+
+            // Monitor stderr of the sidecar process
+            tokio::spawn({
+                let app_handle = app_handle.clone(); // Clone the Arc here
+                async move {
+                    let mut line = String::new();
+                    loop {
+                        match stderr_reader.read_line(&mut line).await {
+                            Ok(0) => {
+                                // 如果返回 0，表示流结束，跳出循环
+                                break;
+                            }
+                            Ok(_) => {
+                                eprintln!("Sidecar stdout: {}", line);
+            
+                                // Emit the line to the frontend (directly without locking)
+                                if let Err(e) = app_handle.emit("sidecar-stdout", line.clone()) {
+                                    eprintln!("Failed to emit sidecar stderr event: {}", e);
+                                }
+                                line.clear();
+                            }
+                            Err(e) => {
+                                // 处理读取错误
+                                eprintln!("Error reading stderr: {}", e);
+                                break;  // 可以选择退出循环或进行其他错误处理
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    });
+
+    Ok(())
+}
+
+// Define a command to shutdown sidecar process
+#[tauri::command]
+pub fn shutdown_fastapi_sidecar(app_handle: tauri::AppHandle) -> Result<String, String> {
+    println!("[tauri] Received command to shutdown sidecar.");
+    // Access the sidecar process state
+
+    if let Some(fastapi_state) = app_handle.try_state::<Arc<Mutex<Option<CommandChild>>>>() {
+        let mut child_process = fastapi_state
+            .lock()
+            .map_err(|_| "[tauri] Failed to acquire lock on sidecar process.")?;
+
+        if let Some(mut process) = child_process.take() {
+            let command = "sidecar shutdown\n"; // Add newline to signal the end of the command
+
+            // Attempt to write the command to the sidecar's stdin
+            if let Err(err) = process.write(command.as_bytes()) {
+                println!("[tauri] Failed to write to sidecar stdin: {}", err);
+                // Restore the process reference if shutdown fails
+                *child_process = Some(process);
+                return Err(format!("Failed to write to sidecar stdin: {}", err));
+            }
+
+            println!("[tauri] Sent 'sidecar shutdown' command to sidecar.");
+            Ok("'sidecar shutdown' command sent.".to_string())
+        } else {
+            println!("[tauri] No active sidecar process to shutdown.");
+            Err("No active sidecar process to shutdown.".to_string())
+        }
+    } else {
+        Err("Sidecar process state not found.".to_string())
+    }
+}
+
+
+
+// Define a command to start sidecar process.
+#[tauri::command]
+pub fn start_fastapi_sidecar(app_handle: tauri::AppHandle) -> Result<String, String> {
+    println!("[tauri] Received command to start sidecar.");
+    spawn_and_monitor_fastapi_sidecar(app_handle)?;
+    Ok("Sidecar spawned and monitoring started.".to_string())
+}
+
+
+// ██████╗  █████╗ ████████╗ █████╗ ██████╗  █████╗ ███████╗███████╗
+// ██╔══██╗██╔══██╗╚══██╔══╝██╔══██╗██╔══██╗██╔══██╗██╔════╝██╔════╝
+// ██║  ██║███████║   ██║   ███████║██████╔╝███████║███████╗█████╗  
+// ██║  ██║██╔══██║   ██║   ██╔══██║██╔══██╗██╔══██║╚════██║██╔══╝  
+// ██████╔╝██║  ██║   ██║   ██║  ██║██████╔╝██║  ██║███████║███████╗
+// ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═════╝ ╚═╝  ╚═╝╚══════╝╚══════╝
+
+
+pub fn spawn_and_monitor_surrealdb_sidecar(app_handle: tauri::AppHandle) -> Result<(), String> {
+    // Check if a sidecar process already exists
+    if let Some(states) = app_handle.try_state::<Arc<SidecarStates>>() {
+        let surreal_state = states.surrealdb.lock().unwrap();
+        if surreal_state.is_some() {
+            // A sidecar is already running, do not spawn a new one
+            println!("[tauri] Sidecar is already running. Skipping spawn.");
+            return Ok(()); // Exit early since sidecar is already running
+        }
+    }
+
+    // Spawn sidecar
+    let dbserver = if cfg!(target_os = "windows") {
+        // 虚拟环境目录
+        "surreal" // Windows
+    } else {
+        "surreal" // Linux/macOS
+    };
+
+    // Path to your Python script
+    // 启动fastapi
+    let mut sidecar_command = TokioCommand::new(dbserver)
+        .arg("start")
+        // .arg("file://D:/database/mydb.db")
+        .arg("--user")
+        .arg("lei0lei")  // 只指定 uvicorn 模块
+        .arg("--pass") // 将 FastAPI 应用传给 uvicorn
+        .arg("12345678")
+        .arg("--bind")
+        .arg("127.0.0.1:8011")
+        .arg("rocksdb://D:/database")
+        .stdout(Stdio::piped()) // 捕获标准输出
+        .stderr(Stdio::piped()) // 捕获错误输出
+        .creation_flags(CREATE_NO_WINDOW)  // 👈 添加这一行隐藏窗口
+        .spawn()
+        .map_err(|e| e.to_string())?;
+
+    
+    
+    // 👇 SurrealDB 启动成功后再运行 import 命令
+    let mut import_proc = TokioCommand::new("surreal")
+        .arg("import")
+        .arg("--conn").arg("http://127.0.0.1:8011")
+        .arg("--user").arg("lei0lei")
+        .arg("--pass").arg("12345678")
+        .arg("--ns").arg("rs")
+        .arg("--db").arg("artifact")
+        .arg("D:/code/tauri-shadcn-template/src-tauri/src/database/surrealdb_schema.surql")
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .creation_flags(CREATE_NO_WINDOW)  // 👈 添加这一行隐藏窗口
+        .spawn()
+        .map_err(|e| format!("执行导入失败: {}", e))?;
+
+    // 等待 import 命令完成
+    // import_proc.wait().await.map_err(|e| format!("等待导入失败: {}", e))?;
+
+    let sidecar_command = Arc::new(Mutex::new(sidecar_command));
+    // Store the child process in the app state
+
+    if let Some(states) = app_handle.try_state::<Arc<SidecarStates>>() {
+        let mut surreal_state = states.surrealdb.lock().unwrap();
+        *surreal_state = Some(sidecar_command.clone());
+    }else {
+        return Err("Failed to access app state".to_string());
+    }
+
     let app_handle = app_handle.clone();
     
     // Spawn an async task to handle sidecar communication
@@ -102,47 +322,12 @@ pub fn spawn_and_monitor_sidecar(app_handle: tauri::AppHandle) -> Result<(), Str
     Ok(())
 }
 
-// Define a command to shutdown sidecar process
-#[tauri::command]
-pub fn shutdown_sidecar(app_handle: tauri::AppHandle) -> Result<String, String> {
-    println!("[tauri] Received command to shutdown sidecar.");
-    // Access the sidecar process state
-    if let Some(state) = app_handle.try_state::<Arc<Mutex<Option<CommandChild>>>>() {
-        let mut child_process = state
-            .lock()
-            .map_err(|_| "[tauri] Failed to acquire lock on sidecar process.")?;
-
-        if let Some(mut process) = child_process.take() {
-            let command = "sidecar shutdown\n"; // Add newline to signal the end of the command
-
-            // Attempt to write the command to the sidecar's stdin
-            if let Err(err) = process.write(command.as_bytes()) {
-                println!("[tauri] Failed to write to sidecar stdin: {}", err);
-                // Restore the process reference if shutdown fails
-                *child_process = Some(process);
-                return Err(format!("Failed to write to sidecar stdin: {}", err));
-            }
-
-            println!("[tauri] Sent 'sidecar shutdown' command to sidecar.");
-            Ok("'sidecar shutdown' command sent.".to_string())
-        } else {
-            println!("[tauri] No active sidecar process to shutdown.");
-            Err("No active sidecar process to shutdown.".to_string())
-        }
-    } else {
-        Err("Sidecar process state not found.".to_string())
-    }
-}
-
 
 
 // Define a command to start sidecar process.
 #[tauri::command]
-pub fn start_sidecar(app_handle: tauri::AppHandle) -> Result<String, String> {
+pub fn start_surrealdb_sidecar(app_handle: tauri::AppHandle) -> Result<String, String> {
     println!("[tauri] Received command to start sidecar.");
-    spawn_and_monitor_sidecar(app_handle)?;
+    spawn_and_monitor_surrealdb_sidecar(app_handle)?;
     Ok("Sidecar spawned and monitoring started.".to_string())
 }
-
-
-// 算法调用

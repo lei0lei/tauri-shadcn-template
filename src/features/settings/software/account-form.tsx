@@ -16,7 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { useSoftwareSettingsStore } from "@/stores/softwareSettingsStore";
 import { useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
+import { useDashboardStore } from "@/stores/dashboardStore";
 
 const accountFormSchema = z.object({
   modelType: z.enum(['EH09','EH12','EK30','EK40','EY28','TEST']), // 只允许选择 "EH09" 或 "EY28"
@@ -30,6 +30,8 @@ const artifactTypes = accountFormSchema.shape.modelType.options; // 获取枚举
 export function AccountForm() {
   const { isDevMode, toggleDevMode, selectedArtifactType, setSelectedArtifactType } = useSoftwareSettingsStore(); // 从 Zustand 获取状态
 
+
+  const { setArtifactType} = useDashboardStore();
   const form = useForm<AccountFormValues>({
     resolver: zodResolver(accountFormSchema),
     defaultValues:{ modelType: selectedArtifactType },
@@ -56,6 +58,8 @@ export function AccountForm() {
         variant: "destructive",
       });
     }
+
+    setArtifactType(data.modelType);
   }
 
   return (

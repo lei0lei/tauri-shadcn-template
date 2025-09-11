@@ -1,4 +1,7 @@
 import { create } from "zustand";
+import Surreal from 'surrealdb';
+
+
 interface LogShow {
     sender: string;
     level: string;
@@ -20,8 +23,55 @@ interface LogShow {
     hardware: string|null;
   }
 
+const holesPreset: Record<string, SurfaceData[]> = {
+  "EH09": [
+    { surface: "A", status: "NULL", holes: [null, null] },
+    { surface: "B", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,] },
+    { surface: "C", status: "NULL", holes: [null, null, null,null,null,] },
+    { surface: "D", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null,null,null,null] },
+    { surface: "E", status: "NULL", holes: [null,null,null,null,null,null,] },
+    { surface: "F", status: "NULL", holes: [null,null,null,null,] }
+  ],
+  "EH12": [
+    { surface: "A", status: "NULL", holes: [null,null,null,null] },
+    { surface: "B", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null,null,null,null] },
+    { surface: "C", status: "NULL", holes: [null,null,null,null,null,null] },
+    { surface: "D", status: "NULL", holes: [null,null,null,null,null,null,null,null,null] },
+    { surface: "E", status: "NULL", holes: [null,null,null,null] },
+  ],
+  "EK30": [ 
+    { surface: "A", status: "NULL", holes: [null,null,null,null] },
+    { surface: "B", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null] },
+    { surface: "C", status: "NULL", holes: [null] },
+    { surface: "D", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null,null,null,null] },
+    { surface: "E", status: "NULL", holes: [null,null,null,null,null] },],
+  "EK40": [ 
+    { surface: "A", status: "NULL", holes: [null,null] },
+    { surface: "B", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null,null,null,null,null] },
+    { surface: "C", status: "NULL", holes: [null,null,null,null] },
+    { surface: "D", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null,null,null,null] },
+    { surface: "E", status: "NULL", holes: [null,null,null,null,null] }, ],
+  "EY28": [ 
+    { surface: "A", status: "NULL", holes: [null,null,null,null] },
+    { surface: "B", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null] },
+    { surface: "C", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null,null] },
+    { surface: "D", status: "NULL", holes: [null,null,null,null,null,null,null,null,null] },
+    { surface: "E", status: "NULL", holes: [null,null,null,null,null,null,null,null] }, ],
+  "TEST": [
+    { surface: "A", status: "NULL", holes: [] },
+    { surface: "B", status: "NULL", holes: [] },
+    { surface: "C", status: "NULL", holes: [] },
+    { surface: "D", status: "NULL", holes: [] },
+    { surface: "E", status: "NULL", holes: [] },
+    { surface: "F", status: "NULL", holes: [] }
+  ],
+};
+
 interface DashboardState {
+    dbInstance: Surreal | null;
+    setDbInstance: (db: Surreal) => void;
     isRunning: boolean;
+    userName: string|null;
     artifactType: string;
     statics: string;
     artifact: string;
@@ -38,10 +88,11 @@ interface DashboardState {
     // 方法
     setIsRunning:(state:boolean)=>void;
     setArtifactType:(atype: string)=>void;
+    setUsername:(name: string)=>void;
     // setStatics:(statics: string)=>void;
     setArtifact:(result: string)=>void;
     // setSystemstate:(state: SystemState)=>void;
-
+    
     setLogs: (log: string) => void;
     addLogComponentValueEntry: (log: LogShow) => void;
     addImage_1: (image: string) => void;
@@ -52,6 +103,7 @@ interface DashboardState {
     clearImage_2: () => void;
     clearInfo_1: () => void;
     clearInfo_2: () => void;
+    clearResult:() => void;
     setCurrentHole:(hole: string, face:string)=>void;
     updateResultComponent: (
       surface: string,                      // 要更新的 surface 名称
@@ -64,7 +116,10 @@ interface DashboardState {
     ) => void;
   }
 
-export const useDashboardStore = create<DashboardState>((set) => ({
+export const useDashboardStore = create<DashboardState>((set,get) => ({
+  dbInstance: null,
+  userName:null,
+  setDbInstance: (db) => set({ dbInstance: db }),
   isRunning:false,  
   artifactType:"---",
   statics:"---",
@@ -91,37 +146,11 @@ export const useDashboardStore = create<DashboardState>((set) => ({
     set({ artifactType: atype });
 
     // 根据不同型号设置 holes
-    const holesPreset: Record<string, SurfaceData[]> = {
-      "EH09": [
-        { surface: "A", status: "NULL", holes: [null, null] },
-        { surface: "B", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,] },
-        { surface: "C", status: "NULL", holes: [null, null, null,null,null,] },
-        { surface: "D", status: "NULL", holes: [null,null,null,null,null,null,null,null,null,null,null,null,] },
-        { surface: "E", status: "NULL", holes: [null,null,null,null,null,null,] },
-        { surface: "F", status: "NULL", holes: [null,null,null,null,] }
-      ],
-      "EH12": [
-        { surface: "A", status: "NULL", holes: [false, true] },
-        { surface: "B", status: "NULL", holes: [true, false, true] },
-        { surface: "C", status: "NULL", holes: [false, false, false] },
-        { surface: "D", status: "NULL", holes: [true] },
-        { surface: "E", status: "NULL", holes: [] },
-        { surface: "F", status: "NULL", holes: [null, true] }
-      ],
-      "EK30": [ /* 其他型号的配置... */ ],
-      "EK40": [ /* 其他型号的配置... */ ],
-      "EY28": [ /* 其他型号的配置... */ ],
-      "TEST": [
-        { surface: "A", status: "NULL", holes: [] },
-        { surface: "B", status: "NULL", holes: [] },
-        { surface: "C", status: "NULL", holes: [] },
-        { surface: "D", status: "NULL", holes: [] },
-        { surface: "E", status: "NULL", holes: [] },
-        { surface: "F", status: "NULL", holes: [] }
-      ],
-    };
-
     set({ resultComponentValue: holesPreset[atype] || [] });
+  },
+  clearResult:()=>{
+    const state = get();
+    set({ resultComponentValue: holesPreset[state.artifactType] || [] });
   },
   setIsRunning: (state: boolean) => set({ isRunning: state }),
   setLogs: (log) => set((state) => ({ logs: state.logs + `\n${log}` })),
@@ -141,6 +170,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
     }
     return state; // 如果图片没有变化，保持不变
   }),
+  setUsername: (name: string) => set({ userName: name }),
   clearImage_1: () => set(() => ({ image_1: null })),
   clearImage_2: () => set(() => ({ image_2: null })),
 

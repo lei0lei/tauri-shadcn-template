@@ -34,6 +34,7 @@ import supervision as sv
 import base64
 from io import BytesIO
 from pydantic import BaseModel
+import asyncio
 # from cameras.local_image.image_gen import router as image_get_websocket_router
 # from cameras.hik.image_gen import router as image_hik_get_websocket_router
 # 配置 CORS
@@ -45,38 +46,63 @@ import torch
 origins = [
     "http://localhost:5173",  # 前端地址
     "http://127.0.0.1:5173",  # 或者你的前端地址（如果是 React 本地开发的话）
+    "http://localhost:8080",
 ]
 
 model_path = {
     'luowen_detect':"D:\\code\\tauri-shadcn-template\\fastapi\\app\\algo\\det.pt",
     'diameter_segment':"D:\\code\\tauri-shadcn-template\\fastapi\\app\\algo\\seg.pt",
+    'q_diameter_segment':"D:\\code\\tauri-shadcn-template\\fastapi\\app\\algo\\q_seg.pt",
+    'd_type':"D:\\code\\tauri-shadcn-template\\fastapi\\app\\algo\\type.pt",
 }
 
 # JSON 数据格式
 class ImageMetadata(BaseModel):
     some_field: str  # 示例字段
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """应用启动时加载 YOLOv8，关闭时释放"""
+yolo_model = None
+yolo_seg_model = None
+q_seg_model = None
+type_model = None
+    
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+
+
+
+@app.on_event("startup")
+async def startup():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     det_model_str = model_path["luowen_detect"]
     seg_model_str = model_path["diameter_segment"]
-    global yolo_model,yolo_seg_model
+    q_seg_model_str = model_path["q_diameter_segment"]
+    type_model_str = model_path["d_type"]
+    global yolo_model, yolo_seg_model,q_seg_model,type_model
     yolo_model = YOLO(det_model_str).to(device)
     print("✅ YOLOv8 det模型加载完成")
     yolo_seg_model = YOLO(seg_model_str).to(device)
+    q_seg_model = YOLO(q_seg_model_str).to(device)
+    print("✅ YOLOv8 det模型加载完成")
+    type_model = YOLO(type_model_str).to(device)
+    print("✅ YOLOv8 det模型加载完成")
+    await asyncio.sleep(2)  # 等待模型稳定
     print("✅ YOLOv8 seg模型加载完成")
-    dummy_img = np.zeros((640, 640, 3), dtype=np.uint8)  # 创建黑色图片
-    yolo_model(dummy_img)
-    yolo_seg_model(dummy_img)
+    dummy_img = np.random.randint(0, 255, (2448, 2048, 3), dtype=np.uint8)
+    results = yolo_model(dummy_img)[0]
+    results = yolo_seg_model(dummy_img)[0]
+    results = q_seg_model(dummy_img)[0]
+    results = type_model(dummy_img)[0]
+    torch.cuda.synchronize()
     print("🔥 预热完成，YOLOv8 已准备就绪")
-    yield  # 运行 FastAPI
-    # del yolo_model
-    # print("🛑 YOLOv8 模型已释放")
-    
-app = FastAPI(lifespan=lifespan)
-
 
 
 
@@ -106,25 +132,62 @@ async def root():
     return {"Algo list": "Hello World",
             "Command": "run"}
 
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
+@app.get("/warmup")
+async def warmup():
+    dummy_img = np.random.randint(0, 255, (2448, 2048, 3), dtype=np.uint8)
+    results = yolo_model(dummy_img)[0]
+    results = yolo_seg_model(dummy_img)[0]
+    torch.cuda.synchronize()  # 等待所有 CUDA 操作完成
+    return {"msg": "模型已预热"}
 
 
 def parse_yolo_results(results):
     """手动解析 YOLOv8 目标检测结果为 JSON 格式"""
+    if len(results.boxes) == 0:
+        return None  # 无检测结果
+
+    boxes = results.boxes.xyxy.cpu().numpy()
+    confs = results.boxes.conf.cpu().numpy()
+    clss = results.boxes.cls.cpu().numpy()
+
+    max_idx = confs.argmax()
+
+    detection = {
+        "x1": float(boxes[max_idx][0]),
+        "y1": float(boxes[max_idx][1]),
+        "x2": float(boxes[max_idx][2]),
+        "y2": float(boxes[max_idx][3]),
+        "confidence": float(confs[max_idx]),
+        "class_id": int(clss[max_idx]),
+    }
+
+    return detection  # 或 json.dumps(detection, indent=4) 如果你需要字符串
+
+def parse_yolo_multi_results(results):
+    """解析 YOLOv8 检测结果，返回所有目标"""
+    if len(results.boxes) == 0:
+        return []  # 返回空列表
+
+    boxes = results.boxes.xyxy.cpu().numpy()
+    confs = results.boxes.conf.cpu().numpy()
+    clss = results.boxes.cls.cpu().numpy()
+
     detections = []
-    for box, conf, cls in zip(results[0].boxes.xyxy.cpu().numpy(),
-                              results[0].boxes.conf.cpu().numpy(),
-                              results[0].boxes.cls.cpu().numpy()):
+    for i in range(len(boxes)):
         detection = {
-            "x1": float(box[0]),  # 左上角 X 坐标
-            "y1": float(box[1]),  # 左上角 Y 坐标
-            "x2": float(box[2]),  # 右下角 X 坐标
-            "y2": float(box[3]),  # 右下角 Y 坐标
-            "confidence": float(conf),  # 置信度
-            "class_id": int(cls),  # 类别 ID
+            "bbox": [float(v) for v in boxes[i]],  # [x1, y1, x2, y2]
+            "confidence": float(confs[i]),
+            "class_id": int(clss[i]),
         }
         detections.append(detection)
 
-    return json.dumps(detections, indent=4)  # 转换为 JSON 字符串
+    return detections
+
 
 
 @app.post("/detect_diameter")
@@ -133,7 +196,7 @@ async def detect_diameter(
 ):
     pass
 
-def get_largest_mask_info(masks):
+def get_largest_mask_wai_info(masks):
     largest_contour = None
     max_area = 0
     
@@ -147,17 +210,43 @@ def get_largest_mask_info(masks):
                 largest_contour = contour
     
     if largest_contour is not None:
+        x,y,radius=0,0,0
         (x, y), radius = cv2.minEnclosingCircle(largest_contour)
         return {"center_x": int(x), "center_y": int(y), "diameter": int(radius * 2)}
     
     return None
+def get_largest_mask_nei_info(masks):
+    largest_contour = None
+    max_area = 0
+    
+    for mask in masks:
+        mask = np.array(mask, dtype=np.uint8) * 255
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        for contour in contours:
+            area = cv2.contourArea(contour)
+            if area > max_area:
+                max_area = area
+                largest_contour = contour
+    
+    if largest_contour is not None:
+        x,y=0,0
+        (x, y), radius = cv2.minEnclosingCircle(largest_contour)
 
 
+        diameter = 2 * np.sqrt(max_area / np.pi)
+        diameter = int(round(diameter))
+        return {"center_x": int(x), "center_y": int(y), "diameter": diameter}
+    
+    return None
+
+import time
 @app.post("/detect_diameter_with_draw/")
 async def detect_diameter_with_draw(
     file: UploadFile = File(...),
 ):
 # 读取图片数据
+    print('启动算法')
+    t1 =  time.time()
     contents = await file.read()
     image = np.frombuffer(contents, np.uint8)
     image = cv2.imdecode(image, cv2.IMREAD_COLOR)
@@ -185,16 +274,20 @@ async def detect_diameter_with_draw(
             
             class_id = int(class_id)
 
-            masks = [
-                cv2.resize(mask.cpu().numpy(), (orig_w, orig_h), interpolation=cv2.INTER_NEAREST)
-                for mask, cls in zip(results.masks.data, results.boxes.cls)
-                if int(cls) == class_id
-            ]
+            best_conf = -1
+            best_mask = None
 
-            if not masks:
+            for mask, cls, conf in zip(results.masks.data, results.boxes.cls, results.boxes.conf):
+                if int(cls) == class_id and conf > best_conf:
+                    best_conf = float(conf)
+                    best_mask = cv2.resize(mask.cpu().numpy(), (orig_w, orig_h), interpolation=cv2.INTER_NEAREST)
+
+            if best_mask is None:
                 continue
-
-            mask_info = get_largest_mask_info(masks)
+            if class_name =='diameter-nei':
+                mask_info = get_largest_mask_nei_info([best_mask])
+            if class_name =='diameter-wai':
+                mask_info = get_largest_mask_wai_info([best_mask])
             if mask_info:
                 detection_json[class_name] = mask_info
 
@@ -229,14 +322,101 @@ async def detect_diameter_with_draw(
         img_base64 = base64.b64encode(buffer).decode("utf-8")
         detection_json = {}
         img_bytes = io.BytesIO(buffer)
-        
+
+    print(time.time()-t1)
+    detection_json['algo_time'] = time.time()-t1
     return {"results": detection_json, "image_base64": img_base64}
     # print(detection_json)
     # 直接返回图片文件
     # headers = {"Content-Disposition": "attachment; filename=detected_image.png"}
     # return StreamingResponse(img_bytes, media_type="image/png", headers=headers, background=JSONResponse(content=detection_json))
 
+@app.post("/detect_q_diameter_with_draw/")
+async def detect_q_diameter_with_draw(
+    file: UploadFile = File(...),
+):
+# 读取图片数据
+    print('启动算法')
+    t1 =  time.time()
+    contents = await file.read()
+    image = np.frombuffer(contents, np.uint8)
+    image = cv2.imdecode(image, cv2.IMREAD_COLOR)
 
+    # 使用 YOLOv8 进行推理
+    try:
+        orig_h, orig_w = image.shape[:2]
+
+        results = q_seg_model(image)[0]
+        detections = sv.Detections.from_ultralytics(results)
+        # 绘制mask图片
+        mask_annotator = sv.MaskAnnotator()
+        label_annotator = sv.LabelAnnotator(text_position=sv.Position.CENTER_OF_MASS)
+
+        annotated_image = mask_annotator.annotate(
+            scene=image, detections=detections)
+        annotated_image = label_annotator.annotate(
+            scene=annotated_image, detections=detections)
+        
+        detection_json = {}
+        for class_name in ["diameter-nei", "diameter-wai"]:
+            class_id = next((k for k, v in results.names.items() if v == class_name), None)
+            if class_id is None:
+                continue
+            
+            class_id = int(class_id)
+
+            best_conf = -1
+            best_mask = None
+
+            for mask, cls, conf in zip(results.masks.data, results.boxes.cls, results.boxes.conf):
+                if int(cls) == class_id and conf > best_conf:
+                    best_conf = float(conf)
+                    best_mask = cv2.resize(mask.cpu().numpy(), (orig_w, orig_h), interpolation=cv2.INTER_NEAREST)
+
+            if best_mask is None:
+                continue
+            if class_name =='diameter-nei':
+                mask_info = get_largest_mask_nei_info([best_mask])
+            if class_name =='diameter-wai':
+                mask_info = get_largest_mask_wai_info([best_mask])
+            if mask_info:
+                detection_json[class_name] = mask_info
+
+        text_position_y = 70  # 从30像素开始绘制文本
+
+
+        for class_name, info in detection_json.items():
+            center_text = f"{class_name}_center: ({info['center_x']}, {info['center_y']})"
+            diameter_text = f"{class_name}_diameter: {info['diameter']}"
+
+            font_scale = 2  # 增大字体大小
+            font_color = (0, 255, 0)  # 绿色
+            thickness = 3  # 增加字体的厚度
+            # 绘制文本
+            cv2.putText(annotated_image, center_text, 
+                        (10, text_position_y), 
+                        cv2.FONT_HERSHEY_SIMPLEX, font_scale, font_color, thickness, cv2.LINE_AA)
+            text_position_y += 70  # 下一行文本向下偏移50像素
+
+            cv2.putText(annotated_image, diameter_text, 
+                        (10, text_position_y), 
+                        cv2.FONT_HERSHEY_SIMPLEX, font_scale, font_color, thickness, cv2.LINE_AA)
+            text_position_y += 70  # 下一行文本向下偏移50像素
+
+
+        # **直接用 OpenCV 编码为 PNG**
+        _, buffer = cv2.imencode('.jpg', annotated_image)
+        img_base64 = base64.b64encode(buffer).decode("utf-8")
+        img_bytes = io.BytesIO(buffer)
+    except:
+        _, buffer = cv2.imencode('.jpg', image)
+        img_base64 = base64.b64encode(buffer).decode("utf-8")
+        detection_json = {}
+        img_bytes = io.BytesIO(buffer)
+
+    print(time.time()-t1)
+    detection_json['algo_time'] = time.time()-t1
+    return {"results": detection_json, "image_base64": img_base64}
 
 
 @app.post("/detect_luowen_with_draw/")
@@ -244,7 +424,8 @@ async def detect_luowen_with_draw(
     file: UploadFile = File(...),
 ):
     """处理图片，返回检测结果和绘制后的 Base64 图片"""
-
+    print('启动算法')
+    t1 =  time.time()
     # 读取图片数据
     contents = await file.read()
     image = np.frombuffer(contents, np.uint8)
@@ -254,6 +435,51 @@ async def detect_luowen_with_draw(
     try:
 
         results = yolo_model(image,conf=0.5)[0]
+        detections = sv.Detections.from_ultralytics(results)
+        
+        # 解析检测结果
+        detection_json = parse_yolo_multi_results(results)
+        GREEN = (0, 255, 0)
+        # 使用 Supervision 绘制检测框
+        # image_with_boxes = draw_detections(image, results)
+        box_annotator = sv.BoxAnnotator(thickness=5)
+        annotated_frame = box_annotator.annotate(
+            scene=image.copy(),
+            detections=detections)
+
+        # **直接用 OpenCV 编码为 PNG**
+        _, buffer = cv2.imencode('.png', annotated_frame)
+        img_base64 = base64.b64encode(buffer).decode("utf-8")
+        img_bytes = io.BytesIO(buffer)
+    except:
+        _, buffer = cv2.imencode('.png', image)
+        img_base64 = base64.b64encode(buffer).decode("utf-8")
+        detection_json = {}
+        img_bytes = io.BytesIO(buffer)
+    print('line 242')
+    print(time.time()-t1)
+    return {"results": detection_json, "image_base64": img_base64}
+
+    # 直接返回图片文件
+    # headers = {"Content-Disposition": "attachment; filename=detected_image.png"}
+    # return StreamingResponse(img_bytes, media_type="image/png", headers=headers)
+
+@app.post("/detect_type_with_draw/")
+async def detect_type_with_draw(
+    file: UploadFile = File(...),
+):
+    """处理图片，返回检测结果和绘制后的 Base64 图片"""
+    print('启动算法')
+    t1 =  time.time()
+    # 读取图片数据
+    contents = await file.read()
+    image = np.frombuffer(contents, np.uint8)
+    image = cv2.imdecode(image, cv2.IMREAD_COLOR)
+
+    # 使用 YOLOv8 进行推理
+    try:
+
+        results = type_model(image,conf=0.6)[0]
         detections = sv.Detections.from_ultralytics(results)
         
         # 解析检测结果
@@ -275,14 +501,9 @@ async def detect_luowen_with_draw(
         img_base64 = base64.b64encode(buffer).decode("utf-8")
         detection_json = {}
         img_bytes = io.BytesIO(buffer)
-        
+
+    print(time.time()-t1)
     return {"results": detection_json, "image_base64": img_base64}
-
-    # 直接返回图片文件
-    # headers = {"Content-Disposition": "attachment; filename=detected_image.png"}
-    # return StreamingResponse(img_bytes, media_type="image/png", headers=headers)
-
-
 
 @app.post("/detect_luowen/")
 async def detect_luowen(

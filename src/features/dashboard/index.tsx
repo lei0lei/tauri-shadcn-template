@@ -10,21 +10,99 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 import { Tabs, TabsContent} from '@/components/ui/tabs'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
-// import { TopNav } from '@/components/layout/top-nav'
-// import { ProfileDropdown } from '@/components/profile-dropdown'
-// import { Search } from '@/components/search'
 import { ThemeSwitch } from '@/components/theme-switch'
 import { Overview } from './components/overview'
 import  LogWindow  from './components/stateandlogs'
 import ResultShow from './components/resultshow'
-// import { invoke } from '@tauri-apps/api/core';
-// import React, { useState } from 'react';
 import { listen } from '@tauri-apps/api/event';
-import { useEffect } from "react";
+import { useEffect, useRef,useState } from "react"
 import StartStopButton from './components/startstop'
 import { Separator } from '@radix-ui/react-separator'
 import { useDashboardStore } from "@/stores/dashboardStore";
 import { IconCheck, IconX, IconCamera, IconParkingCircleFilled, IconAsset, IconServer, IconCircle, IconDeviceFloppy } from "@tabler/icons-react";
+// import Surreal from 'surrealdb';
+import { toPng } from 'html-to-image';
+import jsPDF from 'jspdf';
+import { useHoleStore } from "@/stores/svgShow";
+import { save } from '@tauri-apps/plugin-dialog';
+import { writeFile } from '@tauri-apps/plugin-fs';
+import { mkdir, exists  } from '@tauri-apps/plugin-fs';
+import { Input } from "@/components/ui/input";
+// import { Dialog, DialogTrigger, DialogContent, DialogClose } from "@/components/ui/dialog";
+import { getDb } from "@/utils/surreal"; // 引入数据库初始化函数
+import EH09_A from "@/assets/EH09_A.png";
+import EH09_B from "@/assets/EH09_B.png";
+import EH09_C from "@/assets/EH09_C.png";
+import EH09_D from "@/assets/EH09_D.png";
+import EH09_E from "@/assets/EH09_E.png";
+import EH09_F from "@/assets/EH09_F.png";
+
+import EH12_A from "@/assets/EH12_A.png";
+import EH12_B from "@/assets/EH12_B.png";
+import EH12_C from "@/assets/EH12_C.png";
+import EH12_D from "@/assets/EH12_D.png";
+import EH12_E from "@/assets/EH12_E.png";
+
+import EY28_A from "@/assets/EY28_A.png";
+import EY28_B from "@/assets/EY28_B.png";
+import EY28_C from "@/assets/EY28_C.png";
+import EY28_D from "@/assets/EY28_D.png";
+import EY28_E from "@/assets/EY28_E.png";
+
+import EK30_A from "@/assets/EK30_A.png";
+import EK30_B from "@/assets/EK30_B.png";
+import EK30_C from "@/assets/EK30_C.png";
+import EK30_D from "@/assets/EK30_D.png";
+import EK30_E from "@/assets/EK30_E.png";
+
+import EK40_A from "@/assets/EK40_A.png";
+import EK40_B from "@/assets/EK40_B.png";
+import EK40_C from "@/assets/EK40_C.png";
+import EK40_D from "@/assets/EK40_D.png";
+import EK40_E from "@/assets/EK40_E.png";
+
+
+const imageMap: Record<string, Record<string, string>> = {
+
+  EH09: {
+    A: EH09_A,
+    B: EH09_B,
+    C: EH09_C,
+    D: EH09_D,
+    E: EH09_E,
+    F: EH09_F,
+  },
+  EH12: {
+    A: EH12_A,
+    B: EH12_B,
+    C: EH12_C,
+    D: EH12_D,
+    E: EH12_E,
+  },
+  EY28: {
+    A: EY28_A,
+    B: EY28_B,
+    C: EY28_C,
+    D: EY28_D,
+    E: EY28_E,
+  },
+  EK30: {
+    A: EK30_A,
+    B: EK30_B,
+    C: EK30_C,
+    D: EK30_D,
+    E: EK30_E,
+  },
+  EK40: {
+    A: EK40_A,
+    B: EK40_B,
+    C: EK40_C,
+    D: EK40_D,
+    E: EK40_E,
+  },
+  // 可添加其他类型
+};
+
 
 const iconMap : Record<string, React.ComponentType>= {
   "相机": IconCamera,
@@ -37,20 +115,136 @@ const iconMap : Record<string, React.ComponentType>= {
 
 import { invoke } from '@tauri-apps/api/core';
 
+const faceReverseMapping: { [key: string]: number } = {
+  "A": 1,
+  "B": 2,
+  "C": 3,
+  "D": 4,
+  "E": 5,
+  "F": 6,
+};
+
+type ModelData = {
+  [modelCode: string]: {
+    last_face: number;
+    last_hole: number;
+  };
+};
+
+// 初始化
+const D: ModelData = {
+  EH09: { last_face: 6, last_hole: 4 },
+  EH12: { last_face: 5, last_hole: 4 },
+  EK30: { last_face: 5, last_hole: 5 },
+  EK40: { last_face: 5, last_hole: 5 },
+  EY28: { last_face: 5, last_hole: 8 },
+};
+
+
+
 export default function Dashboard() {
+
+  // const dbInstance = useDashboardStore((state) => state.dbInstance);
+  const setDbInstance = useDashboardStore((state) => state.setDbInstance);
+  const dbInstanceRef = useRef<any>(null);
+  const resultComponentValue = useDashboardStore((state) => state.resultComponentValue);
+  const holePositions = useHoleStore((state) => state.holePositions);
+
+  const [timer, setTimer] = useState(0)
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  useEffect(() => {
+    const startTimer = () => {
+      // 如果定时器已经存在，先清除它
+      console.log('start');
+      if (timerRef.current !== null) {
+        clearInterval(timerRef.current);
+      }
+      // 每次开始时重置计时器为 0
+      setTimer(0);
+      // 启动新的定时器
+      timerRef.current = setInterval(() => {
+        setTimer((prev) => prev + 1); // 每秒增加
+      }, 1000);
+    };
+
+
+    const stopTimer = () => {
+      console.log('stop');
+      if (timerRef.current) {
+        clearInterval(timerRef.current); // 停止定时器
+        timerRef.current = null;          // 清除定时器引用
+      }
+      
+    };
+
+
+    const unlistenStart = listen("timer-start", startTimer)
+    const unlistenStop = listen("timer-stop", stopTimer)
+
+    return () => {
+      unlistenStart.then(fn => fn())
+      unlistenStop.then(fn => fn())
+      if (timerRef.current) clearInterval(timerRef.current)
+    }
+  }, [])
+
+
+
+
+
+  useEffect(() => {
+    const initializeDb = async () => {
+      if (!dbInstanceRef.current) {
+        try {
+          // 初始化数据库并将实例存储到 Zustand
+          const db = await getDb();
+          setDbInstance(db); // 将实例保存到 Zustand store
+          dbInstanceRef.current = db;
+          console.log("数据库连接成功");
+        } catch (err) {
+          console.error("数据库连接失败:", err);
+        }
+      }
+    };
+
+    initializeDb();
+  }, [setDbInstance]);
 
   // @ts-ignore
   const { logs, setLogs, artifactType,setArtifactType,statics,artifact,setArtifact} = useDashboardStore();
   const {current_hole,setCurrentHole,current_face}= useDashboardStore();
+
+
+
   useEffect(() => {
     // 监听后端发送的 log_received 事件
-    const handleStageReceived = (event: { payload: { face: number, hole: number, artifact: string} }) => {
+    const handleStageReceived = async (event: { payload: { face: number, hole: number, artifact: string} }) => {
       const { face, hole,artifact} = event.payload;
-
-      setCurrentHole(hole.toString(),face.toString());
+      const faceStr = face.toString();
+      const holeStr = hole.toString();
+      setCurrentHole(holeStr,faceStr);
       setArtifact(artifact)
-    };
+      const { last_face, last_hole } = D[artifactType];
 
+      if (face == last_face && hole == last_hole) {
+        const artifactForExport = artifact;
+        console.log("已到最后一个面和孔，开始自动导出PDF");
+        setTimeout(async () => {
+          if (!dbInstanceRef.current) {
+            console.error("数据库依然未初始化，取消导出");
+            return;
+          }
+          await handleAutoExportClick(artifactForExport);
+        }, 500);
+      }
+    };
+  //   handleStageReceived({
+  //   payload: {
+  //     face: 5,        // 这里填你想要的初始face
+  //     hole: 8,        // 这里填你想要的初始hole
+  //     artifact: "----",   // 这里填初始artifact
+  //   },
+  // });
     // 监听 "log_received" 事件
     const unlisten = listen("current_stage", handleStageReceived);
 
@@ -58,7 +252,9 @@ export default function Dashboard() {
     return () => {
       unlisten.then((unlistenFn) => unlistenFn());
     };
-  }, [setCurrentHole]);
+  }, [setCurrentHole,artifactType]);
+
+
   useEffect(() => {
     // 监听后端发送的 log_received 事件
     const handleTypeReceived = (event: { payload: string }) => {
@@ -76,13 +272,18 @@ export default function Dashboard() {
     };
   }, [setArtifactType]);
 
+
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        const result = await invoke("selected_artifact_type"); // 调用后端命令
-        console.log("后端返回的数据:", result);
-      } catch (error) {
-        console.error("调用后端命令失败:", error);
+      if (artifactType === '---') { // 只有在 artifactType 为 '---' 时执行
+        try {
+          const result = await invoke("selected_artifact_type"); // 调用后端命令
+          console.log("后端返回的数据:", result);
+        } catch (error) {
+          console.error("调用后端命令失败:", error);
+        }
+      } else {
+        console.log("artifactType 已设置，不执行 invoke");
       }
     };
 
@@ -118,6 +319,385 @@ export default function Dashboard() {
     initSidecarListeners()
   }, [])
 
+  const handleAutoExportClick = async (artifactArg:string) => {
+    if (!dbInstanceRef.current) {
+    console.warn("数据库未初始化，尝试初始化...");
+    try {
+      const db = await getDb();
+      setDbInstance(db);
+      console.log("数据库初始化成功！");
+    } catch (err) {
+      console.error("数据库初始化失败:", err);
+      return;
+    }
+    }
+    const doc = new jsPDF({
+        orientation: 'landscape', // 横向
+        unit: 'px',               // 使用像素单位（可选）
+        format: [800, 1600]        // 自定义宽高（如有需要）
+      })
+
+    for (const { surface, holes } of resultComponentValue) {
+      // === 1. 查询当前面孔数据 ===
+      if (!dbInstanceRef.current) {
+        console.error("数据库未初始化")
+        continue  // 跳过当前面
+      }
+      const faceId = faceReverseMapping[surface];
+      const query = `
+        SELECT * FROM Hole_library
+        WHERE artifact_name = $artifactArg AND face_id = $faceId
+        ORDER BY hole_id
+      `;
+      const surreal_result = await dbInstanceRef.current.query(query, {
+        artifactArg,
+        faceId: faceId,
+      });
+      const holesData = Array.isArray(surreal_result?.[0]) ? surreal_result[0] : [];
+      const surfaceImage = imageMap[artifactType]?.[surface]
+      if (!surfaceImage) continue
+
+
+      const leftWrapper = document.createElement("div");
+      leftWrapper.style.width = "800px";
+      leftWrapper.style.height = "800px";
+      leftWrapper.style.position = "absolute";
+      leftWrapper.style.top = "80px";
+      leftWrapper.style.left = "50px";
+
+
+      const svgNS = "http://www.w3.org/2000/svg"
+      const svg = document.createElementNS(svgNS, "svg")
+      svg.setAttribute("viewBox", "0 0 800 800")
+      svg.setAttribute("width", "800")
+      svg.setAttribute("height", "800")
+
+      // 网格
+      const defs = document.createElementNS(svgNS, "defs")
+      const pattern = document.createElementNS(svgNS, "pattern")
+      pattern.setAttribute("id", "grid")
+      pattern.setAttribute("width", "30")
+      pattern.setAttribute("height", "30")
+      pattern.setAttribute("patternUnits", "userSpaceOnUse")
+      const path = document.createElementNS(svgNS, "path")
+      path.setAttribute("d", "M 30 0 L 0 0 0 30")
+      path.setAttribute("fill", "none")
+      path.setAttribute("stroke", "rgba(0,0,0,0.1)")
+      path.setAttribute("stroke-width", "1")
+      pattern.appendChild(path)
+      defs.appendChild(pattern)
+      svg.appendChild(defs)
+
+      const grid = document.createElementNS(svgNS, "rect")
+      grid.setAttribute("width", "100%")
+      grid.setAttribute("height", "100%")
+      grid.setAttribute("fill", "url(#grid)")
+      svg.appendChild(grid)
+
+
+      // 背景图
+      const bg = document.createElementNS(svgNS, "image")
+      bg.setAttribute("href", surfaceImage) // ✅ 推荐写法，现代浏览器支持
+      bg.setAttribute("x", "0")
+      bg.setAttribute("y", "0")
+      bg.setAttribute("width", "800")
+      bg.setAttribute("height", "800")
+      svg.appendChild(bg)
+
+      // 孔位
+      holes.forEach((status, index) => {
+        const holeId = index + 1
+        const pos = holePositions.find(
+          (p) => p.artifact === artifactType && p.surface === surface && p.holeId === holeId
+        )
+        if (!pos) return
+
+        const circle = document.createElementNS(svgNS, "circle")
+        circle.setAttribute("cx", pos.x.toString())
+        circle.setAttribute("cy", pos.y.toString())
+        circle.setAttribute("r", pos.r.toString())
+        circle.setAttribute("stroke", "#1e293b");
+        circle.setAttribute("stroke-width", "5");
+        status=true
+        const fill =
+          status === true ? "#15803d" : status === false ? "#b91c1c" : "#1e293b"
+        circle.setAttribute("fill", fill)
+        svg.appendChild(circle)
+      })
+
+
+      leftWrapper.appendChild(svg);
+      document.body.appendChild(leftWrapper);
+
+          // 2. 创建右侧表格容器，独立生成
+      const rightWrapper = document.createElement("div");
+      rightWrapper.style.width = "800px";
+      rightWrapper.style.height = "800px";
+      rightWrapper.style.position = "absolute";
+      rightWrapper.style.top = "80px";
+      rightWrapper.style.left = "50px";
+      // rightWrapper.style.fontSize = "12px";
+
+      rightWrapper.innerHTML = `
+            <table border="1" style="border-collapse:collapse;width:90%;font-size:16px;text-align:center;line-height:2;">
+              <thead>
+                <tr style="background:#334155;color:white;">
+                  <th>孔位</th><th>型号</th><th>直径</th><th>深度</th><th>螺纹</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${(holesData as any[]).map((hole: any, index: number) => {
+                  const holeId = index + 1;
+                  const diameterColor = hole.dimeter_result === false ? "red" : "#334155";
+                  const depthColor = hole.depth_result === false ? "red" : "#334155";
+                  const threadColor = hole.luowen_result === false ? "red" : "#334155";
+                  return `
+                    <tr style="background:${index % 2 === 0 ? "#e2e8f0" : "#f1f5f9"};">
+                      <td>${holeId}</td>
+                      <td>${hole.standard_hole_type || ""}</td>
+                      <td style="color:${diameterColor};">${hole.diameter?.toFixed(3) || ""}</td>
+                      <td style="color:${depthColor};">${hole.depth?.toFixed(3) || ""}</td>
+                      <td style="color:${threadColor};">${hole.have_luowen === undefined ? "" : hole.luowen ? "是" : "否"}</td>
+                    </tr>
+                  `;
+                }).join("")}
+              </tbody>
+            </table>
+          `;
+      document.body.appendChild(rightWrapper);
+
+      // 3. 分别截图
+      const leftDataUrl = await toPng(leftWrapper);
+      const rightDataUrl = await toPng(rightWrapper);
+      // 4. 加到 PDF，左右各占 800x800，间距可调整
+      doc.text(surface, 40, 40); // 标题放这里
+
+      doc.addImage(leftDataUrl, "PNG", 10, 10, 800, 800);
+      doc.addImage(rightDataUrl, "PNG", 800, 50, 800, 800);
+
+      doc.addPage();
+
+      // 清理DOM
+      document.body.removeChild(leftWrapper);
+      document.body.removeChild(rightWrapper);
+
+
+    }
+  // 移除最后一页空白
+    const pageCount = doc.getNumberOfPages();
+    if (pageCount > 1) {
+      doc.deletePage(pageCount);
+    }
+    const pdfArrayBuffer = doc.output("arraybuffer");
+    const pdfBytes = new Uint8Array(pdfArrayBuffer);
+    const userName = useDashboardStore.getState().userName || "defaultUser";
+    const baseDir = `D:/pdfresult/${userName}`;
+
+    exists(baseDir).then((dirExists) => {
+      if (!dirExists) {
+        return mkdir(baseDir, { recursive: true }).then(() => {
+          console.log("目录已创建:", baseDir);
+        });
+      }
+    }).then(() => {
+      const defaultName = `${baseDir}/${artifactType}-${artifactArg}.pdf`;
+      return writeFile(defaultName, pdfBytes).then(() => {
+        console.log("PDF 已自动保存:", defaultName);
+      });
+    }).catch((err) => {
+      console.error("保存出错:", err);
+    });
+
+  };
+  const handleExportClick = async () => {
+    const doc = new jsPDF({
+      orientation: 'landscape', // 横向
+      unit: 'px',               // 使用像素单位（可选）
+      format: [800, 1600]        // 自定义宽高（如有需要）
+    })
+
+    for (const { surface, holes } of resultComponentValue) {
+      // === 1. 查询当前面孔数据 ===
+      if (!dbInstanceRef.current) {
+        console.error("数据库未初始化")
+        continue  // 跳过当前面
+      }
+      const faceId = faceReverseMapping[surface];
+      const query = `
+        SELECT * FROM Hole_library
+        WHERE artifact_name = $artifact AND face_id = $faceId
+        ORDER BY hole_id
+      `;
+      const surreal_result = await dbInstanceRef.current.query(query, {
+        artifact,
+        faceId: faceId,
+      });
+      const holesData = Array.isArray(surreal_result?.[0]) ? surreal_result[0] : [];
+      const surfaceImage = imageMap[artifactType]?.[surface]
+      if (!surfaceImage) continue
+
+
+      const leftWrapper = document.createElement("div");
+      leftWrapper.style.width = "800px";
+      leftWrapper.style.height = "800px";
+      leftWrapper.style.position = "absolute";
+      leftWrapper.style.top = "80px";
+      leftWrapper.style.left = "50px";
+
+
+      const svgNS = "http://www.w3.org/2000/svg"
+      const svg = document.createElementNS(svgNS, "svg")
+      svg.setAttribute("viewBox", "0 0 800 800")
+      svg.setAttribute("width", "800")
+      svg.setAttribute("height", "800")
+
+      // 网格
+      const defs = document.createElementNS(svgNS, "defs")
+      const pattern = document.createElementNS(svgNS, "pattern")
+      pattern.setAttribute("id", "grid")
+      pattern.setAttribute("width", "30")
+      pattern.setAttribute("height", "30")
+      pattern.setAttribute("patternUnits", "userSpaceOnUse")
+      const path = document.createElementNS(svgNS, "path")
+      path.setAttribute("d", "M 30 0 L 0 0 0 30")
+      path.setAttribute("fill", "none")
+      path.setAttribute("stroke", "rgba(0,0,0,0.1)")
+      path.setAttribute("stroke-width", "1")
+      pattern.appendChild(path)
+      defs.appendChild(pattern)
+      svg.appendChild(defs)
+
+      const grid = document.createElementNS(svgNS, "rect")
+      grid.setAttribute("width", "100%")
+      grid.setAttribute("height", "100%")
+      grid.setAttribute("fill", "url(#grid)")
+      svg.appendChild(grid)
+
+
+      // 背景图
+      const bg = document.createElementNS(svgNS, "image")
+      bg.setAttribute("href", surfaceImage) // ✅ 推荐写法，现代浏览器支持
+      bg.setAttribute("x", "0")
+      bg.setAttribute("y", "0")
+      bg.setAttribute("width", "800")
+      bg.setAttribute("height", "800")
+      svg.appendChild(bg)
+
+      // 孔位
+      holes.forEach((status, index) => {
+        const holeId = index + 1
+        const pos = holePositions.find(
+          (p) => p.artifact === artifactType && p.surface === surface && p.holeId === holeId
+        )
+        if (!pos) return
+
+        const circle = document.createElementNS(svgNS, "circle")
+        circle.setAttribute("cx", pos.x.toString())
+        circle.setAttribute("cy", pos.y.toString())
+        circle.setAttribute("r", pos.r.toString())
+        circle.setAttribute("stroke", "#1e293b");
+        circle.setAttribute("stroke-width", "5");
+
+        const fill =
+          status === true ? "#15803d" : status === false ? "#b91c1c" : "#1e293b"
+        circle.setAttribute("fill", fill)
+        svg.appendChild(circle)
+      })
+
+
+      leftWrapper.appendChild(svg);
+      document.body.appendChild(leftWrapper);
+
+          // 2. 创建右侧表格容器，独立生成
+      const rightWrapper = document.createElement("div");
+      rightWrapper.style.width = "800px";
+      rightWrapper.style.height = "800px";
+      rightWrapper.style.position = "absolute";
+      rightWrapper.style.top = "80px";
+      rightWrapper.style.left = "50px";
+      // rightWrapper.style.fontSize = "12px";
+
+      rightWrapper.innerHTML = `
+            <table border="1" style="border-collapse:collapse;width:90%;font-size:16px;text-align:center;line-height:2;">
+              <thead>
+                <tr style="background:#334155;color:white;">
+                  <th>孔位</th><th>型号</th><th>直径</th><th>深度</th><th>螺纹</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${(holesData as any[]).map((hole: any, index: number) => {
+                  const holeId = index + 1;
+                  const diameterColor = hole.dimeter_result === false ? "red" : "#334155";
+                  const depthColor = hole.depth_result === false ? "red" : "#334155";
+                  const threadColor = hole.luowen_result === false ? "red" : "#334155";
+                  return `
+                    <tr style="background:${index % 2 === 0 ? "#e2e8f0" : "#f1f5f9"};">
+                      <td>${holeId}</td>
+                      <td>${hole.standard_hole_type || ""}</td>
+                      <td style="color:${diameterColor};">${hole.diameter?.toFixed(3) || ""}</td>
+                      <td style="color:${depthColor};">${hole.depth?.toFixed(3) || ""}</td>
+                      <td style="color:${threadColor};">${hole.have_luowen === undefined ? "" : hole.luowen ? "是" : "否"}</td>
+                    </tr>
+                  `;
+                }).join("")}
+              </tbody>
+            </table>
+          `;
+      document.body.appendChild(rightWrapper);
+
+      // 3. 分别截图
+      const leftDataUrl = await toPng(leftWrapper);
+      const rightDataUrl = await toPng(rightWrapper);
+      // 4. 加到 PDF，左右各占 800x800，间距可调整
+      doc.text(surface, 40, 40); // 标题放这里
+
+      doc.addImage(leftDataUrl, "PNG", 10, 10, 800, 800);
+      doc.addImage(rightDataUrl, "PNG", 800, 50, 800, 800);
+
+      doc.addPage();
+
+      // 清理DOM
+      document.body.removeChild(leftWrapper);
+      document.body.removeChild(rightWrapper);
+
+
+    }
+  // 移除最后一页空白
+    const pageCount = doc.getNumberOfPages();
+    if (pageCount > 1) {
+      doc.deletePage(pageCount);
+    }
+
+    // 获取 PDF 二进制内容
+    const pdfArrayBuffer = doc.output("arraybuffer");
+    const pdfBytes = new Uint8Array(pdfArrayBuffer);
+    const userName = useDashboardStore.getState().userName || "defaultUser";
+    const baseDir = `D:/pdfresult/${userName}`;
+    const dirExists = await exists(baseDir);
+    if (!dirExists) {
+      // 递归创建目录（绝对路径，不带 baseDir）
+      await mkdir(baseDir, { recursive: true });
+      console.log('目录已创建:', baseDir);
+    }
+
+
+    // 弹出保存对话框
+    const defaultName = `${baseDir}/${artifactType}-${artifact}.pdf`;
+    const path = await save({
+      defaultPath: defaultName,
+      filters: [{ name: "PDF 文件", extensions: ["pdf"] }]
+    });
+
+    if (path) {
+      await writeFile(path, pdfBytes);
+      console.log("PDF 保存成功:", path);
+    } else {
+      console.log("用户取消保存");
+    }
+  }
+
+
+
   return (
     <div className='flex flex-col min-h-screen p-4'>
       <Header>
@@ -140,21 +720,24 @@ export default function Dashboard() {
             <div className='grid gap-4 sm:grid-cols-2 lg:grid-cols-4'>
               <Card className="select-none">
                 <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-                  <CardTitle className='text-sm font-medium'>
-                    型号
-                  </CardTitle>
-                  <svg
-                    xmlns='http://www.w3.org/2000/svg'
-                    viewBox='0 0 24 24'
-                    fill='none'
-                    stroke='currentColor'
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth='2'
-                    className='h-4 w-4 text-muted-foreground'
-                  >
-                    <path d='M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6' />
-                  </svg>
+                  <div className="flex items-center gap-2 whitespace-nowrap">
+                    <span className="text-sm font-medium">
+                      型号
+                    </span>
+                    <Input
+                      id="username"
+                      placeholder="输入用户名并回车"
+                      className="h-6 max-w-xs py-0"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          const name = (e.target as HTMLInputElement).value.trim();
+                          if (name) {
+                            useDashboardStore.getState().setUsername(name);
+                          }
+                        }
+                      }}
+                    />
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className='text-5xl font-bold'>{artifactType}</div>
@@ -163,7 +746,7 @@ export default function Dashboard() {
               <Card className="select-none">
                 <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                   <CardTitle className='text-sm font-medium'>
-                    统计
+                    计时
                   </CardTitle>
                   <svg
                     xmlns='http://www.w3.org/2000/svg'
@@ -181,28 +764,21 @@ export default function Dashboard() {
                   </svg>
                 </CardHeader>
                 <CardContent>
-                  <div className='text-2xl font-bold'>{statics}</div>
-                  <p className='text-xs text-muted-foreground'>
-                    +180.1% from last month
-                  </p>
+                  <div className='text-5xl font-bold'>
+                    {String(Math.floor(timer / 60)).padStart(2, '0')}:{String(timer % 60).padStart(2, '0')}
+                  </div>
+                  
                 </CardContent>
               </Card>
               <Card className="select-none">
                 <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                   <CardTitle className='text-sm font-medium'>当前工件</CardTitle>
-                  <svg
-                    xmlns='http://www.w3.org/2000/svg'
-                    viewBox='0 0 24 24'
-                    fill='none'
-                    stroke='currentColor'
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth='2'
-                    className='h-4 w-4 text-muted-foreground'
-                  >
-                    <rect width='20' height='14' x='2' y='5' rx='2' />
-                    <path d='M2 10h20' />
-                  </svg>
+                  <Badge
+                    className="cursor-pointer"
+                    onClick={handleExportClick}                  >
+                    导出工件数据
+                  </Badge>
+                 
                 </CardHeader>
                 <CardContent>
                 <div className='text-lg font-bold'>{artifact}</div>
