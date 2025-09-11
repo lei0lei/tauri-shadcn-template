@@ -71,6 +71,7 @@ interface DashboardState {
     dbInstance: Surreal | null;
     setDbInstance: (db: Surreal) => void;
     isRunning: boolean;
+    userName: string|null;
     artifactType: string;
     statics: string;
     artifact: string;
@@ -87,6 +88,7 @@ interface DashboardState {
     // 方法
     setIsRunning:(state:boolean)=>void;
     setArtifactType:(atype: string)=>void;
+    setUsername:(name: string)=>void;
     // setStatics:(statics: string)=>void;
     setArtifact:(result: string)=>void;
     // setSystemstate:(state: SystemState)=>void;
@@ -116,6 +118,7 @@ interface DashboardState {
 
 export const useDashboardStore = create<DashboardState>((set,get) => ({
   dbInstance: null,
+  userName:null,
   setDbInstance: (db) => set({ dbInstance: db }),
   isRunning:false,  
   artifactType:"---",
@@ -167,6 +170,7 @@ export const useDashboardStore = create<DashboardState>((set,get) => ({
     }
     return state; // 如果图片没有变化，保持不变
   }),
+  setUsername: (name: string) => set({ userName: name }),
   clearImage_1: () => set(() => ({ image_1: null })),
   clearImage_2: () => set(() => ({ image_2: null })),
 
